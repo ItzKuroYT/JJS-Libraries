@@ -72,6 +72,8 @@
       <div class="actions">
         <button class="toggle">Show code</button>
         <button class="copy">Copy</button>
+        <button class="edit ghost" style="display:none">Edit</button>
+        <button class="del ghost" style="display:none">Delete</button>
         <button class="ghost viewOrig">Open credit</button>
       </div>
       <div class="codeWrap" style="display:none">
@@ -140,9 +142,53 @@ Get a code from the character builder in jjs, then paste it here. When you click
         });
 
         viewOrig.addEventListener('click', ()=>window.open(lib.credit,'_blank'));
+        // show edit/delete if current user is author
+        const editBtn = node.querySelector('.edit');
+        const delBtn = node.querySelector('.del');
+        const currentUser = getCurrentUser();
+        if(currentUser && currentUser.username === lib.author){
+          if(editBtn) editBtn.style.display = 'inline-block';
+          if(delBtn) delBtn.style.display = 'inline-block';
+        }
+
+        if(editBtn){
+          editBtn.addEventListener('click', async ()=>{
+            const newTitle = prompt('Edit title:', lib.title) || lib.title;
+            const newCredit = prompt('Edit credit URL (optional):', lib.credit||'') || lib.credit;
+            const newCode = prompt('Edit code:', lib.code||'') || lib.code;
+            lib.title = newTitle; lib.credit = newCredit; lib.code = newCode;
+            // preserve tags — could implement edit tags UI later
+            // save via serverless if available
+            const filename = lib.__filename || `${lib.id}-${sanitizeFilename(lib.title)}.json`;
+            try{
+              if(SERVERLESS_URL){ await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) }); }
+              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){ await saveToGitHub(lib, filename); }
+            }catch(e){ /* ignore save errors silently */ }
+            render(filter(search.value));
+          });
+        }
+
+        if(delBtn){
+          delBtn.addEventListener('click', async ()=>{
+            if(!confirm('Delete this library?')) return;
+            const path = lib.__path || (GITHUB.path?GITHUB.path + '/' + lib.__filename:lib.__filename);
+            try{
+              if(SERVERLESS_URL){ await fetch(SERVERLESS_URL + '?action=delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ path }) }); }
+              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){
+                // delete via contents API
+                const apiBase = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(path)}`;
+                const getResp = await fetch(apiBase + `?ref=${encodeURIComponent(GITHUB.branch)}`, { headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}` } });
+                if(getResp.status===200){ const data = await getResp.json(); const delResp = await fetch(apiBase, { method:'DELETE', headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}`, 'Content-Type':'application/json' }, body: JSON.stringify({ message: 'Delete library', sha: data.sha, branch: GITHUB.branch }) }); }
+              }
+            }catch(e){ /* ignore */ }
+            // remove locally
+            const idx = libs.findIndex(x=>x.id===lib.id);
+            if(idx>=0) libs.splice(idx,1);
+            render(filter(search.value));
+          });
+        }
 
         listEl.appendChild(node);
-          listEl.appendChild(node);
         });
         // diagnostics removed
     }
@@ -375,7 +421,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
           if(item.type==='file' && item.name.endsWith('.json')){
             try{
               const j = await fetch(item.download_url).then(r=>r.json());
-              if(j && j.id && !libs.some(l=>l.id===j.id)) { libs.push(j); added++; }
+              if(j){
+                // attach filename/path so client can edit/delete
+                j.__filename = item.name;
+                j.__path = item.path || (path + '/' + item.name);
+                if(j.id && !libs.some(l=>l.id===j.id)) { libs.push(j); added++; }
+                else if(!j.id){ j.id = Date.now().toString() + Math.random().toString(36).slice(2,6); libs.push(j); added++; }
+              }
             }catch(e){ /* ignore load error */ }
           }
         }
@@ -392,3 +444,4 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
