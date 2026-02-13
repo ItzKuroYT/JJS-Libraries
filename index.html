@@ -43,6 +43,7 @@
     </div>
 
     <div id="list" class="list"></div>
+    <div id="diagnostics" style="white-space:pre-wrap;margin-top:14px;color:#ffdcdc;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;display:none"></div>
   </div>
 
   <template id="cardTpl">
@@ -86,7 +87,7 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
     const search = document.getElementById('search');
 
     function render(filtered){
-      listEl.innerHTML = '';
+        listEl.innerHTML = '';
       if(filtered.length===0){
         listEl.innerHTML = '<div class="small">No libraries match your search.</div>';
         return;
@@ -127,7 +128,11 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
         viewOrig.addEventListener('click', ()=>window.open(lib.credit,'_blank'));
 
         listEl.appendChild(node);
-      });
+          listEl.appendChild(node);
+        });
+        // show diagnostics panel when serverless URL is set
+        const diagnostics = document.getElementById('diagnostics');
+        if(SERVERLESS_URL){ diagnostics.style.display = 'block'; }
     }
 
     function filter(q){
@@ -159,8 +164,8 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
       token: '' // insecure: only for quick testing
     };
 
-    // Serverless endpoint (preferred). If deployed on the same domain (Vercel), use '/api/save-lib'.
-    // Set to your deployment URL if hosted elsewhere (e.g. 'https://my-site.vercel.app/api/save-lib')
+    // Serverless endpoint (preferred). If deployed on Vercel you can use
+    // https://<your-project>.vercel.app/api/save-lib. Defaulting to your known deploy URL.
     const SERVERLESS_URL = 'https://jjs-libraries.vercel.app/api/save-lib';
 
     // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
@@ -176,15 +181,18 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
       const filename = `${lib.id}-${sanitizeFilename(lib.title)}.json`;
 
       // Try serverless endpoint first (recommended):
+      const diagnostics = document.getElementById('diagnostics');
       if(SERVERLESS_URL){
         try{
+          diagnostics.textContent = 'Posting to serverless endpoint...';
           const resp = await fetch(SERVERLESS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ lib, filename }) });
-          const j = await resp.json();
+          const j = await resp.json().catch(()=>null);
+          diagnostics.textContent = `Status: ${resp.status}\n${JSON.stringify(j, null, 2)}`;
           if(!resp.ok) throw new Error(JSON.stringify(j));
-          alert('Saved to repository via serverless endpoint.');
           return;
         }catch(err){
           console.error('Serverless save failed', err);
+          diagnostics.textContent = 'Serverless save failed: ' + String(err);
           // fallthrough to next option
         }
       }
@@ -197,8 +205,8 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
         }catch(err){
           console.error('GitHub save failed', err);
           // fallback to local download
-          downloadJSON(lib, filename);
-          alert('Failed to save to GitHub. Downloaded JSON locally instead.');
+            downloadJSON(lib, filename);
+            diagnostics.textContent = 'Failed to save to GitHub. Downloaded JSON locally instead.';
         }
       } else {
         // No GitHub config — download file locally so user can upload or commit manually
