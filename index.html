@@ -314,7 +314,7 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
     // Load remote libraries (if any) then render
     async function loadRemoteLibs(){
       const diagnostics = document.getElementById('diagnostics');
-      diagnostics.textContent = 'Loading remote libraries...';
+      if(diagnostics) diagnostics.textContent = 'Loading remote libraries...';
       const owner = (typeof GITHUB !== 'undefined' && GITHUB.owner) ? GITHUB.owner : 'ItzKuroYT';
       const repo = (typeof GITHUB !== 'undefined' && GITHUB.repo) ? GITHUB.repo : 'JJS-Libraries';
       const path = (typeof GITHUB !== 'undefined' && GITHUB.path) ? GITHUB.path : 'libs';
@@ -322,12 +322,12 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
       try{
         const listResp = await fetch(api);
         if(!listResp.ok){
-          diagnostics.textContent = `Failed to list remote libs: ${listResp.status} ${await listResp.text()}`;
+          if(diagnostics) diagnostics.textContent = `Failed to list remote libs: ${listResp.status} ${await listResp.text()}`;
           render(libs);
           return;
         }
         const list = await listResp.json();
-        if(!Array.isArray(list)){ diagnostics.textContent = 'No remote files found.'; render(libs); return; }
+        if(!Array.isArray(list)){ if(diagnostics) diagnostics.textContent = 'No remote files found.'; render(libs); return; }
         let added = 0;
         for(const item of list){
           if(item.type==='file' && item.name.endsWith('.json')){
@@ -337,10 +337,10 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
             }catch(e){ /* ignore load error */ }
           }
         }
-        diagnostics.textContent = `Loaded ${added} remote libraries from ${owner}/${repo}/${path}.`;
+        if(diagnostics) diagnostics.textContent = `Loaded ${added} remote libraries from ${owner}/${repo}/${path}.`;
         render(filter(search.value));
       }catch(err){
-        diagnostics.textContent = 'Error loading remote libs: ' + String(err);
+        if(diagnostics) diagnostics.textContent = 'Error loading remote libs: ' + String(err);
         render(libs);
       }
     }
@@ -350,3 +350,4 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
   </script>
 </body>
 </html>
+
