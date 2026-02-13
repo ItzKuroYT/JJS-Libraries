@@ -8,7 +8,35 @@
 
 const { URL } = require('url');
 
+// Try to use global fetch (Node 18+ / modern runtimes). Fallback to node-fetch if available.
+let fetchFn = global.fetch;
+try{ if(!fetchFn) fetchFn = require('node-fetch'); }catch(e){}
+
+async function readBody(req){
+  if (req.body && Object.keys(req.body).length) return req.body;
+  // If body is raw string (some platforms), try to parse
+  if (typeof req.body === 'string'){
+    try{ return JSON.parse(req.body); }catch(e){ /* fallthrough */ }
+  }
+  // Otherwise, collect stream
+  return await new Promise((resolve, reject)=>{
+    let data = '';
+    req.on('data', chunk=> data += chunk);
+    req.on('end', ()=>{
+      if(!data) return resolve({});
+      try{ resolve(JSON.parse(data)); }catch(e){ resolve({}); }
+    });
+    req.on('error', reject);
+  });
+}
+
 module.exports = async (req, res) => {
+  // Basic CORS support
+  res.setHeader('Access-Control-Allow-Origin','*');
+  res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const token = process.env.GITHUB_TOKEN;
@@ -18,11 +46,12 @@ module.exports = async (req, res) => {
   const basePath = (process.env.GITHUB_PATH || 'libs').replace(/^\/+|\/+$/g, '');
 
   if (!token || !owner || !repo) {
+    console.error('Missing GITHUB_TOKEN/OWNER/REPO env vars');
     return res.status(500).json({ error: 'Server not configured. Set GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO.' });
   }
 
   let payload;
-  try { payload = req.body; } catch (e) { return res.status(400).json({ error: 'Invalid JSON' }); }
+  try { payload = await readBody(req); } catch (e) { console.error('Body parse error', e); return res.status(400).json({ error: 'Invalid JSON' }); }
 
   const lib = payload.lib;
   if (!lib || !lib.title) return res.status(400).json({ error: 'Missing lib object or title' });
@@ -34,25 +63,31 @@ module.exports = async (req, res) => {
 
   try {
     // check existing file to get sha
-    const getResp = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+    console.log('Checking existing file at', apiUrl, 'branch', branch);
+    const getResp = await fetchFn(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
     let sha = null;
-    if (getResp.status === 200) {
+    if (getResp && getResp.status === 200) {
       const data = await getResp.json(); sha = data.sha;
+      console.log('Existing file sha:', sha);
+    } else {
+      console.log('File does not exist or cannot be read', getResp && getResp.status);
     }
 
     const content = toBase64(JSON.stringify(lib, null, 2));
     const body = { message: `Add/Update library ${lib.title}`, content, branch };
     if (sha) body.sha = sha;
 
-    const putResp = await fetch(apiUrl, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const putResp = await fetchFn(apiUrl, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!putResp.ok) {
       const txt = await putResp.text();
+      console.error('GitHub API error', putResp.status, txt);
       return res.status(putResp.status).json({ error: 'GitHub API error', detail: txt });
     }
     const result = await putResp.json();
+    console.log('GitHub put result:', result.content && result.content.path);
     return res.status(200).json({ ok: true, result });
   } catch (err) {
-    console.error(err);
+    console.error('Internal error', err);
     return res.status(500).json({ error: 'Internal Server Error', detail: String(err) });
   }
 };
