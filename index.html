@@ -36,7 +36,54 @@
       <div class="small">Made for Jujutsu Shenanigans</div>
     </header>
 
-    <div class="controls">
+    <style>
+      .layout{display:flex;gap:18px;margin-top:16px}
+      .sidebar{width:260px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:10px}
+      .sidebar .profile{display:flex;gap:12px;align-items:center}
+      .avatar{width:68px;height:68px;border-radius:10px;background:rgba(255,255,255,0.03);display:inline-block;overflow:hidden}
+      .avatar img{width:100%;height:100%;object-fit:cover}
+      .smallMuted{font-size:12px;color:var(--muted)}
+      .sideSection{margin-top:12px}
+      .libItem{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.02);margin-bottom:6px}
+      .notifications{max-height:140px;overflow:auto}
+      .dmList{max-height:140px;overflow:auto}
+    </style>
+
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="profile">
+          <div class="avatar" id="avatarWrap"><img id="avatarImg" src="" alt="avatar"/></div>
+          <div>
+            <div id="sideUsername" class="small"></div>
+            <div class="smallMuted">My account</div>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <input id="avatarFile" type="file" accept="image/*" style="width:100%" />
+        </div>
+
+        <div class="sideSection">
+          <div class="smallMuted">My libraries (<span id="myLibCount">0</span>)</div>
+          <div id="myLibs"></div>
+        </div>
+
+        <div class="sideSection">
+          <div class="smallMuted">Notifications</div>
+          <div id="notifications" class="notifications small"></div>
+        </div>
+
+        <div class="sideSection">
+          <div class="smallMuted">Direct Messages</div>
+          <div id="dmConvos" class="dmList small"></div>
+          <div style="margin-top:8px;display:flex;gap:6px">
+            <input id="dmTo" placeholder="To (username)" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+            <button id="openDm" class="ghost">Open</button>
+          </div>
+        </div>
+      </aside>
+
+      <main style="flex:1">
+        <div class="controls">
         <input id="search" class="search" placeholder="Search libraries (title, tags)..." />
         <div style="display:flex;gap:8px;align-items:center">
           <div id="authBox" style="display:flex;gap:8px;align-items:center">
@@ -350,6 +397,77 @@ Get a code from the character builder in jjs, then paste it here. When you click
         alert('No serverless URL or GitHub config set — downloaded JSON locally for manual upload.');
       }
     });
+
+    // --- Sidebar / Profile / Notifications / DMs ---
+    function saveAvatarToServer(file){
+      // try serverless multipart upload first
+      if(!file) return Promise.reject('no file');
+      if(SERVERLESS_URL){
+        const fd = new FormData(); fd.append('avatar', file);
+        return fetch(SERVERLESS_URL + '?action=uploadAvatar', { method:'POST', body: fd }).then(r=>r.json()).catch(()=>{ throw new Error('upload failed'); });
+      }
+      // fallback: read as data URL and store locally
+      return new Promise((res,rej)=>{
+        const fr = new FileReader(); fr.onload = ()=>{ try{ localStorage.setItem('jjs_avatar', fr.result); res({ url: fr.result }); }catch(e){ rej(e); } }; fr.onerror = rej; fr.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('avatarFile').addEventListener('change', async (ev)=>{
+      const f = ev.target.files && ev.target.files[0]; if(!f) return;
+      try{
+        const j = await saveAvatarToServer(f);
+        const url = j && j.url ? j.url : null;
+        if(url){ localStorage.setItem('jjs_avatar_url', url); document.getElementById('avatarImg').src = url; addNotification('Avatar updated'); }
+      }catch(e){ alert('Avatar upload failed.'); }
+    });
+
+    function renderSidebar(){
+      const u = getCurrentUser(); document.getElementById('sideUsername').textContent = u ? u.username : 'Not signed in';
+      const av = localStorage.getItem('jjs_avatar_url') || '';
+      if(av) document.getElementById('avatarImg').src = av; else document.getElementById('avatarImg').src = '';
+      // my libs
+      const myLibsWrap = document.getElementById('myLibs'); myLibsWrap.innerHTML = '';
+      const author = u ? u.username : null;
+      const my = author ? libs.filter(l=>l.author===author) : [];
+      document.getElementById('myLibCount').textContent = my.length;
+      my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; myLibsWrap.appendChild(d); });
+
+      renderNotifications(); renderDMList();
+    }
+
+    // Notifications (stored in localStorage)
+    function addNotification(text){ try{ const key='jjs_notifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift({t:Date.now(),text}); localStorage.setItem(key, JSON.stringify(arr.slice(0,50))); renderNotifications(); }catch(e){} }
+    function renderNotifications(){ const key='jjs_notifications'; const el = document.getElementById('notifications'); el.innerHTML=''; try{ const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.forEach(n=>{ const div = document.createElement('div'); div.textContent = new Date(n.t).toLocaleString() + ' — ' + n.text; el.appendChild(div); }); }catch(e){}
+    }
+
+    // Simple DM storage: store conversations keyed by usernames in localStorage; attempt serverless save when available
+    function saveDMMessage(to, msg){ const from = getCurrentUser() ? getCurrentUser().username : 'Anonymous'; const convKey = `jjs_dm_${[from,to].sort().join('_')}`; const arr = JSON.parse(localStorage.getItem(convKey)||'[]'); const entry = {from,to,message:msg,t:Date.now()}; arr.push(entry); localStorage.setItem(convKey, JSON.stringify(arr)); // try serverless
+      if(SERVERLESS_URL){ fetch(SERVERLESS_URL + '?action=saveDM', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ conv: convKey, entry }) }).catch(()=>{}); }
+      renderDMConversation(to);
+    }
+
+    function listDMConvos(){ // find keys
+      const keys = Object.keys(localStorage).filter(k=>k.startsWith('jjs_dm_'));
+      return keys.map(k=>k.replace('jjs_dm_',''));
+    }
+
+    function renderDMList(){ const wrap = document.getElementById('dmConvos'); wrap.innerHTML=''; const convs = listDMConvos(); convs.forEach(c=>{ const b = document.createElement('div'); b.className='libItem'; b.textContent = c.replace(/_/g,' → '); b.style.cursor='pointer'; b.addEventListener('click', ()=>{ const parts = c.split('_'); const other = parts.find(x=>x!== (getCurrentUser()?getCurrentUser().username:'Anonymous')) || parts[0]; openDMWindow(other); }); wrap.appendChild(b); }); }
+
+    function renderDMConversation(withUser){ const key = `jjs_dm_${[getCurrentUser()?getCurrentUser().username:'Anonymous', withUser].sort().join('_')}`; const data = JSON.parse(localStorage.getItem(key)||'[]'); // open modal-like area
+      let modal = document.getElementById('dmModal'); if(!modal){ modal = document.createElement('div'); modal.id='dmModal'; modal.style.position='fixed'; modal.style.right='20px'; modal.style.bottom='20px'; modal.style.width='320px'; modal.style.maxHeight='60vh'; modal.style.background='var(--card)'; modal.style.padding='10px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>DM: ${withUser}</strong><button id="closeDm">Close</button></div><div id="dmMessages" style="max-height:300px;overflow:auto;margin-top:8px"></div><div style="display:flex;gap:8px;margin-top:8px"><input id="dmMsgInput" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" placeholder="Message..."><button id="sendDmBtn" class="ghost">Send</button></div>`;
+      document.getElementById('closeDm').addEventListener('click', ()=>modal.remove());
+      const msgs = document.getElementById('dmMessages'); msgs.innerHTML=''; data.forEach(m=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = `${m.from}: ${m.message}`; msgs.appendChild(d); });
+      document.getElementById('sendDmBtn').addEventListener('click', ()=>{ const v = document.getElementById('dmMsgInput').value.trim(); if(!v) return; saveDMMessage(withUser, v); document.getElementById('dmMsgInput').value=''; renderDMConversation(withUser); });
+    }
+
+    function openDMWindow(username){ renderDMConversation(username); }
+
+    document.getElementById('openDm').addEventListener('click', ()=>{ const to = document.getElementById('dmTo').value.trim(); if(!to) return alert('Enter username'); openDMWindow(to); document.getElementById('dmTo').value=''; });
+
+    // ensure sidebar updates when user/ libs change
+    const origRender = render;
+    render = function(filtered){ origRender(filtered); renderSidebar(); };
 
     // Helper: download an object as JSON file (local fallback)
     function downloadJSON(obj, filename){
