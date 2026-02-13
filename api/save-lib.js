@@ -17,10 +17,6 @@ module.exports = async (req, res) => {
   const branch = process.env.GITHUB_BRANCH || 'main';
   const basePath = (process.env.GITHUB_PATH || 'libs').replace(/^\/+|\/+$/g, '');
 
-  if (!token || !owner || !repo) {
-    return res.status(500).json({ error: 'Server not configured. Set GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO.' });
-  }
-
   let payload;
   try { payload = req.body; } catch (e) { return res.status(400).json({ error: 'Invalid JSON' }); }
 
