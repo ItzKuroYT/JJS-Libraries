@@ -28,17 +28,10 @@
 </head>
 <body>
   <div class="container">
-    <header>
-      <div>
-        <h1>JJS Library — Search & Copy</h1>
-        <div class="credits">Original credits shown in each library. Use code sections to view or copy.</div>
-      </div>
-      <div class="small">Made for Jujutsu Shenanigans</div>
-    </header>
 
     <style>
       .layout{display:flex;gap:18px;margin-top:16px}
-      .sidebar{width:260px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:10px}
+      .sidebar{width:260px;background:transparent;padding:12px;border-radius:10px}
       .sidebar .profile{display:flex;gap:12px;align-items:center}
       .avatar{width:68px;height:68px;border-radius:10px;background:rgba(255,255,255,0.03);display:inline-block;overflow:hidden}
       .avatar img{width:100%;height:100%;object-fit:cover}
@@ -47,6 +40,7 @@
       .libItem{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.02);margin-bottom:6px}
       .notifications{max-height:140px;overflow:auto}
       .dmList{max-height:140px;overflow:auto}
+      .postsCard{max-width:980px;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.8);color:inherit}
     </style>
 
     <div class="layout">
@@ -82,9 +76,18 @@
         </div>
       </aside>
 
-      <main style="flex:1">
-        <div class="controls">
-        <input id="search" class="search" placeholder="Search libraries (title, tags)..." />
+      <div class="postsCard">
+        <header>
+          <div>
+            <h1>JJS Library — Search & Copy</h1>
+            <div class="credits">Original credits shown in each library. Use code sections to view or copy.</div>
+          </div>
+          <div class="small">Made for Jujutsu Shenanigans</div>
+        </header>
+
+        <main style="flex:1">
+          <div class="controls">
+          <input id="search" class="search" placeholder="Search libraries (title, tags)..." />
         <div style="display:flex;gap:8px;align-items:center">
           <div id="authBox" style="display:flex;gap:8px;align-items:center">
             <input id="authUser" placeholder="username" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
@@ -105,7 +108,9 @@
     </div>
 
     <div id="list" class="list"></div>
-  </div>
+        </main>
+      </div>
+    </div>
 
   <template id="cardTpl">
     <div class="card">
@@ -400,15 +405,27 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     // --- Sidebar / Profile / Notifications / DMs ---
     function saveAvatarToServer(file){
-      // try serverless multipart upload first
       if(!file) return Promise.reject('no file');
-      if(SERVERLESS_URL){
-        const fd = new FormData(); fd.append('avatar', file);
-        return fetch(SERVERLESS_URL + '?action=uploadAvatar', { method:'POST', body: fd }).then(r=>r.json()).catch(()=>{ throw new Error('upload failed'); });
-      }
-      // fallback: read as data URL and store locally
-      return new Promise((res,rej)=>{
-        const fr = new FileReader(); fr.onload = ()=>{ try{ localStorage.setItem('jjs_avatar', fr.result); res({ url: fr.result }); }catch(e){ rej(e); } }; fr.onerror = rej; fr.readAsDataURL(file);
+      // Read file as data URL then POST JSON to serverless (simpler cross-platform)
+      return new Promise((res, rej)=>{
+        const fr = new FileReader();
+        fr.onload = async ()=>{
+          try{
+            const dataUrl = fr.result;
+            // try serverless JSON endpoint
+            if(SERVERLESS_URL){
+              try{
+                const username = getCurrentUser() ? getCurrentUser().username : 'anonymous';
+                const resp = await fetch(SERVERLESS_URL + '?action=uploadAvatar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dataUrl, username }) });
+                if(resp.ok){ const j = await resp.json().catch(()=>null); return res(j); }
+              }catch(e){ /* fall through to local */ }
+            }
+            // fallback: store locally
+            try{ localStorage.setItem('jjs_avatar_url', dataUrl); return res({ url: dataUrl }); }catch(e){ return rej(e); }
+          }catch(err){ rej(err); }
+        };
+        fr.onerror = rej;
+        fr.readAsDataURL(file);
       });
     }
 
@@ -561,5 +578,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
     loadRemoteLibs();
   </script>
 </body>
+</html>
 </html>
 
