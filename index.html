@@ -227,7 +227,9 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
       if(!title) return;
       const credit = prompt('Credit / original link (optional):','');
       const code = prompt('Paste code (for long code consider editing file directly):','-- code');
-      const lib = {id:Date.now().toString(),title,author:'You',credit,code,tags:[]};
+      const currentUser = getCurrentUser();
+      const author = currentUser ? currentUser.username : 'Anonymous';
+      const lib = {id:Date.now().toString(),title,author,credit,code,tags:[]};
       libs.push(lib);
       render(filter(search.value));
 
