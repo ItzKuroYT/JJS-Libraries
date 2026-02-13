@@ -51,6 +51,12 @@
         </div>
     </div>
 
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div id="tagPicker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <input id="customTag" placeholder="Add tag" style="padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+      <button id="addTagBtn" class="ghost">Add Tag</button>
+    </div>
+
     <div id="list" class="list"></div>
   </div>
 
@@ -73,7 +79,6 @@
       </div>
     </div>
   </template>
-
 
   <script>
     // Sample libraries array — you can extend this or load from a JSON endpoint
@@ -222,6 +227,42 @@ Get a code from the character builder in jjs, then paste it here. When you click
     });
     updateUserLabel();
 
+    // --- Tag picker ---
+    const PRESET_TAGS = ['Beginner moveset','Intermediate moveset','Advanced moveset','Custom','JJK','Dragonball','Sololeveling','Video-game','OP'];
+    function renderTagPicker(){
+      const wrap = document.getElementById('tagPicker'); if(!wrap) return;
+      wrap.innerHTML = '';
+      PRESET_TAGS.forEach(t=>{
+        const id = 'tag_' + t.replace(/[^a-z0-9]/gi,'_');
+        const label = document.createElement('label'); label.style.display='inline-flex'; label.style.alignItems='center'; label.style.gap='6px';
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.value = t; cb.id = id;
+        const span = document.createElement('span'); span.textContent = t; span.className='small';
+        label.appendChild(cb); label.appendChild(span); wrap.appendChild(label);
+      });
+    }
+
+    function getSelectedTags(){
+      const wrap = document.getElementById('tagPicker'); if(!wrap) return [];
+      const checks = Array.from(wrap.querySelectorAll('input[type="checkbox"]'));
+      return checks.filter(i=>i.checked).map(i=>i.value);
+    }
+
+    document.getElementById('addTagBtn').addEventListener('click', ()=>{
+      const v = (document.getElementById('customTag').value||'').trim();
+      if(!v) return; const wrap = document.getElementById('tagPicker');
+      // avoid duplicates
+      const exists = Array.from(wrap.querySelectorAll('input')).some(i=>i.value.toLowerCase()===v.toLowerCase());
+      if(exists){ document.getElementById('customTag').value=''; return; }
+      const id = 'tag_' + v.replace(/[^a-z0-9]/gi,'_');
+      const label = document.createElement('label'); label.style.display='inline-flex'; label.style.alignItems='center'; label.style.gap='6px';
+      const cb = document.createElement('input'); cb.type='checkbox'; cb.value = v; cb.id = id; cb.checked = true;
+      const span = document.createElement('span'); span.textContent = v; span.className='small';
+      label.appendChild(cb); label.appendChild(span); wrap.appendChild(label);
+      document.getElementById('customTag').value = '';
+    });
+
+    renderTagPicker();
+
     // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
     document.getElementById('createEntry').addEventListener('click', async ()=>{
       const title = prompt('Title for library:','New Library');
@@ -230,7 +271,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const code = prompt('Paste code (for long code consider editing file directly):','-- code');
       const currentUser = getCurrentUser();
       const author = currentUser ? currentUser.username : 'Anonymous';
-      const lib = {id:Date.now().toString(),title,author,credit,code,tags:[]};
+      const lib = {id:Date.now().toString(),title,author,credit,code,tags:getSelectedTags()};
       libs.push(lib);
       render(filter(search.value));
 
@@ -351,4 +392,3 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
-
