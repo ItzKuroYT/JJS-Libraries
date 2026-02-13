@@ -37,9 +37,18 @@
     </header>
 
     <div class="controls">
-      <input id="search" class="search" placeholder="Search libraries (title, tags)..." />
-      <button id="createEntry" class="ghost">Create</button>
-      <button id="newEntry" class="ghost">+ Add</button>
+        <input id="search" class="search" placeholder="Search libraries (title, tags)..." />
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="authBox" style="display:flex;gap:8px;align-items:center">
+            <input id="authUser" placeholder="username" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+            <input id="authPass" type="password" placeholder="password" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+            <button id="signupBtn" class="ghost">Sign up</button>
+            <button id="loginBtn" class="ghost">Log in</button>
+            <div id="userLabel" class="small" style="margin-left:8px"></div>
+          </div>
+          <button id="createEntry" class="ghost">Create</button>
+          <button id="newEntry" class="ghost">Discord</button>
+        </div>
     </div>
 
     <div id="list" class="list"></div>
@@ -167,6 +176,59 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
     // Serverless endpoint (preferred). If deployed on Vercel you can use
     // https://<your-project>.vercel.app/api/save-lib. Defaulting to your known deploy URL.
     const SERVERLESS_URL = 'https://jjs-libraries.vercel.app/api/save-lib';
+
+    // Users endpoint derived from serverless base
+    const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
+
+    // --- Authentication helpers (client-side) ---
+    function setToken(tok){ try{ localStorage.setItem('jjs_token', tok); updateUserLabel(); }catch(e){} }
+    function getToken(){ try{ return localStorage.getItem('jjs_token'); }catch(e){return null;} }
+    function decodeToken(tok){ if(!tok) return null; try{ const parts = tok.split('.'); if(parts.length<2) return null; const payload = parts[1]; const json = JSON.parse(atob(payload.replace(/-/g,'+').replace(/_/g,'/'))); return json; }catch(e){return null;} }
+    function getCurrentUser(){ const tok = getToken(); const p = decodeToken(tok); return p ? { username: p.username, id: p.id } : null; }
+    function updateUserLabel(){ const lbl = document.getElementById('userLabel'); const u = getCurrentUser(); if(u) lbl.textContent = `Signed in: ${u.username}`; else lbl.textContent = ''; }
+
+    async function authSignup(username,password){
+      const diagnostics = document.getElementById('diagnostics');
+      diagnostics.style.display='block'; diagnostics.textContent='Signing up...';
+      try{
+        const resp = await fetch(USERS_URL + '?action=signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+        const j = await resp.json().catch(()=>null);
+        diagnostics.textContent = `Status: ${resp.status}\n${JSON.stringify(j, null, 2)}`;
+        if(!resp.ok) throw new Error(JSON.stringify(j));
+        if(j && j.token) setToken(j.token);
+        updateUserLabel();
+        return j;
+      }catch(err){ diagnostics.textContent = 'Signup error: '+String(err); return null; }
+    }
+
+    async function authLogin(username,password){
+      const diagnostics = document.getElementById('diagnostics');
+      diagnostics.style.display='block'; diagnostics.textContent='Logging in...';
+      try{
+        const resp = await fetch(USERS_URL + '?action=login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+        const j = await resp.json().catch(()=>null);
+        diagnostics.textContent = `Status: ${resp.status}\n${JSON.stringify(j, null, 2)}`;
+        if(!resp.ok) throw new Error(JSON.stringify(j));
+        if(j && j.token) setToken(j.token);
+        updateUserLabel();
+        return j;
+      }catch(err){ diagnostics.textContent = 'Login error: '+String(err); return null; }
+    }
+
+    // attach auth button handlers
+    document.getElementById('signupBtn').addEventListener('click', ()=>{
+      const u = document.getElementById('authUser').value.trim();
+      const p = document.getElementById('authPass').value;
+      if(!u||!p) return alert('username and password required');
+      authSignup(u,p);
+    });
+    document.getElementById('loginBtn').addEventListener('click', ()=>{
+      const u = document.getElementById('authUser').value.trim();
+      const p = document.getElementById('authPass').value;
+      if(!u||!p) return alert('username and password required');
+      authLogin(u,p);
+    });
+    updateUserLabel();
 
     // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
     document.getElementById('createEntry').addEventListener('click', async ()=>{
