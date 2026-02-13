@@ -67,15 +67,77 @@ module.exports = async (req, res) => {
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
 
   try {
+    // parse action from querystring (e.g., ?action=delete or uploadAvatar or saveDM)
+    const urlObj = new URL(req.url, 'http://localhost');
+    const action = urlObj.searchParams.get('action');
+
+    // Helper to get file sha if exists
+    async function getShaForPath(p){
+      const api = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(p)}`;
+      const r = await fetchFn(api + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      if(r && r.status === 200){ const d = await r.json(); return d.sha; }
+      return null;
+    }
+
+    // handle avatar upload
+    if(action === 'uploadAvatar'){
+      // expect payload.dataUrl and payload.username
+      const dataUrl = payload.dataUrl || (payload.lib && payload.lib.dataUrl);
+      const username = (payload.username || (payload.lib && payload.lib.username) || 'anonymous').replace(/[^a-z0-9_-]/gi,'_');
+      if(!dataUrl) return res.status(400).json({ error: 'Missing dataUrl' });
+      const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
+      if(!m) return res.status(400).json({ error: 'Invalid dataUrl' });
+      const mime = m[1]; const b64 = m[2];
+      const ext = mime.split('/')[1].split('+')[0] || 'png';
+      const avBase = basePath ? `${basePath}/avatars` : 'avatars';
+      const avPath = `${avBase}/${username}.${ext}`;
+      const apiAvatar = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(avPath)}`;
+      const sha = await getShaForPath(avPath);
+      const putBody = { message: `Upload avatar for ${username}`, content: b64, branch };
+      if(sha) putBody.sha = sha;
+      const putResp = await fetchFn(apiAvatar, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
+      if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub avatar upload error', detail: txt }); }
+      const result = await putResp.json();
+      return res.status(200).json({ ok: true, result, url: result.content && result.content.download_url });
+    }
+
+    // handle DM saves
+    if(action === 'saveDM'){
+      const conv = payload.conv || (payload.lib && payload.lib.conv);
+      const entry = payload.entry || (payload.lib && payload.lib.entry);
+      if(!conv || !entry) return res.status(400).json({ error: 'Missing conv or entry' });
+      const dmBase = basePath ? `${basePath}/dms` : 'dms';
+      const dmPath = `${dmBase}/${conv}.json`;
+      const apiDm = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(dmPath)}`;
+      // get existing
+      let existing = [];
+      const getResp = await fetchFn(apiDm + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      let sha = null;
+      if(getResp && getResp.status === 200){ const data = await getResp.json(); sha = data.sha; try{ existing = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8')); if(!Array.isArray(existing)) existing = []; }catch(e){ existing = []; } }
+      existing.push(entry);
+      const content = Buffer.from(JSON.stringify(existing, null, 2), 'utf8').toString('base64');
+      const putBody = { message: `Save DM convo ${conv}`, content, branch };
+      if(sha) putBody.sha = sha;
+      const putResp = await fetchFn(apiDm, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
+      if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub DM save error', detail: txt }); }
+      const result = await putResp.json();
+      return res.status(200).json({ ok: true, result });
+    }
+
+    // Default: save library JSON (existing logic)
     // check existing file to get sha
-    console.log('Checking existing file at', apiUrl, 'branch', branch);
     const getResp = await fetchFn(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
     let sha = null;
     if (getResp && getResp.status === 200) {
       const data = await getResp.json(); sha = data.sha;
-      console.log('Existing file sha:', sha);
-    } else {
-      console.log('File does not exist or cannot be read', getResp && getResp.status);
+    }
+
+    if(action === 'delete'){
+      if(!sha) return res.status(404).json({ error: 'File not found' });
+      const delResp = await fetchFn(apiUrl, { method: 'DELETE', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `Delete library ${filename}`, sha: sha, branch }) });
+      if(!delResp.ok){ const txt = await delResp.text(); return res.status(delResp.status).json({ error: 'GitHub API delete error', detail: txt }); }
+      const result = await delResp.json();
+      return res.status(200).json({ ok: true, result });
     }
 
     const content = toBase64(JSON.stringify(lib, null, 2));
