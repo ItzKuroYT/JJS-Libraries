@@ -263,10 +263,45 @@ W3siQUREIjpmYWxzZSwiTkFNRSI6IjIwMCUiLCJLX05BTUUiOiJTS0lMTCIsIktFWSI6MSwiREFUQSI6
       }
     }
 
-    // initial render
+    // Load remote libraries (if any) then render
+    async function loadRemoteLibs(){
+      const diagnostics = document.getElementById('diagnostics');
+      diagnostics.textContent = 'Loading remote libraries...';
+      const owner = (typeof GITHUB !== 'undefined' && GITHUB.owner) ? GITHUB.owner : 'ItzKuroYT';
+      const repo = (typeof GITHUB !== 'undefined' && GITHUB.repo) ? GITHUB.repo : 'JJS-Libraries';
+      const path = (typeof GITHUB !== 'undefined' && GITHUB.path) ? GITHUB.path : 'libs';
+      const api = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      try{
+        const listResp = await fetch(api);
+        if(!listResp.ok){
+          diagnostics.textContent = `Failed to list remote libs: ${listResp.status} ${await listResp.text()}`;
+          render(libs);
+          return;
+        }
+        const list = await listResp.json();
+        if(!Array.isArray(list)){ diagnostics.textContent = 'No remote files found.'; render(libs); return; }
+        let added = 0;
+        for(const item of list){
+          if(item.type==='file' && item.name.endsWith('.json')){
+            try{
+              const j = await fetch(item.download_url).then(r=>r.json());
+              if(j && j.id && !libs.some(l=>l.id===j.id)) { libs.push(j); added++; }
+            }catch(e){ console.warn('Failed to load', item.download_url, e); }
+          }
+        }
+        diagnostics.textContent = `Loaded ${added} remote libraries from ${owner}/${repo}/${path}.`;
+        render(filter(search.value));
+      }catch(err){
+        diagnostics.textContent = 'Error loading remote libs: ' + String(err);
+        render(libs);
+      }
+    }
+
     render(libs);
+    loadRemoteLibs();
   </script>
 </body>
 </html>
+
 
 
