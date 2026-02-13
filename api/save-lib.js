@@ -39,6 +39,21 @@ module.exports = async (req, res) => {
 
   // Lightweight health/check endpoint - does NOT expose secrets
   if (req.method === 'GET'){
+    // support a lightweight social fetch: ?action=getSocial&username=...
+    try{
+      const urlObj = new URL(req.url, 'http://localhost');
+      const action = urlObj.searchParams.get('action');
+      if(action === 'getSocial'){
+        const username = (urlObj.searchParams.get('username')||'').replace(/[^a-z0-9_-]/gi,'_');
+        if(!username) return res.status(400).json({ error: 'username required' });
+        const basePath = (process.env.GITHUB_PATH || 'libs').replace(/^\/+|\/+$/g, '');
+        const socialPath = basePath ? `${basePath}/social/${username}.json` : `social/${username}.json`;
+        const api = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/contents/${encodeURIComponent(socialPath)}`;
+        const getResp = await fetchFn(api + `?ref=${encodeURIComponent(process.env.GITHUB_BRANCH || 'main')}`, { headers: { Accept: 'application/vnd.github.v3+json', Authorization: `token ${process.env.GITHUB_TOKEN}` } });
+        if(getResp && getResp.status === 200){ const d = await getResp.json(); try{ const json = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); return res.status(200).json({ ok:true, social: json }); }catch(e){ return res.status(200).json({ ok:true, social: {} }); } }
+        return res.status(200).json({ ok:true, social: {} });
+      }
+    }catch(e){ /* fall back to generic */ }
     return res.status(200).json({ ok: true, configured: !!(process.env.GITHUB_OWNER && process.env.GITHUB_REPO && process.env.GITHUB_TOKEN), owner: process.env.GITHUB_OWNER||null, repo: process.env.GITHUB_REPO||null, branch: process.env.GITHUB_BRANCH||'main', path: process.env.GITHUB_PATH||'libs' });
   }
 
@@ -98,6 +113,21 @@ module.exports = async (req, res) => {
       const putResp = await fetchFn(apiAvatar, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
       if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub avatar upload error', detail: txt }); }
       const result = await putResp.json();
+      // update social record for user to include avatar url (best-effort)
+      try{
+        const socialBase = basePath ? `${basePath}/social` : 'social';
+        const socialPath = `${socialBase}/${username}.json`;
+        const apiSocial = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(socialPath)}`;
+        let existing = {};
+        const getS = await fetchFn(apiSocial + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+        let sSha = null;
+        if(getS && getS.status === 200){ const d = await getS.json(); sSha = d.sha; try{ existing = JSON.parse(Buffer.from(d.content,'base64').toString('utf8')); }catch(e){ existing = {}; } }
+        existing.avatar_url = result.content && result.content.download_url;
+        const socContent = Buffer.from(JSON.stringify(existing, null, 2), 'utf8').toString('base64');
+        const socPut = { message: `Update social for ${username} (avatar)`, content: socContent, branch };
+        if(sSha) socPut.sha = sSha;
+        await fetchFn(apiSocial, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(socPut) }).catch(()=>{});
+      }catch(e){ /* non-fatal */ }
       return res.status(200).json({ ok: true, result, url: result.content && result.content.download_url });
     }
 
@@ -120,6 +150,27 @@ module.exports = async (req, res) => {
       if(sha) putBody.sha = sha;
       const putResp = await fetchFn(apiDm, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
       if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub DM save error', detail: txt }); }
+      const result = await putResp.json();
+      return res.status(200).json({ ok: true, result });
+    }
+
+    // handle updateSocial (save full social object for user)
+    if(action === 'updateSocial'){
+      const username = (payload.username || (payload.lib && payload.lib.username) || '').replace(/[^a-z0-9_-]/gi,'_');
+      const social = payload.social || (payload.lib && payload.lib.social) || null;
+      if(!username || !social) return res.status(400).json({ error: 'Missing username or social object' });
+      const socialBase = basePath ? `${basePath}/social` : 'social';
+      const socialPath = `${socialBase}/${username}.json`;
+      const apiSocial = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(socialPath)}`;
+      // get existing
+      let sSha = null;
+      const getS = await fetchFn(apiSocial + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      if(getS && getS.status === 200){ const d = await getS.json(); sSha = d.sha; }
+      const content = Buffer.from(JSON.stringify(social, null, 2), 'utf8').toString('base64');
+      const putBody = { message: `Update social for ${username}`, content, branch };
+      if(sSha) putBody.sha = sSha;
+      const putResp = await fetchFn(apiSocial, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
+      if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub social save error', detail: txt }); }
       const result = await putResp.json();
       return res.status(200).json({ ok: true, result });
     }
@@ -166,3 +217,4 @@ function sanitizeFilename(name){
 function toBase64(str){
   try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
 }
+
