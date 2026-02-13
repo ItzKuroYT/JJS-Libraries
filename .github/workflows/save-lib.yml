@@ -1,0 +1,20 @@
+name: Save Library via repository_dispatch
+
+on:
+  repository_dispatch:
+    types: [save-lib]
+
+permissions:
+  contents: write
+
+jobs:
+  save-lib:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update file from payload
+        uses: peter-evans/create-or-update-file@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ github.event.client_payload.path }}
+          commit-message: "Add/Update library ${{ github.event.client_payload.filename }}"
+          content: ${{ toJson(github.event.client_payload.content) }}
