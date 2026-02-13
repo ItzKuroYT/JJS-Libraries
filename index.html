@@ -67,6 +67,11 @@
         </div>
 
         <div class="sideSection">
+          <div class="smallMuted">Friend Requests</div>
+          <div id="friendRequests"></div>
+        </div>
+
+        <div class="sideSection">
           <div class="smallMuted">Direct Messages</div>
           <div id="dmConvos" class="dmList small"></div>
           <div style="margin-top:8px;display:flex;gap:6px">
@@ -116,8 +121,13 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <h3 class="title"></h3>
-          <div class="meta"><span class="author"></span><span class="sep">•</span><a class="orig link" target="_blank">Original credit</a></div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:40px;height:40px;overflow:hidden;border-radius:8px;background:rgba(255,255,255,0.03)"><img class="cardAvatar" src="" style="width:100%;height:100%;object-fit:cover"/></div>
+            <div>
+              <h3 class="title" style="margin:0"></h3>
+              <div class="meta"><span class="author"></span><span class="sep">•</span><a class="orig link" target="_blank">Original credit</a></div>
+            </div>
+          </div>
         </div>
         <div class="small">tag: <span class="tags"></span></div>
       </div>
@@ -140,7 +150,7 @@
       {
         id: 'hollow-purple',
         title: 'Create a post to share your library with the community! Include details like title, description, tags, and code. You can also link to an original credit if your library is inspired by or based on someone else\'s work.',
-        author: 'AdminKuro',
+        author: 'Kuro',
         credit: 'https://www.youtube.com/@FFS-Productions',
         tags: ['help','guide','how-to'],
         // Put the long import code here (string). Keep it escaped as needed.
@@ -164,12 +174,25 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const node = tpl.content.cloneNode(true);
         node.querySelector('.title').textContent = lib.title;
         node.querySelector('.author').textContent = lib.author;
+        // make author clickable to open profile
+        try{ const authorEl = node.querySelector('.author'); authorEl.style.cursor='pointer'; authorEl.addEventListener('click', ()=> openProfile(lib.author)); }catch(e){}
         node.querySelector('.orig').href = lib.credit;
         node.querySelector('.orig').textContent = 'Credit';
         node.querySelector('.tags').textContent = lib.tags.join(', ');
         const pre = node.querySelector('.code');
         pre.textContent = lib.code;
         pre.setAttribute('data-full', lib.code);
+
+        // populate author avatar from social if available
+        (async ()=>{
+          try{
+            const s = await fetchSocial(lib.author);
+            const img = node.querySelector('.cardAvatar');
+            if(img) img.src = (s && s.avatar_url) ? s.avatar_url : (localStorage.getItem('jjs_avatar_url')||'');
+            // optionally show small bio snippet in meta
+            if(s && s.bio){ const meta = node.querySelector('.meta'); const bioEl = document.createElement('div'); bioEl.className='smallMuted'; bioEl.style.marginTop='6px'; bioEl.textContent = s.bio.length>80? s.bio.slice(0,80)+'…': s.bio; meta.appendChild(bioEl); }
+          }catch(e){}
+        })();
 
         const card = node.querySelector('.card');
         const toggle = node.querySelector('.toggle');
@@ -363,12 +386,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
     document.getElementById('createEntry').addEventListener('click', async ()=>{
+      const currentUser = getCurrentUser();
+      if(!currentUser) return alert('You must be signed in to create a library.');
       const title = prompt('Title for library:','New Library');
       if(!title) return;
       const credit = prompt('Credit / original link (optional):','');
       const code = prompt('Paste code (for long code consider editing file directly):','-- code');
-      const currentUser = getCurrentUser();
-      const author = currentUser ? currentUser.username : 'Anonymous';
+      const author = currentUser.username;
       const lib = {id:Date.now().toString(),title,author,credit,code,tags:getSelectedTags()};
       libs.push(lib);
       render(filter(search.value));
@@ -448,9 +472,177 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const my = author ? libs.filter(l=>l.author===author) : [];
       document.getElementById('myLibCount').textContent = my.length;
       my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; myLibsWrap.appendChild(d); });
-
-      renderNotifications(); renderDMList();
+      renderFriendRequests(); renderNotifications(); renderDMList();
     }
+
+    // Profile edit UI in sidebar
+    (function addProfileEditor(){
+      const wrap = document.getElementById('sidebar');
+      if(!wrap) return;
+      const div = document.createElement('div'); div.className='sideSection';
+      div.innerHTML = `<div class="smallMuted">Edit Profile</div><div style="margin-top:6px"><textarea id="profileBio" placeholder="Bio" style="width:100%;min-height:60px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)"></textarea><div style="display:flex;gap:6px;margin-top:6px"><button id="saveProfile" class="ghost">Save Profile</button><button id="refreshProfile" class="ghost">Refresh</button></div></div>`;
+      wrap.appendChild(div);
+      document.getElementById('saveProfile').addEventListener('click', async ()=>{
+        const me = getCurrentUser(); if(!me) return alert('Sign in to edit profile');
+        const bio = document.getElementById('profileBio').value.trim();
+        // include avatar url if set
+        const avatar = localStorage.getItem('jjs_avatar_url') || '';
+        const social = await fetchSocial(me.username) || {};
+        social.bio = bio; if(avatar) social.avatar_url = avatar;
+        await updateSocial(me.username, social);
+        addNotification('Profile saved');
+        render(filter(search.value));
+      });
+      document.getElementById('refreshProfile').addEventListener('click', async ()=>{
+        const me = getCurrentUser(); if(!me) return alert('Sign in'); const s = await fetchSocial(me.username); document.getElementById('profileBio').value = s.bio || '';
+      });
+    })();
+
+    // --- Social helpers (friend requests, blocking, profiles) ---
+    async function fetchSocial(username){
+      if(!username) return {};
+      const key = 'jjs_social_' + username;
+      if(SERVERLESS_URL){
+        try{ const resp = await fetch(SERVERLESS_URL + '?action=getSocial&username=' + encodeURIComponent(username)); if(resp.ok){ const j = await resp.json(); if(j && j.social){ try{ localStorage.setItem(key, JSON.stringify(j.social)); }catch(e){}; return j.social; } } }catch(e){}
+      }
+      try{ return JSON.parse(localStorage.getItem(key) || '{}'); }catch(e){ return {}; }
+    }
+
+    async function updateSocial(username, social){
+      if(!username || !social) return null;
+      const key = 'jjs_social_' + username;
+      try{ localStorage.setItem(key, JSON.stringify(social)); }catch(e){}
+      if(SERVERLESS_URL){
+        try{ const resp = await fetch(SERVERLESS_URL + '?action=updateSocial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, social }) }); if(resp.ok) return await resp.json(); }catch(e){}
+      }
+      return null;
+    }
+
+    async function sendFriendRequest(to){
+      const me = getCurrentUser(); if(!me) return alert('Sign in to add friends');
+      const from = me.username; if(from === to) return;
+      const mySocial = await fetchSocial(from) || {};
+      const theirSocial = await fetchSocial(to) || {};
+      if((theirSocial.blocked||[]).includes(from)) return alert('User has blocked you.');
+      if((mySocial.blocked||[]).includes(to)) return alert('You have blocked this user.');
+      mySocial.outgoingRequests = Array.from(new Set([...(mySocial.outgoingRequests||[]), to]));
+      theirSocial.incomingRequests = Array.from(new Set([...(theirSocial.incomingRequests||[]), from]));
+      await updateSocial(from, mySocial);
+      await updateSocial(to, theirSocial);
+      addNotification('Friend request sent to ' + to);
+      renderSidebar();
+    }
+
+    async function acceptFriendRequest(from){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username;
+      const mySocial = await fetchSocial(meName) || {};
+      const theirSocial = await fetchSocial(from) || {};
+      mySocial.incomingRequests = (mySocial.incomingRequests||[]).filter(x=>x!==from);
+      theirSocial.outgoingRequests = (theirSocial.outgoingRequests||[]).filter(x=>x!==meName);
+      mySocial.friends = Array.from(new Set([...(mySocial.friends||[]), from]));
+      theirSocial.friends = Array.from(new Set([...(theirSocial.friends||[]), meName]));
+      await updateSocial(meName, mySocial);
+      await updateSocial(from, theirSocial);
+      addNotification('You and ' + from + ' are now friends');
+      renderSidebar();
+    }
+
+    async function declineFriendRequest(from){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username;
+      const mySocial = await fetchSocial(meName) || {};
+      const theirSocial = await fetchSocial(from) || {};
+      mySocial.incomingRequests = (mySocial.incomingRequests||[]).filter(x=>x!==from);
+      theirSocial.outgoingRequests = (theirSocial.outgoingRequests||[]).filter(x=>x!==meName);
+      await updateSocial(meName, mySocial);
+      await updateSocial(from, theirSocial);
+      renderSidebar();
+    }
+
+    async function blockUser(target){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username; if(meName === target) return;
+      const mySocial = await fetchSocial(meName) || {};
+      const theirSocial = await fetchSocial(target) || {};
+      mySocial.blocked = Array.from(new Set([...(mySocial.blocked||[]), target]));
+      mySocial.friends = (mySocial.friends||[]).filter(x=>x!==target);
+      mySocial.outgoingRequests = (mySocial.outgoingRequests||[]).filter(x=>x!==target);
+      mySocial.incomingRequests = (mySocial.incomingRequests||[]).filter(x=>x!==target);
+      theirSocial.friends = (theirSocial.friends||[]).filter(x=>x!==meName);
+      theirSocial.outgoingRequests = (theirSocial.outgoingRequests||[]).filter(x=>x!==meName);
+      theirSocial.incomingRequests = (theirSocial.incomingRequests||[]).filter(x=>x!==meName);
+      await updateSocial(meName, mySocial);
+      await updateSocial(target, theirSocial);
+      addNotification('Blocked ' + target);
+      renderSidebar();
+    }
+
+    async function unblockUser(target){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username;
+      const mySocial = await fetchSocial(meName) || {};
+      mySocial.blocked = (mySocial.blocked||[]).filter(x=>x!==target);
+      await updateSocial(meName, mySocial);
+      addNotification('Unblocked ' + target);
+      renderSidebar();
+    }
+
+    function renderFriendRequests(){
+      const wrap = document.getElementById('friendRequests'); if(!wrap) return;
+      wrap.innerHTML = '';
+      const u = getCurrentUser(); if(!u) { wrap.innerHTML = '<div class="smallMuted">Sign in to manage friends</div>'; return; }
+      fetchSocial(u.username).then(s=>{
+        const inc = s.incomingRequests||[];
+        if(inc.length===0) { wrap.innerHTML = '<div class="smallMuted">No incoming requests</div>'; return; }
+        inc.forEach(from=>{
+          const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.marginBottom='6px';
+          const link = document.createElement('a'); link.href = '#'; link.textContent = from; link.className='small'; link.addEventListener('click',(e)=>{ e.preventDefault(); openProfile(from); });
+          const left = document.createElement('div'); left.appendChild(link);
+          row.appendChild(left);
+          const btns = document.createElement('div');
+          const a = document.createElement('button'); a.className='ghost'; a.textContent='Accept'; a.addEventListener('click',()=>acceptFriendRequest(from));
+          const d = document.createElement('button'); d.className='ghost'; d.textContent='Decline'; d.addEventListener('click',()=>declineFriendRequest(from));
+          btns.appendChild(a); btns.appendChild(d); row.appendChild(btns); wrap.appendChild(row);
+        });
+      });
+    }
+
+    async function openProfile(username){
+      const social = await fetchSocial(username);
+      let modal = document.getElementById('profileModal'); if(!modal){ modal = document.createElement('div'); modal.id='profileModal'; modal.style.position='fixed'; modal.style.left='20px'; modal.style.top='20px'; modal.style.width='320px'; modal.style.maxHeight='80vh'; modal.style.background='var(--card)'; modal.style.padding='12px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
+      const avatar = social.avatar_url || localStorage.getItem('jjs_avatar_url') || '';
+      const friends = (social.friends||[]).length || 0;
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center"><div style="width:56px;height:56px;overflow:hidden;border-radius:8px;background:rgba(255,255,255,0.03)"><img src="${avatar}" style="width:100%;height:100%;object-fit:cover"/></div><div><strong>${username}</strong><div class="smallMuted">${friends} friends</div></div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Recent libraries</strong><div id="profileLibs"></div></div>`;
+      document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
+      const me = getCurrentUser(); const actions = document.getElementById('profileActions'); actions.innerHTML='';
+      if(me && me.username !== username){
+        const mySocial = await fetchSocial(me.username);
+        const theirSocial = social || {};
+        const isFriend = (mySocial.friends||[]).includes(username);
+        const outgoing = (mySocial.outgoingRequests||[]).includes(username);
+        const incoming = (mySocial.incomingRequests||[]).includes(username);
+        const blocked = (mySocial.blocked||[]).includes(username);
+        if(isFriend){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Friends'; actions.appendChild(b); }
+        else if(outgoing){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Request sent'; actions.appendChild(b); }
+        else if(incoming){ const a = document.createElement('button'); a.className='ghost'; a.textContent='Accept'; a.addEventListener('click', ()=>{ acceptFriendRequest(username); openProfile(username); }); actions.appendChild(a); }
+        else { const a = document.createElement('button'); a.className='ghost'; a.textContent='Add friend'; a.addEventListener('click', ()=>{ sendFriendRequest(username); openProfile(username); }); actions.appendChild(a); }
+        if(blocked){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Unblock'; b.addEventListener('click', ()=>{ unblockUser(username); openProfile(username); }); actions.appendChild(b); }
+        else { const b = document.createElement('button'); b.className='ghost'; b.textContent='Block'; b.addEventListener('click', ()=>{ if(confirm('Block user? This will remove friends and stop messages.')){ blockUser(username); openProfile(username); } }); actions.appendChild(b); }
+      }
+      const libWrap = document.getElementById('profileLibs'); libWrap.innerHTML=''; libs.filter(l=>l.author===username).slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; libWrap.appendChild(d); });
+    }
+
+    // wrap openDMWindow to enforce blocking
+    const __oldOpenDM = openDMWindow;
+    openDMWindow = async function(username){
+      const me = getCurrentUser(); if(!me) return alert('Sign in to DM');
+      const mySocial = await fetchSocial(me.username);
+      const theirSocial = await fetchSocial(username);
+      if((mySocial.blocked||[]).includes(username)) return alert('You have blocked this user — unblock to message.');
+      if((theirSocial.blocked||[]).includes(me.username)) return alert('User has blocked you — cannot message.');
+      return __oldOpenDM(username);
+    };
 
     // Notifications (stored in localStorage)
     function addNotification(text){ try{ const key='jjs_notifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift({t:Date.now(),text}); localStorage.setItem(key, JSON.stringify(arr.slice(0,50))); renderNotifications(); }catch(e){} }
@@ -578,5 +770,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
     loadRemoteLibs();
   </script>
 </body>
+</html>
+
 </html>
 
