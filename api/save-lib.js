@@ -91,57 +91,68 @@ module.exports = async (req, res) => {
 
     // handle avatar upload
     if(action === 'uploadAvatar'){
-      // Accepts payload.file (Buffer or base64), or payload.dataUrl, and payload.username
+      // Accepts payload.file (Buffer, base64, or raw binary), or payload.dataUrl, and payload.username
       let fileBuffer = null, mime = 'image/png', ext = 'png';
       const username = (payload.username || (payload.lib && payload.lib.username) || 'anonymous').replace(/[^a-z0-9_-]/gi,'_');
-      if(payload.file){
-        // If file is a Buffer, or base64 string
-        if(Buffer.isBuffer(payload.file)){
-          fileBuffer = payload.file;
-        }else if(typeof payload.file === 'string'){
-          // If base64 string, decode
-          fileBuffer = Buffer.from(payload.file, 'base64');
+      try {
+        if(payload.file){
+          // If file is a Buffer
+          if(Buffer.isBuffer(payload.file)){
+            fileBuffer = payload.file;
+          }else if(typeof payload.file === 'string'){
+            // If base64 string, decode
+            fileBuffer = Buffer.from(payload.file, 'base64');
+          }else if(payload.file instanceof Uint8Array){
+            fileBuffer = Buffer.from(payload.file);
+          }
+          // Optionally allow mime/ext in payload
+          if(payload.mime) mime = payload.mime;
+          if(payload.ext) ext = payload.ext;
+        }else if(payload.dataUrl || (payload.lib && payload.lib.dataUrl)){
+          const dataUrl = payload.dataUrl || (payload.lib && payload.lib.dataUrl);
+          const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
+          if(!m) throw new Error('Invalid dataUrl');
+          mime = m[1];
+          fileBuffer = Buffer.from(m[2], 'base64');
+          ext = mime.split('/')[1].split('+')[0] || 'png';
+        }else{
+          throw new Error('Missing file or dataUrl');
         }
-        // Optionally allow mime/ext in payload
-        if(payload.mime) mime = payload.mime;
-        if(payload.ext) ext = payload.ext;
-      }else if(payload.dataUrl || (payload.lib && payload.lib.dataUrl)){
-        const dataUrl = payload.dataUrl || (payload.lib && payload.lib.dataUrl);
-        const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
-        if(!m) return res.status(400).json({ error: 'Invalid dataUrl' });
-        mime = m[1];
-        fileBuffer = Buffer.from(m[2], 'base64');
-        ext = mime.split('/')[1].split('+')[0] || 'png';
-      }else{
-        return res.status(400).json({ error: 'Missing file or dataUrl' });
+        // Fallback: try to guess mime/ext if not provided
+        if(!mime || !ext){
+          mime = 'image/png'; ext = 'png';
+        }
+        // Convert to base64 for GitHub
+        const b64 = fileBuffer.toString('base64');
+        const avBase = basePath ? `${basePath}/avatars` : 'avatars';
+        const avPath = `${avBase}/${username}.${ext}`;
+        const apiAvatar = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(avPath)}`;
+        const sha = await getShaForPath(avPath);
+        const putBody = { message: `Upload avatar for ${username}`, content: b64, branch };
+        if(sha) putBody.sha = sha;
+        const putResp = await fetchFn(apiAvatar, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
+        if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub avatar upload error', detail: txt }); }
+        const result = await putResp.json();
+        // update social record for user to include avatar url (best-effort)
+        try{
+          const socialBase = basePath ? `${basePath}/social` : 'social';
+          const socialPath = `${socialBase}/${username}.json`;
+          const apiSocial = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(socialPath)}`;
+          let existing = {};
+          const getS = await fetchFn(apiSocial + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+          let sSha = null;
+          if(getS && getS.status === 200){ const d = await getS.json(); sSha = d.sha; try{ existing = JSON.parse(Buffer.from(d.content,'base64').toString('utf8')); }catch(e){ existing = {}; } }
+          existing.avatar_url = result.content && result.content.download_url;
+          const socContent = Buffer.from(JSON.stringify(existing, null, 2), 'utf8').toString('base64');
+          const socPut = { message: `Update social for ${username} (avatar)`, content: socContent, branch };
+          if(sSha) socPut.sha = sSha;
+          await fetchFn(apiSocial, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(socPut) }).catch(()=>{});
+        }catch(e){ /* non-fatal */ }
+        return res.status(200).json({ ok: true, result, url: result.content && result.content.download_url });
+      } catch (err) {
+        console.error('Avatar upload error:', err);
+        return res.status(400).json({ error: 'Avatar upload failed', detail: String(err) });
       }
-      // Convert to base64 for GitHub
-      const b64 = fileBuffer.toString('base64');
-      const avBase = basePath ? `${basePath}/avatars` : 'avatars';
-      const avPath = `${avBase}/${username}.${ext}`;
-      const apiAvatar = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(avPath)}`;
-      const sha = await getShaForPath(avPath);
-      const putBody = { message: `Upload avatar for ${username}`, content: b64, branch };
-      if(sha) putBody.sha = sha;
-      const putResp = await fetchFn(apiAvatar, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
-      if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub avatar upload error', detail: txt }); }
-      const result = await putResp.json();
-      // update social record for user to include avatar url (best-effort)
-      try{
-        const socialBase = basePath ? `${basePath}/social` : 'social';
-        const socialPath = `${socialBase}/${username}.json`;
-        const apiSocial = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(socialPath)}`;
-        let existing = {};
-        const getS = await fetchFn(apiSocial + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
-        let sSha = null;
-        if(getS && getS.status === 200){ const d = await getS.json(); sSha = d.sha; try{ existing = JSON.parse(Buffer.from(d.content,'base64').toString('utf8')); }catch(e){ existing = {}; } }
-        existing.avatar_url = result.content && result.content.download_url;
-        const socContent = Buffer.from(JSON.stringify(existing, null, 2), 'utf8').toString('base64');
-        const socPut = { message: `Update social for ${username} (avatar)`, content: socContent, branch };
-        if(sSha) socPut.sha = sSha;
-        await fetchFn(apiSocial, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(socPut) }).catch(()=>{});
-      }catch(e){ /* non-fatal */ }
-      return res.status(200).json({ ok: true, result, url: result.content && result.content.download_url });
     }
 
     // handle DM saves
@@ -193,38 +204,52 @@ module.exports = async (req, res) => {
     if(action === 'getComments'){
       const libId = urlObj.searchParams.get('libId');
       if(!libId) return res.status(400).json({ error: 'Missing libId' });
-      // Try exact id.json first, only fallback if not found
       let libPath = `${basePath}/${libId}.json`;
       let apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
-      let getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
       let libData = null;
-      if(getResp && getResp.status === 200){
-        const d = await getResp.json();
-        try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
-        catch(e){ libData = null; }
+      let timedOut = false;
+      // Helper to fetch with timeout
+      async function fetchWithTimeout(url, opts, ms=10000){
+        return Promise.race([
+          fetchFn(url, opts),
+          new Promise((_, reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
+        ]);
       }
-      // Only fallback if id.json not found
-      if(!libData){
-        // fallback: try id-*.json
-        const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(basePath)}`;
-        const dirResp = await fetchFn(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
-        if(dirResp && dirResp.status === 200){
-          const files = await dirResp.json();
-          const match = files.find(f=>f.name.startsWith(libId+'-') && f.name.endsWith('.json'));
-          if(match){
-            libPath = `${basePath}/${match.name}`;
-            apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
-            getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
-            if(getResp && getResp.status === 200){
-              const d = await getResp.json();
-              try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
-              catch(e){ libData = null; }
+      try {
+        let getResp = await fetchWithTimeout(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } }, 10000);
+        if(getResp && getResp.status === 200){
+          const d = await getResp.json();
+          try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
+          catch(e){ libData = null; }
+        }
+        // Only fallback if id.json not found
+        if(!libData){
+          // fallback: try id-*.json
+          const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(basePath)}`;
+          const dirResp = await fetchWithTimeout(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } }, 10000);
+          if(dirResp && dirResp.status === 200){
+            const files = await dirResp.json();
+            const match = files.find(f=>f.name.startsWith(libId+'-') && f.name.endsWith('.json'));
+            if(match){
+              libPath = `${basePath}/${match.name}`;
+              apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
+              getResp = await fetchWithTimeout(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } }, 10000);
+              if(getResp && getResp.status === 200){
+                const d = await getResp.json();
+                try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
+                catch(e){ libData = null; }
+              }
             }
           }
         }
+      } catch (err) {
+        timedOut = true;
       }
       if(libData && Array.isArray(libData.comments)){
         return res.status(200).json({ ok:true, comments: libData.comments });
+      }
+      if(timedOut){
+        return res.status(504).json({ ok:false, comments: [], error: 'Timeout loading comments' });
       }
       return res.status(200).json({ ok:true, comments: [] });
     }
