@@ -172,14 +172,24 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
       filtered.forEach(lib=>{
         const node = tpl.content.cloneNode(true);
-        node.querySelector('.title').textContent = lib.title;
+        // Add avatar next to title
+        const titleEl = node.querySelector('.title');
+        const avatarImg = document.createElement('img');
+        avatarImg.className = 'cardAvatar';
+        avatarImg.style.width = '32px';
+        avatarImg.style.height = '32px';
+        avatarImg.style.borderRadius = '50%';
+        avatarImg.style.objectFit = 'cover';
+        avatarImg.style.marginRight = '8px';
+        titleEl.parentElement.insertBefore(avatarImg, titleEl);
+        titleEl.textContent = lib.title;
         // Show description if present
         if(lib.description){
           const desc = document.createElement('div');
           desc.className = 'smallMuted';
           desc.style.margin = '6px 0 0 0';
           desc.textContent = lib.description.length>250? lib.description.slice(0,250)+'…': lib.description;
-          node.querySelector('.title').parentElement.appendChild(desc);
+          titleEl.parentElement.appendChild(desc);
         }
         node.querySelector('.author').textContent = lib.author;
         // make author clickable to open profile
@@ -195,11 +205,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
         (async ()=>{
           try{
             const s = await fetchSocial(lib.author);
-            const img = node.querySelector('.cardAvatar');
-            if(img) img.src = (s && s.avatar_url) ? s.avatar_url : (localStorage.getItem('jjs_avatar_url')||'');
+            avatarImg.src = (s && s.avatar_url) ? s.avatar_url : (localStorage.getItem('jjs_avatar_url')||'');
             // optionally show small bio snippet in meta
             if(s && s.bio){ const meta = node.querySelector('.meta'); const bioEl = document.createElement('div'); bioEl.className='smallMuted'; bioEl.style.marginTop='6px'; bioEl.textContent = s.bio.length>80? s.bio.slice(0,80)+'…': s.bio; meta.appendChild(bioEl); }
-          }catch(e){}
+          }catch(e){ avatarImg.src = localStorage.getItem('jjs_avatar_url')||''; }
         })();
 
         const card = node.querySelector('.card');
@@ -342,8 +351,16 @@ Get a code from the character builder in jjs, then paste it here. When you click
           list.innerHTML = '<div class="smallMuted">Loading comments...</div>';
           try {
             const resp = await fetch(SERVERLESS_URL + '?action=getComments&libId=' + encodeURIComponent(lib.id));
+            if(resp.status === 404) {
+              list.innerHTML = '<div class="smallMuted">Library not found.</div>';
+              return;
+            }
             const j = await resp.json();
             if (!j.ok) throw new Error('Failed to load');
+            if (!j.comments || j.comments.length === 0) {
+              list.innerHTML = '<div class="smallMuted">No comments yet.</div>';
+              return;
+            }
             renderCommentsThread(j.comments||[], list, lib);
           } catch (e) {
             list.innerHTML = '<div class="smallMuted">Failed to load comments.</div>';
@@ -577,7 +594,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(description.length>250) return alert('Description too long');
         if(!code) return alert('Code required');
         const author = currentUser.username;
-        const lib = {id:Date.now().toString(),title,description,author,credit,code,tags};
+        const lib = {id:Date.now().toString(),title,description,author,credit,code,tags,comments:[]};
         libs.push(lib);
         render(filter(search.value));
         modal.remove();
@@ -990,7 +1007,4 @@ Get a code from the character builder in jjs, then paste it here. When you click
 </body>
 </html>
 
-
-
-</html>
 
