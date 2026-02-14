@@ -91,14 +91,32 @@ module.exports = async (req, res) => {
 
     // handle avatar upload
     if(action === 'uploadAvatar'){
-      // expect payload.dataUrl and payload.username
-      const dataUrl = payload.dataUrl || (payload.lib && payload.lib.dataUrl);
+      // Accepts payload.file (Buffer or base64), or payload.dataUrl, and payload.username
+      let fileBuffer = null, mime = 'image/png', ext = 'png';
       const username = (payload.username || (payload.lib && payload.lib.username) || 'anonymous').replace(/[^a-z0-9_-]/gi,'_');
-      if(!dataUrl) return res.status(400).json({ error: 'Missing dataUrl' });
-      const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
-      if(!m) return res.status(400).json({ error: 'Invalid dataUrl' });
-      const mime = m[1]; const b64 = m[2];
-      const ext = mime.split('/')[1].split('+')[0] || 'png';
+      if(payload.file){
+        // If file is a Buffer, or base64 string
+        if(Buffer.isBuffer(payload.file)){
+          fileBuffer = payload.file;
+        }else if(typeof payload.file === 'string'){
+          // If base64 string, decode
+          fileBuffer = Buffer.from(payload.file, 'base64');
+        }
+        // Optionally allow mime/ext in payload
+        if(payload.mime) mime = payload.mime;
+        if(payload.ext) ext = payload.ext;
+      }else if(payload.dataUrl || (payload.lib && payload.lib.dataUrl)){
+        const dataUrl = payload.dataUrl || (payload.lib && payload.lib.dataUrl);
+        const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
+        if(!m) return res.status(400).json({ error: 'Invalid dataUrl' });
+        mime = m[1];
+        fileBuffer = Buffer.from(m[2], 'base64');
+        ext = mime.split('/')[1].split('+')[0] || 'png';
+      }else{
+        return res.status(400).json({ error: 'Missing file or dataUrl' });
+      }
+      // Convert to base64 for GitHub
+      const b64 = fileBuffer.toString('base64');
       const avBase = basePath ? `${basePath}/avatars` : 'avatars';
       const avPath = `${avBase}/${username}.${ext}`;
       const apiAvatar = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(avPath)}`;
@@ -175,7 +193,7 @@ module.exports = async (req, res) => {
     if(action === 'getComments'){
       const libId = urlObj.searchParams.get('libId');
       if(!libId) return res.status(400).json({ error: 'Missing libId' });
-      // Try id.json and id-title.json
+      // Try exact id.json first, only fallback if not found
       let libPath = `${basePath}/${libId}.json`;
       let apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
       let getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
@@ -185,6 +203,7 @@ module.exports = async (req, res) => {
         try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
         catch(e){ libData = null; }
       }
+      // Only fallback if id.json not found
       if(!libData){
         // fallback: try id-*.json
         const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(basePath)}`;
