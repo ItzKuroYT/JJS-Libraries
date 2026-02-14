@@ -172,8 +172,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
       filtered.forEach(lib=>{
         const node = tpl.content.cloneNode(true);
-        // Add avatar next to title
+        // Add avatar next to title, remove any existing avatar
         const titleEl = node.querySelector('.title');
+        // Remove any existing avatar element
+        const existingAvatar = titleEl.parentElement.querySelector('.cardAvatar');
+        if(existingAvatar) existingAvatar.remove();
         const avatarImg = document.createElement('img');
         avatarImg.className = 'cardAvatar';
         avatarImg.style.width = '32px';
@@ -1006,5 +1009,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
 
