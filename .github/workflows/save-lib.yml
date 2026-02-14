@@ -11,10 +11,20 @@ jobs:
   save-lib:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Create or update file from payload
-        uses: peter-evans/create-or-update-file@v3
+        uses: actions/github-script@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ github.event.client_payload.path }}
-          commit-message: "Add/Update library ${{ github.event.client_payload.filename }}"
-          content: ${{ toJson(github.event.client_payload.content) }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = `${{ github.event.client_payload.path }}`;
+            const content = ${{ toJson(github.event.client_payload.content) }};
+            fs.mkdirSync(require('path').dirname(path), { recursive: true });
+            fs.writeFileSync(path, content);
+            await exec('git', ['config', '--global', 'user.name', 'github-actions']);
+            await exec('git', ['config', '--global', 'user.email', 'github-actions@github.com']);
+            await exec('git', ['add', path]);
+            await exec('git', ['commit', '-m', `Add/Update library ${{ github.event.client_payload.filename }}`]);
+            await exec('git', ['push']);
