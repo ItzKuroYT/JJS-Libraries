@@ -1,3 +1,115 @@
+    // --- COMMENTS SYSTEM (embedded in library file) ---
+    // GET comments for a library: ?action=getComments&libId=...
+    if(action === 'getComments'){
+      const libId = urlObj.searchParams.get('libId');
+      if(!libId) return res.status(400).json({ error: 'Missing libId' });
+      // Find library file by id
+      const libsBase = basePath;
+      // Try both id and id-title.json
+      let libPath = null;
+      let apiLib = null;
+      let libData = null;
+      // Try id.json
+      libPath = `${libsBase}/${libId}.json`;
+      apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
+      let getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      if(getResp && getResp.status === 200){
+        const d = await getResp.json();
+        try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
+        catch(e){ libData = null; }
+      }
+      // If not found, try id-title.json
+      if(!libData){
+        // fallback: search for file with id in name
+        // (for now, just try id-*.json)
+        const searchPath = `${libsBase}/${libId}-`;
+        // List files in the repo path (not efficient, but works for small sets)
+        const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libsBase)}`;
+        const dirResp = await fetchFn(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+        if(dirResp && dirResp.status === 200){
+          const files = await dirResp.json();
+          const match = files.find(f=>f.name.startsWith(libId+'-') && f.name.endsWith('.json'));
+          if(match){
+            libPath = `${libsBase}/${match.name}`;
+            apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
+            getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+            if(getResp && getResp.status === 200){
+              const d = await getResp.json();
+              try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
+              catch(e){ libData = null; }
+            }
+          }
+        }
+      }
+      if(libData && Array.isArray(libData.comments)){
+        return res.status(200).json({ ok:true, comments: libData.comments });
+      }
+      return res.status(200).json({ ok:true, comments: [] });
+    }
+
+    // POST add a comment: ?action=addComment, body: { libId, comment: { author, text, parentId (optional) } }
+    if(action === 'addComment'){
+      const libId = payload.libId;
+      const comment = payload.comment;
+      if(!libId || !comment || !comment.author || !comment.text) return res.status(400).json({ error: 'Missing libId, author, or text' });
+      if(comment.text.length > 200) return res.status(400).json({ error: 'Comment too long (max 200)' });
+      // Find library file by id
+      const libsBase = basePath;
+      let libPath = null;
+      let apiLib = null;
+      let libData = null;
+      let sha = null;
+      // Try id.json
+      libPath = `${libsBase}/${libId}.json`;
+      apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
+      let getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      if(getResp && getResp.status === 200){
+        const d = await getResp.json(); sha = d.sha;
+        try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }catch(e){ libData = null; }
+      }
+      // If not found, try id-title.json
+      if(!libData){
+        const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libsBase)}`;
+        const dirResp = await fetchFn(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+        if(dirResp && dirResp.status === 200){
+          const files = await dirResp.json();
+          const match = files.find(f=>f.name.startsWith(libId+'-') && f.name.endsWith('.json'));
+          if(match){
+            libPath = `${libsBase}/${match.name}`;
+            apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
+            getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+            if(getResp && getResp.status === 200){
+              const d = await getResp.json(); sha = d.sha;
+              try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }catch(e){ libData = null; }
+            }
+          }
+        }
+      }
+      if(!libData) return res.status(404).json({ error: 'Library not found' });
+      if(!Array.isArray(libData.comments)) libData.comments = [];
+      // create new comment object
+      const newComment = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: comment.author, text: comment.text.slice(0,200), t: Date.now(), replies: [] };
+      if(comment.parentId){
+        // find parent and add as reply (recursive)
+        function addReply(arr){
+          for(const c of arr){
+            if(c.id === comment.parentId){ c.replies = c.replies || []; c.replies.push(newComment); return true; }
+            if(c.replies && addReply(c.replies)) return true;
+          }
+          return false;
+        }
+        if(!addReply(libData.comments)) return res.status(404).json({ error: 'Parent comment not found' });
+      }else{
+        libData.comments.push(newComment);
+      }
+      const content = Buffer.from(JSON.stringify(libData, null, 2), 'utf8').toString('base64');
+      const putBody = { message: `Add comment to ${libId}`, content, branch };
+      if(sha) putBody.sha = sha;
+      const putResp = await fetchFn(apiLib, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
+      if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub comment save error', detail: txt }); }
+      const result = await putResp.json();
+      return res.status(200).json({ ok:true, result, comment: newComment });
+    }
 // Serverless function (Vercel / Netlify compatible) to save a library JSON into a GitHub repo.
 // Configuration via environment variables:
 // GITHUB_TOKEN - a PAT with repo contents permissions (store as a secret in your host)
@@ -217,4 +329,5 @@ function sanitizeFilename(name){
 function toBase64(str){
   try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
 }
+
 
