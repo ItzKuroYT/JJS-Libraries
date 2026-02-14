@@ -71,7 +71,33 @@ module.exports = async (req, res) => {
   }
 
   let payload;
-  try { payload = await readBody(req); } catch (e) { console.error('Body parse error', e); return res.status(400).json({ error: 'Invalid JSON' }); }
+  // Support multipart/form-data for avatar upload
+  const contentType = req.headers['content-type'] || req.headers['Content-Type'] || '';
+  if(contentType.startsWith('multipart/form-data')){
+    // Use busboy to parse multipart
+    const Busboy = require('busboy');
+    payload = {};
+    await new Promise((resolve, reject) => {
+      const busboy = new Busboy({ headers: req.headers });
+      busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+        let buffers = [];
+        file.on('data', data => buffers.push(data));
+        file.on('end', () => {
+          payload.file = Buffer.concat(buffers);
+          payload.mime = mimetype;
+          payload.ext = filename.split('.').pop() || 'png';
+        });
+      });
+      busboy.on('field', (fieldname, val) => {
+        payload[fieldname] = val;
+      });
+      busboy.on('finish', resolve);
+      busboy.on('error', reject);
+      req.pipe(busboy);
+    });
+  }else{
+    try { payload = await readBody(req); } catch (e) { console.error('Body parse error', e); return res.status(400).json({ error: 'Invalid JSON' }); }
+  }
 
   // Only require lib for library save/delete
   let lib, filename, path, apiUrl;
