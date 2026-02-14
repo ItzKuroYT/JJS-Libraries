@@ -16,5 +16,11 @@
     "username": "JJ_lovemuffins",
     "passwordHash": "4df6271910541ef1566de34c4762f0fe$393a43537f879501bf95dc948270e67056338889ac06433475fd35c7a270c69d8eaa08fd86ae923c23de6ca39a2fc0e2a56173dce656c1a1dc0e619665ec6b32",
     "createdAt": "2026-02-13T22:15:23.869Z"
+  },
+  {
+    "id": "1771038240041",
+    "username": "Aidenvstheworld",
+    "passwordHash": "3be259a6b8d90455320dae7212f3e285$dbcb0a511543aaefb60905124a829fa4441196cc048b8c4a914aa578373ded582a94c5a9c2e5c5a5b62ade27fbc8a32f625490a3b89694932ca0549842a22f08",
+    "createdAt": "2026-02-14T03:04:00.219Z"
   }
 ]
