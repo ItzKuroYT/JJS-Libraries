@@ -243,7 +243,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(!SERVERLESS_URL) return;
       const list = document.getElementById('commentsList');
       const libId = getLibIdForApi(lib);
-      if(!libId){ renderCommentsList(lib); return; }
+      const rerender = typeof opts.renderFn === 'function' ? opts.renderFn : null;
+      if(!libId){ if(rerender) rerender(); return; }
       if(opts.showSpinner && list){
         list.innerHTML = '<div class="smallMuted">Loading comments...</div>';
       }
@@ -259,14 +260,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(resp.status === 404){
           lib.comments = [];
           saveLocalComments(lib, []);
-          renderCommentsList(lib);
+          if(rerender) rerender();
           return;
         }
         const data = await resp.json().catch(()=>null);
         if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed');
         lib.comments = data.comments || [];
         saveLocalComments(lib, lib.comments);
-        renderCommentsList(lib);
+        if(rerender) rerender();
       }catch(e){
         console.error('syncCommentsFromServer failed', e);
         if(opts.showError && list){
@@ -274,7 +275,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           list.innerHTML = `<div class="smallMuted">Failed to load comments. ${escapeHtml(msg)} <button class="ghost" id="retryCommentsSync">Retry</button></div>`;
           const retryBtn = list.querySelector('#retryCommentsSync');
           if(retryBtn){
-            retryBtn.addEventListener('click', ()=> syncCommentsFromServer(lib, { showSpinner: true, showError: true }));
+            retryBtn.addEventListener('click', ()=> syncCommentsFromServer(lib, Object.assign({}, opts, { showSpinner: true, showError: true })));
           }
         }
       }
@@ -468,15 +469,16 @@ Get a code from the character builder in jjs, then paste it here. When you click
           </div>`;
           document.body.appendChild(modal);
           document.getElementById('closeCommentsModal').onclick = ()=>modal.remove();
+          const rerenderComments = () => renderCommentsList(lib);
           // Add comment UI
-          renderAddCommentUI(lib);
+          renderAddCommentUI(lib, rerenderComments);
           // Fetch and render comments
           const hasLocalComments = ensureLibComments(lib).length > 0;
-          renderCommentsList(lib);
-          syncCommentsFromServer(lib, { showSpinner: !hasLocalComments, showError: true });
+          rerenderComments();
+          syncCommentsFromServer(lib, { showSpinner: !hasLocalComments, showError: true, renderFn: rerenderComments });
         }
 
-        function renderAddCommentUI(lib) {
+        function renderAddCommentUI(lib, rerenderCb) {
           const u = getCurrentUser();
           const wrap = document.getElementById('addCommentSection');
           wrap.innerHTML = '';
@@ -495,13 +497,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
             submitBtn.disabled = true;
             const tempComment = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: text.slice(0,COMMENT_MAX_LENGTH), t: Date.now(), replies: [] };
             appendComment(lib, tempComment);
-            renderCommentsList(lib);
+            if(rerenderCb) rerenderCb(); else renderCommentsList(lib);
             input.value = '';
             count.textContent = '';
             try{
               if(SERVERLESS_URL){
                 await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), null);
-                await syncCommentsFromServer(lib);
+                await syncCommentsFromServer(lib, { renderFn: rerenderCb });
               }
             }catch(err){
               console.warn('Comment sync failed', err);
@@ -564,7 +566,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
                     try{
                       if(SERVERLESS_URL){
                         await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), c.id);
-                        await syncCommentsFromServer(lib);
+                        await syncCommentsFromServer(lib, { renderFn: ()=>renderCommentsList(lib) });
                       }
                     }catch(err){
                       console.warn('Reply sync failed', err);
@@ -1239,6 +1241,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
 
 
