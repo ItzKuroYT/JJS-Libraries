@@ -58,5 +58,12 @@
     "username": "JamesTheLonely",
     "passwordHash": "f7e8cb3fab356eaf4f0b712c59719307$c92531250856b48d9d96c561fbc12ae7d8a5d82bd57d66cc7b25698c3e00c6068ea387ea93af1c541b94778422d97c51564ca5cf16757e790fd3077e2e02d459",
     "createdAt": "2026-02-15T11:22:32.961Z"
+  },
+  {
+    "id": "1771191569115",
+    "username": "Shunoko",
+    "passwordHash": "6f5785d4d43ed74bc94d0ad490af5bb7$ab0f55e58b141a17280c9e6c573a817f5efb22daae9c6fd848db1d1ddbb35d7ef50e6f83db120f1370689c3611aef249e9c7554025902c61e016792138cf07c9",
+    "createdAt": "2026-02-15T21:39:29.182Z",
+    "role": "member"
   }
 ]
