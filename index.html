@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>JJS Library — Search & Copy</title>
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7c3aed;--glass:rgba(255,255,255,0.03)}
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7c3aed;--glass:rgba(255,255,255,0.03);--ratingPositive:#22c55e;--ratingNeutral:#facc15;--ratingNegative:#f87171}
     html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#071024 0%,#081226 100%);color:#e6eef6}
     .container{max-width:1248px;margin:40px auto;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.8)}
     header{display:flex;gap:16px;align-items:center;justify-content:space-between}
@@ -23,6 +23,22 @@
     pre.code{background:#020617;color:#dff0ff;padding:12px;border-radius:8px;overflow:auto;max-height:260px;margin:10px 0}
     .small{font-size:13px}
     .link{color:var(--accent);text-decoration:none}
+    .ratingRow{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;position:relative}
+    .ratingRow.ratingRowFlash{animation:ratingRowPulse 0.6s ease}
+    .ratingStars{display:flex;gap:4px}
+    .ratingStars button{background:transparent;border:none;padding:0;font-size:18px;line-height:1;color:rgba(255,255,255,0.25);cursor:pointer;transition:color 0.18s ease,transform 0.18s ease;will-change:color,transform}
+    .ratingStars button.filled{color:#facc15;text-shadow:0 0 12px rgba(250,204,21,0.35);transform:scale(1)}
+    .ratingStars button:not(:disabled):hover{color:#fde047;transform:translateY(-1px)}
+    .ratingStars button:not(:disabled):active{transform:scale(0.88)}
+    .ratingStars button:disabled{opacity:0.35;cursor:not-allowed}
+    .ratingStars button:focus-visible{outline:1px dashed var(--accent);outline-offset:2px}
+    .ratingPercent{font-size:12px;color:var(--muted);transition:color 0.2s ease,transform 0.2s ease}
+    .ratingPercent--positive{color:var(--ratingPositive)}
+    .ratingPercent--neutral{color:var(--ratingNeutral)}
+    .ratingPercent--negative{color:var(--ratingNegative)}
+    .ratingRow.ratingRowFlash .ratingPercent{transform:scale(1.06)}
+    @keyframes ratingRowPulse{0%{transform:scale(0.96);opacity:0.6;}60%{transform:scale(1.04);opacity:1;}100%{transform:scale(1);opacity:1;}}
+    @media (prefers-reduced-motion:reduce){.ratingRow.ratingRowFlash{animation:none}.ratingPercent{transition:none}.ratingStars button{transition:none}}
     @media(max-width:600px){.container{margin:18px;padding:16px}}
   </style>
 </head>
@@ -239,6 +255,150 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return data.comment;
     }
 
+    function ensureLibRatings(lib){
+      if(!lib) return [];
+      if(Array.isArray(lib.ratings)) return lib.ratings;
+      lib.ratings = [];
+      return lib.ratings;
+    }
+
+    function clampRatingValue(value){
+      const num = Number(value);
+      if(!Number.isFinite(num)) return null;
+      return Math.min(5, Math.max(1, num));
+    }
+
+    function getRatingStats(lib){
+      const ratings = ensureLibRatings(lib);
+      const values = ratings
+        .map(entry => clampRatingValue(entry && entry.value))
+        .filter(val => typeof val === 'number');
+      if(!values.length) return { avg: 0, percent: 0, count: 0 };
+      const sum = values.reduce((acc, val)=> acc + val, 0);
+      const avg = sum / values.length;
+      const percent = Math.round(((avg - 1) / 4) * 100);
+      const clampedPercent = Math.max(0, Math.min(100, percent));
+      return { avg, percent: clampedPercent, count: values.length };
+    }
+
+    function getRatingTone(percent){
+      if(percent >= 70) return 'positive';
+      if(percent >= 40) return 'neutral';
+      return 'negative';
+    }
+
+    function formatRatingSummary(stats){
+      if(!stats || !stats.count) return 'Be the first to rate';
+      const countLabel = `${stats.count} rating${stats.count === 1 ? '' : 's'}`;
+      return `${stats.percent}% quality • ${countLabel}`;
+    }
+
+    function getUserRatingValue(lib){
+      const me = getCurrentUser();
+      if(!me) return null;
+      const ratings = ensureLibRatings(lib);
+      const match = ratings.find(r=> (r.user || '').toLowerCase() === me.username.toLowerCase());
+      return match ? Number(match.value) || null : null;
+    }
+
+    async function submitRating(lib, value){
+      if(!SERVERLESS_URL) throw new Error('Serverless endpoint not configured');
+      const me = getCurrentUser();
+      if(!me) throw new Error('Sign in to rate');
+      const libId = getLibIdForApi(lib);
+      if(!libId) throw new Error('Missing library identifier');
+      const resp = await fetch(SERVERLESS_URL + '?action=rate', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ libId, rating: value, username: me.username })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to submit rating');
+      lib.ratings = Array.isArray(data.ratings) ? data.ratings : ensureLibRatings(lib);
+      return data.stats || getRatingStats(lib);
+    }
+
+    function renderRatingRow(lib, container){
+      const stats = getRatingStats(lib);
+      const avgRounded = Math.round(stats.avg);
+      const me = getCurrentUser();
+      const toneClasses = ['ratingPercent--positive','ratingPercent--neutral','ratingPercent--negative'];
+      const shouldFlash = container.dataset.justRated === 'true';
+      container.innerHTML = '';
+      const starsWrap = document.createElement('div');
+      starsWrap.className = 'ratingStars';
+      starsWrap.setAttribute('aria-label', stats.count ? `Average rating ${stats.avg.toFixed(1)} out of 5 stars` : 'No ratings yet');
+      const percentEl = document.createElement('div');
+      percentEl.className = 'ratingPercent';
+      percentEl.setAttribute('aria-live','polite');
+      percentEl.textContent = formatRatingSummary(stats);
+      if(stats.count){
+        percentEl.classList.add(`ratingPercent--${getRatingTone(stats.percent)}`);
+        percentEl.title = `${stats.avg.toFixed(2)} average stars`;
+      }else{
+        percentEl.title = 'No ratings yet';
+      }
+      const starButtons = [];
+      const applyFill = (fillValue)=>{
+        starButtons.forEach(b=>{
+          const isFilled = Number(b.dataset.value) <= fillValue;
+          b.classList.toggle('filled', isFilled);
+        });
+      };
+      for(let i=1;i<=5;i++){
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '★';
+        btn.dataset.value = i;
+        btn.setAttribute('aria-label', `Rate ${i} star${i===1?'':'s'}`);
+        if(!me){
+          btn.disabled = true;
+          btn.title = 'Sign in to rate';
+        }
+        btn.addEventListener('mouseenter', ()=>{
+          if(btn.disabled) return;
+          applyFill(i);
+        });
+        btn.addEventListener('mouseleave', ()=>{
+          applyFill(Math.round(getRatingStats(lib).avg));
+        });
+        btn.addEventListener('click', async ()=>{
+          if(btn.disabled) return;
+          const starValue = Number(btn.dataset.value);
+          starButtons.forEach(b=> b.disabled = true);
+          percentEl.textContent = 'Saving...';
+          toneClasses.forEach(cls => percentEl.classList.remove(cls));
+          try{
+            await submitRating(lib, starValue);
+            container.dataset.justRated = 'true';
+            renderRatingRow(lib, container);
+            addNotification(`Rated ${lib.title} ${starValue} star${starValue===1?'':'s'}`);
+          }catch(err){
+            alert(err && err.message ? err.message : 'Failed to submit rating');
+            starButtons.forEach(b=> b.disabled = !me);
+            const fallbackStats = getRatingStats(lib);
+            percentEl.textContent = formatRatingSummary(fallbackStats);
+            if(fallbackStats.count){
+              percentEl.classList.add(`ratingPercent--${getRatingTone(fallbackStats.percent)}`);
+            }
+            applyFill(Math.round(fallbackStats.avg));
+          }
+        });
+        starButtons.push(btn);
+        starsWrap.appendChild(btn);
+      }
+      applyFill(avgRounded);
+      container.appendChild(starsWrap);
+      container.appendChild(percentEl);
+      if(shouldFlash){
+        container.classList.add('ratingRowFlash');
+        delete container.dataset.justRated;
+        setTimeout(()=> container.classList.remove('ratingRowFlash'), 600);
+      }else{
+        container.classList.remove('ratingRowFlash');
+      }
+    }
+
     async function syncCommentsFromServer(lib, opts = {}){
       if(!SERVERLESS_URL) return;
       const list = document.getElementById('commentsList');
@@ -368,6 +528,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
         })();
 
         const card = node.querySelector('.card');
+
+        // Ratings UI
+        const ratingRow = document.createElement('div');
+        ratingRow.className = 'ratingRow';
+        ensureLibRatings(lib);
+        renderRatingRow(lib, ratingRow);
+        const actionsEl = node.querySelector('.actions');
+        card.insertBefore(ratingRow, actionsEl);
         const toggle = node.querySelector('.toggle');
         const copyBtn = node.querySelector('.copy');
         const viewOrig = node.querySelector('.viewOrig');
@@ -1454,6 +1622,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
 
 
