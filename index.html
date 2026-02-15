@@ -433,12 +433,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
         listEl.appendChild(node);
         });
         // diagnostics removed
-    // Helper to escape HTML in comments
-    function escapeHtml(str){
-      return String(str).replace(/[&<>"']/g, function(m) {
-        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'})[m];
-      });
     }
+
+    function escapeHtml(str){
+      const map = {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};
+      return String(str).replace(/[&<>"']/g, (m)=>map[m] || m);
     }
 
     function filter(q){
