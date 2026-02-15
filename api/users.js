@@ -90,14 +90,25 @@ module.exports = async (req,res) => {
   const branch = process.env.GITHUB_BRANCH || 'main';
   const usersPath = (process.env.GITHUB_USERS_PATH || 'users/users.json').replace(/^\/+|\/+$/g,'');
   const jwtSecret = process.env.JWT_SECRET || null;
+  const query = req.query || new URL(req.url, 'http://localhost').searchParams;
+  const getAction = (q)=>{
+    if(!q) return 'health';
+    if(typeof q.get === 'function') return q.get('action') || 'health';
+    return q.action || 'health';
+  };
 
   if(req.method==='GET'){
+    const action = getAction(query);
+    if(action === 'list'){
+      if(!token || !owner || !repo) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO.' });
+      const { users } = await getUsers(token, owner, repo, branch, usersPath);
+      return res.status(200).json({ ok:true, count: users.length });
+    }
     return res.status(200).json({ ok:true, configured: !!(token && owner && repo && jwtSecret), owner: owner||null, repo: repo||null, usersPath });
   }
 
   if(req.method!=='POST') return res.status(405).json({ error:'Method Not Allowed' });
 
-  const query = req.query || new URL(req.url, 'http://localhost').searchParams;
   const action = (query.get && query.get('action')) || (query.action) || 'health';
 
   const body = await readBody(req);

@@ -37,6 +37,10 @@
     .ratingPercent--neutral{color:var(--ratingNeutral)}
     .ratingPercent--negative{color:var(--ratingNegative)}
     .ratingRow.ratingRowFlash .ratingPercent{transform:scale(1.06)}
+    .userStatsBanner{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;margin:12px 0;border-radius:10px;background:linear-gradient(120deg,rgba(124,58,237,0.28),rgba(30,64,175,0.25));border:1px solid rgba(255,255,255,0.08)}
+    .userStatsBanner h2{margin:0;font-size:15px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.78)}
+    .userStatsValue{font-size:26px;font-weight:600;letter-spacing:0.02em}
+    .userStatsTrend{font-size:12px;color:var(--muted)}
     @keyframes ratingRowPulse{0%{transform:scale(0.96);opacity:0.6;}60%{transform:scale(1.04);opacity:1;}100%{transform:scale(1);opacity:1;}}
     @media (prefers-reduced-motion:reduce){.ratingRow.ratingRowFlash{animation:none}.ratingPercent{transition:none}.ratingStars button{transition:none}}
     @media(max-width:600px){.container{margin:18px;padding:16px}}
@@ -105,6 +109,13 @@
           </div>
           <div class="small">Made for Jujutsu Shenanigans</div>
         </header>
+        <div class="userStatsBanner" id="userStatsBanner">
+          <div>
+            <h2>Current Users</h2>
+            <div class="userStatsTrend" id="userStatsMeta">Tracking all registered accounts</div>
+          </div>
+          <div class="userStatsValue" id="userCount">—</div>
+        </div>
 
         <main style="flex:1">
           <div class="controls">
@@ -865,6 +876,38 @@ Get a code from the character builder in jjs, then paste it here. When you click
     function getCurrentUser(){ const tok = getToken(); const p = decodeToken(tok); return p ? { username: p.username, id: p.id } : null; }
     function updateUserLabel(){ const lbl = document.getElementById('userLabel'); const u = getCurrentUser(); if(u) lbl.textContent = `Signed in: ${u.username}`; else lbl.textContent = ''; }
 
+    async function getUserCountFromServer(){
+      try{
+        const resp = await fetch(USERS_URL + '?action=list');
+        if(!resp.ok) throw new Error('Failed to load user count');
+        return await resp.json();
+      }catch(err){
+        throw err;
+      }
+    }
+
+    async function refreshUserCount(){
+      const valueEl = document.getElementById('userCount');
+      const metaEl = document.getElementById('userStatsMeta');
+      if(!valueEl) return;
+      valueEl.textContent = '…';
+      if(metaEl) metaEl.textContent = 'Loading account stats';
+      try{
+        const data = await getUserCountFromServer();
+        if(data && typeof data.count === 'number'){
+          const formatted = data.count.toLocaleString();
+          valueEl.textContent = formatted;
+          if(metaEl) metaEl.textContent = data.count === 1 ? 'One registered account' : `${formatted} registered accounts`;
+        }else{
+          valueEl.textContent = '—';
+          if(metaEl) metaEl.textContent = 'Unable to read account count';
+        }
+      }catch(_err){
+        valueEl.textContent = '—';
+        if(metaEl) metaEl.textContent = 'Unable to load account stats';
+      }
+    }
+
     async function authSignup(username,password){
       try{
         const resp = await fetch(USERS_URL + '?action=signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
@@ -872,6 +915,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(!resp.ok) throw new Error(JSON.stringify(j));
         if(j && j.token) setToken(j.token);
         updateUserLabel();
+        refreshUserCount();
         return j;
       }catch(err){ return null; }
     }
@@ -937,6 +981,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
     });
 
     renderTagPicker();
+    refreshUserCount();
 
     // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
     document.getElementById('createEntry').addEventListener('click', async ()=>{
