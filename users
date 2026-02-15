@@ -34,5 +34,11 @@
     "username": "marii",
     "passwordHash": "d9b29d9529c65d9f36861f5af7245264$07265b3f8a60ecd0e145848a111711ef8d55a4804af5cf6e6164463da8294148effdbb24b997f4827b9c0eaa9771e1e5718f16eb05b9e56da8b86f62ba826dd5",
     "createdAt": "2026-02-15T05:42:43.720Z"
+  },
+  {
+    "id": "1771134653002",
+    "username": "thewheatrat",
+    "passwordHash": "5ffacdbd9085ccd08f1100bd53273062$c89464655b0887170e806ca49aad2bdeed15453ee27b028d878833cfde1d3f31906bf420d984834ec49e25adcccc2584b209507360a5538a5cb5310739dd61f4",
+    "createdAt": "2026-02-15T05:50:53.056Z"
   }
 ]
