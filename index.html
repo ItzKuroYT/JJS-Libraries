@@ -266,16 +266,23 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(delBtn){
           delBtn.addEventListener('click', async ()=>{
             if(!confirm('Delete this library?')) return;
-            const path = lib.__path || (GITHUB.path?GITHUB.path + '/' + lib.__filename:lib.__filename);
-            try{
-              if(SERVERLESS_URL){ await fetch(SERVERLESS_URL + '?action=delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ path }) }); }
-              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){
-                // delete via contents API
-                const apiBase = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(path)}`;
-                const getResp = await fetch(apiBase + `?ref=${encodeURIComponent(GITHUB.branch)}`, { headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}` } });
-                if(getResp.status===200){ const data = await getResp.json(); const delResp = await fetch(apiBase, { method:'DELETE', headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}`, 'Content-Type':'application/json' }, body: JSON.stringify({ message: 'Delete library', sha: data.sha, branch: GITHUB.branch }) }); }
+            // Compose filename as used in backend
+            const filename = lib.__filename || `${lib.id}-${sanitizeFilename(lib.title)}.json`;
+            try {
+              // Call backend API to delete the file from the lib folder
+              const resp = await fetch('/api/save-lib.js?action=delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lib, filename })
+              });
+              if(!resp.ok){
+                const err = await resp.json();
+                alert('Delete failed: ' + (err.error || resp.status));
+                return;
               }
-            }catch(e){ /* ignore */ }
+            } catch(e){
+              alert('Delete failed: ' + (e.message || e));
+            }
             // remove locally
             const idx = libs.findIndex(x=>x.id===lib.id);
             if(idx>=0) libs.splice(idx,1);
@@ -439,7 +446,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     // Add button opens Discord invite (manual additions are done by editing the file)
     document.getElementById('newEntry').addEventListener('click', ()=>{
-      window.open('https://discord.gg/h9bxQMPUMY', '_blank');
+      window.open('https://discord.gg/VqwDPu6K', '_blank');
     });
 
     /*
@@ -888,29 +895,121 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     // Simple DM storage: store conversations keyed by usernames in localStorage; attempt serverless save when available
-    function saveDMMessage(to, msg){ const from = getCurrentUser() ? getCurrentUser().username : 'Anonymous'; const convKey = `jjs_dm_${[from,to].sort().join('_')}`; const arr = JSON.parse(localStorage.getItem(convKey)||'[]'); const entry = {from,to,message:msg,t:Date.now()}; arr.push(entry); localStorage.setItem(convKey, JSON.stringify(arr)); // try serverless
-      if(SERVERLESS_URL){ fetch(SERVERLESS_URL + '?action=saveDM', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ conv: convKey, entry }) }).catch(()=>{}); }
-      renderDMConversation(to);
+
+    // --- DM logic using single dms.json ---
+    // --- DM logic using serverless only ---
+    function getDmKey(user1, user2) {
+      return [user1, user2].sort().join('_');
     }
 
-    function listDMConvos(){ // find keys
-      const keys = Object.keys(localStorage).filter(k=>k.startsWith('jjs_dm_'));
-      return keys.map(k=>k.replace('jjs_dm_',''));
+    async function fetchDmsFromServer(key) {
+      if (!SERVERLESS_URL) return [];
+      try {
+        const resp = await fetch(SERVERLESS_URL + '?action=getDM&conv=' + encodeURIComponent(key));
+        if (!resp.ok) return [];
+        const j = await resp.json();
+        return Array.isArray(j.dms) ? j.dms : [];
+      } catch (e) { return []; }
     }
 
-    function renderDMList(){ const wrap = document.getElementById('dmConvos'); wrap.innerHTML=''; const convs = listDMConvos(); convs.forEach(c=>{ const b = document.createElement('div'); b.className='libItem'; b.textContent = c.replace(/_/g,' → '); b.style.cursor='pointer'; b.addEventListener('click', ()=>{ const parts = c.split('_'); const other = parts.find(x=>x!== (getCurrentUser()?getCurrentUser().username:'Anonymous')) || parts[0]; openDMWindow(other); }); wrap.appendChild(b); }); }
+    async function saveDMMessage(to, msg) {
+      const from = getCurrentUser() ? getCurrentUser().username : 'Anonymous';
+      const key = getDmKey(from, to);
+      const entry = { from, to, message: msg, t: Date.now() };
+      // Save to serverless
+      if (SERVERLESS_URL) {
+        await fetch(SERVERLESS_URL + '?action=saveDM', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conv: key, entry })
+        });
+      }
+      await renderDMConversation(to);
+    }
 
-    function renderDMConversation(withUser){ const key = `jjs_dm_${[getCurrentUser()?getCurrentUser().username:'Anonymous', withUser].sort().join('_')}`; const data = JSON.parse(localStorage.getItem(key)||'[]'); // open modal-like area
-      let modal = document.getElementById('dmModal'); if(!modal){ modal = document.createElement('div'); modal.id='dmModal'; modal.style.position='fixed'; modal.style.right='20px'; modal.style.bottom='20px'; modal.style.width='320px'; modal.style.maxHeight='60vh'; modal.style.background='var(--card)'; modal.style.padding='10px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
+    async function listDMConvos() {
+      if (!SERVERLESS_URL) return [];
+      try {
+        const resp = await fetch(SERVERLESS_URL + '?action=listDMs');
+        if (!resp.ok) return [];
+        const j = await resp.json();
+        return Array.isArray(j.convs) ? j.convs : [];
+      } catch (e) { return []; }
+    }
+
+    async function renderDMList() {
+      const wrap = document.getElementById('dmConvos');
+      wrap.innerHTML = '';
+      const convs = await listDMConvos();
+      // Sort by most recent message
+      const convsWithLast = await Promise.all(convs.map(async c => {
+        const dms = await fetchDmsFromServer(c);
+        const last = dms.length ? dms[dms.length - 1].t : 0;
+        return { c, last, dms };
+      }));
+      convsWithLast.sort((a, b) => b.last - a.last);
+      convsWithLast.forEach(({ c, dms }) => {
+        const b = document.createElement('div');
+        b.className = 'libItem';
+        // Show the other user in the DM
+        const parts = c.split('_');
+        const me = getCurrentUser() ? getCurrentUser().username : 'Anonymous';
+        const other = parts.find(x => x !== me) || parts[0];
+        b.textContent = other + (dms && dms.length ? ` (${dms[dms.length-1].message.slice(0, 20)}${dms[dms.length-1].message.length > 20 ? '…' : ''})` : '');
+        b.style.cursor = 'pointer';
+        b.addEventListener('click', () => {
+          openDMWindow(other);
+        });
+        wrap.appendChild(b);
+      });
+    }
+
+    async function renderDMConversation(withUser) {
+      const me = getCurrentUser() ? getCurrentUser().username : 'Anonymous';
+      const key = getDmKey(me, withUser);
+      const data = await fetchDmsFromServer(key);
+      let modal = document.getElementById('dmModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'dmModal';
+        modal.style.position = 'fixed';
+        modal.style.right = '20px';
+        modal.style.bottom = '20px';
+        modal.style.width = '320px';
+        modal.style.maxHeight = '60vh';
+        modal.style.background = 'var(--card)';
+        modal.style.padding = '10px';
+        modal.style.borderRadius = '10px';
+        modal.style.boxShadow = '0 6px 20px rgba(0,0,0,0.6)';
+        document.body.appendChild(modal);
+      }
       modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>DM: ${withUser}</strong><button id="closeDm">Close</button></div><div id="dmMessages" style="max-height:300px;overflow:auto;margin-top:8px"></div><div style="display:flex;gap:8px;margin-top:8px"><input id="dmMsgInput" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" placeholder="Message..."><button id="sendDmBtn" class="ghost">Send</button></div>`;
-      document.getElementById('closeDm').addEventListener('click', ()=>modal.remove());
-      const msgs = document.getElementById('dmMessages'); msgs.innerHTML=''; data.forEach(m=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = `${m.from}: ${m.message}`; msgs.appendChild(d); });
-      document.getElementById('sendDmBtn').addEventListener('click', ()=>{ const v = document.getElementById('dmMsgInput').value.trim(); if(!v) return; saveDMMessage(withUser, v); document.getElementById('dmMsgInput').value=''; renderDMConversation(withUser); });
+      document.getElementById('closeDm').addEventListener('click', () => modal.remove());
+      const msgs = document.getElementById('dmMessages');
+      msgs.innerHTML = '';
+      data.forEach(m => {
+        const d = document.createElement('div');
+        d.className = 'libItem';
+        d.textContent = `${m.from}: ${m.message}`;
+        msgs.appendChild(d);
+      });
+      document.getElementById('sendDmBtn').addEventListener('click', async () => {
+        const v = document.getElementById('dmMsgInput').value.trim();
+        if (!v) return;
+        await saveDMMessage(withUser, v);
+        document.getElementById('dmMsgInput').value = '';
+        await renderDMConversation(withUser);
+      });
     }
 
-    function openDMWindow(username){ renderDMConversation(username); }
+    function openDMWindow(username) { renderDMConversation(username); }
 
-    document.getElementById('openDm').addEventListener('click', ()=>{ const to = document.getElementById('dmTo').value.trim(); if(!to) return alert('Enter username'); openDMWindow(to); document.getElementById('dmTo').value=''; });
+    document.getElementById('openDm').addEventListener('click', () => {
+      const to = document.getElementById('dmTo').value.trim();
+      if (!to) return alert('Enter username');
+      openDMWindow(to);
+      document.getElementById('dmTo').value = '';
+    });
 
     // ensure sidebar updates when user/ libs change
     const origRender = render;
