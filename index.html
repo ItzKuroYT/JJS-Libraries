@@ -1103,46 +1103,211 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const libWrap = document.getElementById('profileLibs'); libWrap.innerHTML=''; libs.filter(l=>l.author===username).slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; libWrap.appendChild(d); });
     }
 
-    // wrap openDMWindow to enforce blocking
-    const __oldOpenDM = openDMWindow;
-    openDMWindow = async function(username){
-      const me = getCurrentUser(); if(!me) return alert('Sign in to DM');
-      const mySocial = await fetchSocial(me.username);
-      const theirSocial = await fetchSocial(username);
-      if((mySocial.blocked||[]).includes(username)) return alert('You have blocked this user — unblock to message.');
-      if((theirSocial.blocked||[]).includes(me.username)) return alert('User has blocked you — cannot message.');
-      return __oldOpenDM(username);
-    };
-
     // Notifications (stored in localStorage)
     function addNotification(text){ try{ const key='jjs_notifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift({t:Date.now(),text}); localStorage.setItem(key, JSON.stringify(arr.slice(0,50))); renderNotifications(); }catch(e){} }
     function renderNotifications(){ const key='jjs_notifications'; const el = document.getElementById('notifications'); el.innerHTML=''; try{ const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.forEach(n=>{ const div = document.createElement('div'); div.textContent = new Date(n.t).toLocaleString() + ' — ' + n.text; el.appendChild(div); }); }catch(e){}
     }
 
-    // Simple DM storage: store conversations keyed by usernames in localStorage; attempt serverless save when available
-    function saveDMMessage(to, msg){ const from = getCurrentUser() ? getCurrentUser().username : 'Anonymous'; const convKey = `jjs_dm_${[from,to].sort().join('_')}`; const arr = JSON.parse(localStorage.getItem(convKey)||'[]'); const entry = {from,to,message:msg,t:Date.now()}; arr.push(entry); localStorage.setItem(convKey, JSON.stringify(arr)); // try serverless
-      if(SERVERLESS_URL){ fetch(SERVERLESS_URL + '?action=saveDM', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ conv: convKey, entry }) }).catch(()=>{}); }
-      renderDMConversation(to);
+    const DM_MESSAGE_MAX_LENGTH = 500;
+
+    function sanitizeDmUser(username){
+      return (username || '').toString().trim().replace(/[^a-z0-9_-]/gi,'_') || 'anonymous';
     }
 
-    function listDMConvos(){ // find keys
-      const keys = Object.keys(localStorage).filter(k=>k.startsWith('jjs_dm_'));
-      return keys.map(k=>k.replace('jjs_dm_',''));
+    function getDmConvId(userA, userB){
+      return [sanitizeDmUser(userA), sanitizeDmUser(userB)].sort((a,b)=>a.localeCompare(b)).join('__');
     }
 
-    function renderDMList(){ const wrap = document.getElementById('dmConvos'); wrap.innerHTML=''; const convs = listDMConvos(); convs.forEach(c=>{ const b = document.createElement('div'); b.className='libItem'; b.textContent = c.replace(/_/g,' → '); b.style.cursor='pointer'; b.addEventListener('click', ()=>{ const parts = c.split('_'); const other = parts.find(x=>x!== (getCurrentUser()?getCurrentUser().username:'Anonymous')) || parts[0]; openDMWindow(other); }); wrap.appendChild(b); }); }
+    async function fetchDmConversation(withUser){
+      const me = getCurrentUser();
+      if(!me) throw new Error('Sign in to load DMs');
+      if(!SERVERLESS_URL) throw new Error('DM server unavailable');
+      const convId = getDmConvId(me.username, withUser);
+      const resp = await fetch(SERVERLESS_URL + '?action=getDMConversation', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ convId, participants:[me.username, withUser] })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load conversation');
+      const messages = Array.isArray(data.messages) ? data.messages : [];
+      return { convId, messages };
+    }
 
-    function renderDMConversation(withUser){ const key = `jjs_dm_${[getCurrentUser()?getCurrentUser().username:'Anonymous', withUser].sort().join('_')}`; const data = JSON.parse(localStorage.getItem(key)||'[]'); // open modal-like area
-      let modal = document.getElementById('dmModal'); if(!modal){ modal = document.createElement('div'); modal.id='dmModal'; modal.style.position='fixed'; modal.style.right='20px'; modal.style.bottom='20px'; modal.style.width='320px'; modal.style.maxHeight='60vh'; modal.style.background='var(--card)'; modal.style.padding='10px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
-      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>DM: ${withUser}</strong><button id="closeDm">Close</button></div><div id="dmMessages" style="max-height:300px;overflow:auto;margin-top:8px"></div><div style="display:flex;gap:8px;margin-top:8px"><input id="dmMsgInput" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" placeholder="Message..."><button id="sendDmBtn" class="ghost">Send</button></div>`;
+    async function listServerDMs(username){
+      if(!SERVERLESS_URL) throw new Error('DM server unavailable');
+      const resp = await fetch(SERVERLESS_URL + '?action=listDMs', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ username })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load DMs');
+      return Array.isArray(data.conversations) ? data.conversations : [];
+    }
+
+    async function sendDmMessage(withUser, text){
+      const me = getCurrentUser();
+      if(!me) throw new Error('Sign in to DM');
+      if(!SERVERLESS_URL) throw new Error('DM server unavailable');
+      const trimmed = text.trim();
+      if(!trimmed) throw new Error('Message required');
+      const entry = { from: me.username, to: withUser, message: trimmed.slice(0, DM_MESSAGE_MAX_LENGTH), t: Date.now() };
+      const convId = getDmConvId(me.username, withUser);
+      const resp = await fetch(SERVERLESS_URL + '?action=saveDM', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ convId, entry, participants:[me.username, withUser] })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to send message');
+      return entry;
+    }
+
+    function renderDMList(){
+      const wrap = document.getElementById('dmConvos');
+      if(!wrap) return;
+      const me = getCurrentUser();
+      if(!me){
+        wrap.innerHTML = '<div class="smallMuted">Sign in to view DMs</div>';
+        return;
+      }
+      if(!SERVERLESS_URL){
+        wrap.innerHTML = '<div class="smallMuted">DM server unavailable</div>';
+        return;
+      }
+      wrap.innerHTML = '<div class="smallMuted">Loading...</div>';
+      const meKey = sanitizeDmUser(me.username);
+      listServerDMs(me.username).then(convos=>{
+        if(!convos.length){
+          wrap.innerHTML = '<div class="smallMuted">No conversations yet</div>';
+          return;
+        }
+        convos.sort((a,b)=> (b.lastMessage && b.lastMessage.t ? b.lastMessage.t : 0) - (a.lastMessage && a.lastMessage.t ? a.lastMessage.t : 0));
+        wrap.innerHTML = '';
+        convos.forEach(convo=>{
+          const row = document.createElement('div');
+          row.className = 'libItem';
+          row.style.cursor = 'pointer';
+          const previewMsg = (convo.lastMessage && typeof convo.lastMessage.message === 'string') ? convo.lastMessage.message : '';
+          const preview = convo.lastMessage ? `${convo.lastMessage.from || ''}: ${previewMsg.slice(0,60)}`.trim() : 'No messages yet';
+          const fallbackUser = (Array.isArray(convo.participants) ? convo.participants : []).find(part=>sanitizeDmUser(part) !== meKey);
+          const targetUser = convo.withUser || fallbackUser || '';
+          const displayName = targetUser || 'unknown';
+          row.innerHTML = `<strong>${escapeHtml(displayName)}</strong><div class="smallMuted">${escapeHtml(preview)}</div>`;
+          row.addEventListener('click', ()=>{
+            if(!targetUser) return alert('Unable to open this conversation');
+            openDMWindow(targetUser);
+          });
+          wrap.appendChild(row);
+        });
+      }).catch(err=>{
+        console.warn('renderDMList error', err);
+        wrap.innerHTML = '<div class="smallMuted">Failed to load DMs</div>';
+      });
+    }
+
+    async function openDMWindow(username){
+      const me = getCurrentUser();
+      if(!me) return alert('Sign in to DM');
+      let mySocial = {};
+      let theirSocial = {};
+      try{
+        [mySocial, theirSocial] = await Promise.all([fetchSocial(me.username), fetchSocial(username)]);
+      }catch(err){
+        console.warn('openDMWindow social fetch failed', err);
+      }
+      if((mySocial && mySocial.blocked || []).includes(username)) return alert('You have blocked this user — unblock to message.');
+      if((theirSocial && theirSocial.blocked || []).includes(me.username)) return alert('User has blocked you — cannot message.');
+      let modal = document.getElementById('dmModal');
+      if(!modal){
+        modal = document.createElement('div');
+        modal.id='dmModal';
+        modal.style.position='fixed';
+        modal.style.right='20px';
+        modal.style.bottom='20px';
+        modal.style.width='320px';
+        modal.style.maxHeight='60vh';
+        modal.style.background='var(--card)';
+        modal.style.padding='10px';
+        modal.style.borderRadius='10px';
+        modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>DM: ${escapeHtml(username)}</strong><button id="closeDm" class="ghost">Close</button></div><div id="dmStatus" class="smallMuted" style="margin-top:4px"></div><div id="dmMessages" style="max-height:300px;overflow:auto;margin-top:4px"></div><div style="display:flex;gap:8px;margin-top:8px"><input id="dmMsgInput" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" placeholder="Message (max ${DM_MESSAGE_MAX_LENGTH} chars)"><button id="sendDmBtn" class="ghost">Send</button></div>`;
       document.getElementById('closeDm').addEventListener('click', ()=>modal.remove());
-      const msgs = document.getElementById('dmMessages'); msgs.innerHTML=''; data.forEach(m=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = `${m.from}: ${m.message}`; msgs.appendChild(d); });
-      document.getElementById('sendDmBtn').addEventListener('click', ()=>{ const v = document.getElementById('dmMsgInput').value.trim(); if(!v) return; saveDMMessage(withUser, v); document.getElementById('dmMsgInput').value=''; renderDMConversation(withUser); });
+      const statusEl = document.getElementById('dmStatus');
+      const messagesEl = document.getElementById('dmMessages');
+      const inputEl = document.getElementById('dmMsgInput');
+      const sendBtn = document.getElementById('sendDmBtn');
+
+      function renderMessages(msgs){
+        messagesEl.innerHTML = '';
+        if(!msgs.length){
+          messagesEl.innerHTML = '<div class="smallMuted">No messages yet</div>';
+          return;
+        }
+        msgs.forEach(m=>{
+          const div = document.createElement('div');
+          div.className='libItem';
+          div.style.marginBottom='4px';
+          const meta = document.createElement('div');
+          meta.innerHTML = `<strong>${escapeHtml(m.from || 'Unknown')}</strong> <span class="smallMuted">${new Date(m.t || Date.now()).toLocaleString()}</span>`;
+          const body = document.createElement('div');
+          body.textContent = m.message || '';
+          div.appendChild(meta);
+          div.appendChild(body);
+          messagesEl.appendChild(div);
+        });
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      async function refreshConversation(){
+        statusEl.textContent = 'Loading conversation...';
+        try{
+          const { messages } = await fetchDmConversation(username);
+          statusEl.textContent = '';
+          renderMessages(messages);
+        }catch(err){
+          statusEl.textContent = 'Failed to load conversation: ' + (err && err.message ? err.message : 'Unknown error');
+        }
+      }
+
+      sendBtn.addEventListener('click', async ()=>{
+        const txt = (inputEl.value || '').trim();
+        if(!txt) return;
+        if(txt.length > DM_MESSAGE_MAX_LENGTH) return alert('Max ' + DM_MESSAGE_MAX_LENGTH + ' chars');
+        sendBtn.disabled = true;
+        try{
+          await sendDmMessage(username, txt);
+          inputEl.value = '';
+          await refreshConversation();
+          renderDMList();
+        }catch(err){
+          alert(err && err.message ? err.message : 'Failed to send message');
+        }finally{
+          sendBtn.disabled = false;
+        }
+      });
+
+      inputEl.addEventListener('keydown', (ev)=>{
+        if(ev.key === 'Enter' && !ev.shiftKey){
+          ev.preventDefault();
+          sendBtn.click();
+        }
+      });
+
+      refreshConversation();
     }
 
-    function openDMWindow(username){ renderDMConversation(username); }
-
-    document.getElementById('openDm').addEventListener('click', ()=>{ const to = document.getElementById('dmTo').value.trim(); if(!to) return alert('Enter username'); openDMWindow(to); document.getElementById('dmTo').value=''; });
+    document.getElementById('openDm').addEventListener('click', ()=>{
+      const to = document.getElementById('dmTo').value.trim();
+      if(!to) return alert('Enter username');
+      openDMWindow(to).catch(err=>{
+        alert(err && err.message ? err.message : 'Failed to open DM');
+      });
+      document.getElementById('dmTo').value='';
+    });
 
     // ensure sidebar updates when user/ libs change
     const origRender = render;
@@ -1241,7 +1406,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
-
 
 
 
