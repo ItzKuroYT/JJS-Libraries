@@ -6,6 +6,12 @@
   "scripts": {
     "test": "echo \"No tests specified\" && exit 0"
   },
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
   "author": "",
   "license": "MIT"
 }
