@@ -144,6 +144,10 @@
         <div class="statLabel">Current Users</div>
         <div class="statValue" id="currentUsersValue">—</div>
       </div>
+      <div class="statBlock">
+        <div class="statLabel">Total Libraries</div>
+        <div class="statValue" id="totalLibrariesValue">—</div>
+      </div>
       <div class="staffPanel">
         <div class="staffBlock">
           <div class="statLabel">Owner</div>
@@ -494,7 +498,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     function render(filtered){
-        listEl.innerHTML = '';
+      updateTotalLibrariesDisplay();
+      listEl.innerHTML = '';
       if(filtered.length===0){
         listEl.innerHTML = '<div class="small">No libraries match your search.</div>';
         return;
@@ -1044,6 +1049,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
           label.title = 'Unable to load user count';
         }
       }
+    }
+
+    function updateTotalLibrariesDisplay(){
+      const label = document.getElementById('totalLibrariesValue');
+      if(!label) return;
+      const total = Array.isArray(libs) ? libs.length : 0;
+      label.textContent = total;
     }
 
     async function refreshStaffDisplay(){
@@ -2095,4 +2107,3 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
-
