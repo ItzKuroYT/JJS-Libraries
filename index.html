@@ -407,10 +407,26 @@ Get a code from the character builder in jjs, then paste it here. When you click
             lib.title = newTitle; lib.credit = newCredit; lib.code = newCode;
             // preserve tags — could implement edit tags UI later
             // save via serverless if available
-            const filename = lib.__filename || `${lib.id}-${sanitizeFilename(lib.title)}.json`;
+            const filename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title)}.json`;
+            const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
             try{
-              if(SERVERLESS_URL){ await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) }); }
-              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){ await saveToGitHub(lib, filename); }
+              if(SERVERLESS_URL){
+                const resp = await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) });
+                const data = await resp.json().catch(()=>null);
+                if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || 'Save failed');
+                if(data && data.result && data.result.content && data.result.content.path){
+                  lib.__path = data.result.content.path;
+                  lib.__filename = data.result.content.path.split('/').pop() || filename;
+                }else{
+                  lib.__filename = filename;
+                  lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
+                }
+              }
+              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){
+                await saveToGitHub(lib, filename);
+                lib.__filename = filename;
+                lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
+              }
             }catch(e){ /* ignore save errors silently */ }
             render(filter(search.value));
           });
@@ -419,17 +435,39 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(delBtn){
           delBtn.addEventListener('click', async ()=>{
             if(!confirm('Delete this library?')) return;
-            const path = lib.__path || (GITHUB.path?GITHUB.path + '/' + lib.__filename:lib.__filename);
+            const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
+            const fallbackFilename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title || 'library')}.json`;
+            const resolvedPath = (lib.__path && lib.__path.trim()) || (localBasePath ? `${localBasePath}/${fallbackFilename}` : fallbackFilename);
+            if(!resolvedPath){
+              alert('Unable to determine a file path for this library.');
+              return;
+            }
+            let deleted = false;
             try{
-              if(SERVERLESS_URL){ await fetch(SERVERLESS_URL + '?action=delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ path }) }); }
+              if(SERVERLESS_URL){
+                const resp = await fetch(SERVERLESS_URL + '?action=delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ path: resolvedPath, filename: fallbackFilename, lib }) });
+                const data = await resp.json().catch(()=>null);
+                if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || 'Delete failed');
+                deleted = true;
+              }
               else if(GITHUB.token && GITHUB.owner && GITHUB.repo){
                 // delete via contents API
-                const apiBase = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(path)}`;
+                const apiBase = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(resolvedPath)}`;
                 const getResp = await fetch(apiBase + `?ref=${encodeURIComponent(GITHUB.branch)}`, { headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}` } });
-                if(getResp.status===200){ const data = await getResp.json(); const delResp = await fetch(apiBase, { method:'DELETE', headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}`, 'Content-Type':'application/json' }, body: JSON.stringify({ message: 'Delete library', sha: data.sha, branch: GITHUB.branch }) }); }
+                if(getResp.status===200){
+                  const data = await getResp.json();
+                  const delResp = await fetch(apiBase, { method:'DELETE', headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}`, 'Content-Type':'application/json' }, body: JSON.stringify({ message: 'Delete library', sha: data.sha, branch: GITHUB.branch }) });
+                  if(!delResp.ok) throw new Error('GitHub delete failed');
+                  deleted = true;
+                }else{
+                  throw new Error('File not found in repository');
+                }
               }
-            }catch(e){ /* ignore */ }
-            // remove locally
+            }catch(e){
+              alert(e && e.message ? e.message : 'Failed to delete library');
+              return;
+            }
+            if(!deleted) return;
             const idx = libs.findIndex(x=>x.id===lib.id);
             if(idx>=0) libs.splice(idx,1);
             render(filter(search.value));
@@ -793,12 +831,22 @@ Get a code from the character builder in jjs, then paste it here. When you click
         render(filter(search.value));
         modal.remove();
         const filename = `${lib.id}-${sanitizeFilename(lib.title)}.json`;
+        const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
+        lib.__filename = lib.__filename || filename;
+        lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
         // Try serverless endpoint first (recommended)
         if(SERVERLESS_URL){
           try{
             const resp = await fetch(SERVERLESS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ lib, filename }) });
             const j = await resp.json().catch(()=>null);
             if(!resp.ok) throw new Error(JSON.stringify(j));
+            if(j && j.result && j.result.content){
+              const remotePath = j.result.content.path;
+              if(remotePath){
+                lib.__path = remotePath;
+                lib.__filename = remotePath.split('/').pop() || lib.__filename;
+              }
+            }
             return;
           }catch(_err){ }
         }
