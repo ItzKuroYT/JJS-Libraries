@@ -464,9 +464,33 @@ module.exports = async (req, res) => {
     // check existing file to get sha
     if(action === 'delete' || !action){
       lib = payload.lib;
-      if (!lib || !lib.title) return res.status(400).json({ error: 'Missing lib object or title' });
-      filename = payload.filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title)}.json`;
-      path = basePath ? `${basePath}/${filename}` : filename;
+      const providedPath = normalizeRelativePath(payload.path);
+      filename = payload.filename || null;
+      if(providedPath){
+        path = ensureBasePath(providedPath, basePath);
+        if(!filename){
+          const parts = providedPath.split('/');
+          filename = parts[parts.length - 1] || null;
+        }
+      }
+      if(!path){
+        if(!lib || !lib.title){
+          return res.status(400).json({ error: 'Missing lib object or title' });
+        }
+        filename = filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title)}.json`;
+        path = ensureBasePath(filename, basePath) || filename;
+      }
+      if(!path){
+        return res.status(400).json({ error: 'Unable to resolve path for library' });
+      }
+      if(!filename){
+        const segments = path.split('/');
+        filename = segments[segments.length - 1] || 'library.json';
+      }
+      if(action !== 'delete' && (!lib || !lib.title)){
+        return res.status(400).json({ error: 'Missing lib object or title' });
+      }
+
       apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
 
       const getResp = await fetchFn(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
@@ -509,4 +533,26 @@ function sanitizeFilename(name){
 
 function toBase64(str){
   try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
+}
+
+function normalizeRelativePath(input){
+  if(!input) return null;
+  return String(input)
+    .replace(/\\/g,'/')
+    .split('/')
+    .map(seg => seg.trim())
+    .filter(seg => seg && seg !== '.' && seg !== '..')
+    .join('/');
+}
+
+function ensureBasePath(relPath, basePath){
+  if(!relPath) return null;
+  const cleanBase = (basePath || '').replace(/^\/+/,'').replace(/\/+$/,'');
+  const cleanRel = relPath.replace(/^\/+/,'');
+  if(!cleanBase) return cleanRel;
+  const prefix = cleanBase + '/';
+  if(cleanRel === cleanBase || cleanRel.startsWith(prefix)){
+    return cleanRel;
+  }
+  return `${cleanBase}/${cleanRel}`;
 }
