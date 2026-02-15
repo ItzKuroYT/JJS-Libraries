@@ -7,7 +7,13 @@
   "code": "test",
   "tags": [],
   "comments": [],
-  "ratings": [],
+  "ratings": [
+    {
+      "user": "Kuro",
+      "value": 3,
+      "t": 1771191631191
+    }
+  ],
   "__filename": "1771191617896-tes.json",
   "__path": "libs/1771191617896-tes.json"
 }
