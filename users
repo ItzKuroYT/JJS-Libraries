@@ -65,5 +65,12 @@
     "passwordHash": "6f5785d4d43ed74bc94d0ad490af5bb7$ab0f55e58b141a17280c9e6c573a817f5efb22daae9c6fd848db1d1ddbb35d7ef50e6f83db120f1370689c3611aef249e9c7554025902c61e016792138cf07c9",
     "createdAt": "2026-02-15T21:39:29.182Z",
     "role": "moderator"
+  },
+  {
+    "id": "1771192055913",
+    "username": "Ashura",
+    "passwordHash": "034a3d150446a87536be6d16f02656f0$32c6e4f59a0245f350099934c4c23b9f24504f41f1bc76f78841d68bf14baef56fe2611bca8e911cc22b40bf486ec96ba493ced5ac98b0c6246b0deb7762c0d8",
+    "createdAt": "2026-02-15T21:47:35.982Z",
+    "role": "member"
   }
 ]
