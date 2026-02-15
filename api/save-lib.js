@@ -354,13 +354,6 @@ module.exports = async (req, res) => {
       let apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
       let libData = null;
       let timedOut = false;
-      // Helper to fetch with timeout
-      async function fetchWithTimeout(url, opts, ms=10000){
-        return Promise.race([
-          fetchFn(url, opts),
-          new Promise((_, reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
-        ]);
-      }
       try {
         let getResp = await fetchWithTimeout(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } }, 10000);
         if(getResp && getResp.status === 200){
@@ -408,27 +401,32 @@ module.exports = async (req, res) => {
       if(!libId || !username) return res.status(400).json({ error: 'Missing libId or username' });
       if(!Number.isFinite(ratingValue)) return res.status(400).json({ error: 'Invalid rating value' });
       const value = Math.min(5, Math.max(1, Math.round(ratingValue)));
-      let libPath = `${basePath}/${libId}.json`;
+      const providedPathRaw = payload.path || (payload.lib && (payload.lib.__path || payload.lib.path));
+      const normalizedProvidedPath = providedPathRaw ? normalizeRelativePath(providedPathRaw) : null;
+      let libPath = normalizedProvidedPath ? ensureBasePath(normalizedProvidedPath, basePath) : null;
+      if(!libPath){
+        libPath = `${basePath}/${libId}.json`;
+      }
       let apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
       let libData = null;
       let sha = null;
-      let getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      let getResp = await fetchWithTimeout(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } }, 12000);
       if(getResp && getResp.status === 200){
         const d = await getResp.json();
         sha = d.sha;
         try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
         catch(e){ libData = null; }
       }
-      if(!libData){
+      if(!libData && !normalizedProvidedPath){
         const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(basePath)}`;
-        const dirResp = await fetchFn(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+        const dirResp = await fetchWithTimeout(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } }, 12000);
         if(dirResp && dirResp.status === 200){
           const files = await dirResp.json();
           const match = files.find(f=>f.name.startsWith(libId+'-') && f.name.endsWith('.json'));
           if(match){
             libPath = `${basePath}/${match.name}`;
             apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
-            getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+            getResp = await fetchWithTimeout(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } }, 12000);
             if(getResp && getResp.status === 200){
               const d = await getResp.json();
               sha = d.sha;
@@ -470,7 +468,7 @@ module.exports = async (req, res) => {
       const content = toBase64(JSON.stringify(libData, null, 2));
       const putBody = { message: `Update rating for ${libId}`, content, branch };
       if(sha) putBody.sha = sha;
-      const putResp = await fetchFn(apiLib, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
+      const putResp = await fetchWithTimeout(apiLib, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) }, 12000);
       if(!putResp.ok){
         const txt = await putResp.text();
         return res.status(putResp.status).json({ error: 'GitHub rating save error', detail: txt });
@@ -607,6 +605,31 @@ module.exports = async (req, res) => {
 
 function sanitizeFilename(name){
   return String(name).replace(/[^a-z0-9-_. ]/gi,'_').slice(0,60);
+}
+
+function fetchWithTimeout(url, opts = {}, ms = 10000){
+  if(!fetchFn) throw new Error('fetch not available');
+  return new Promise((resolve, reject)=>{
+    let settled = false;
+    const timer = setTimeout(()=>{
+      if(settled) return;
+      settled = true;
+      reject(new Error('timeout'));
+    }, ms);
+    fetchFn(url, opts)
+      .then(res=>{
+        if(settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch(err=>{
+        if(settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 }
 
 function toBase64(str){

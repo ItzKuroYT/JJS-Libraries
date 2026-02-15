@@ -310,7 +310,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const resp = await fetch(SERVERLESS_URL + '?action=rate', {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ libId, rating: value, username: me.username })
+        body: JSON.stringify({ libId, rating: value, username: me.username, path: lib.__path || null })
       });
       const data = await resp.json().catch(()=>null);
       if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to submit rating');
