@@ -881,6 +881,99 @@ Get a code from the character builder in jjs, then paste it here. When you click
     const OWNER_USERNAME_LOWER = OWNER_USERNAME.toLowerCase();
     const socialCache = new Map();
     const staffState = { owner: null, moderators: [] };
+    const userDataCache = { fallbackUsers: null, lastFetched: 0 };
+    const USERS_FILE_CANDIDATES = [
+      'users/users.json','users/users.txt','users/users','users.json','users.txt','users'
+    ];
+
+    function getRepoDefaults(){
+      return {
+        owner: GITHUB.owner || 'ItzKuroYT',
+        repo: GITHUB.repo || 'JJS-Libraries',
+        branch: GITHUB.branch || 'main'
+      };
+    }
+
+    function encodePathForRaw(input){
+      return input.split('/').map(seg=>encodeURIComponent(seg)).join('/');
+    }
+
+    function normalizeUserRecord(raw, idx){
+      if(!raw) return null;
+      if(typeof raw === 'string'){
+        const trimmed = raw.trim();
+        if(!trimmed) return null;
+        return { id: String(idx ?? trimmed), username: trimmed, role: 'member' };
+      }
+      const username = (raw.username || raw.user || raw.name || raw.id || '').toString().trim();
+      if(!username) return null;
+      return {
+        id: raw.id || String(idx ?? username),
+        username,
+        role: raw.role || raw.type || 'member'
+      };
+    }
+
+    function parseUsersPayload(payload){
+      if(!payload) return [];
+      if(Array.isArray(payload)) return payload.map((item, idx)=> normalizeUserRecord(item, idx)).filter(Boolean);
+      if(payload && Array.isArray(payload.users)) return payload.users.map((item, idx)=> normalizeUserRecord(item, idx)).filter(Boolean);
+      return [];
+    }
+
+    async function fetchUsersFallback(force = false){
+      const now = Date.now();
+      if(!force && userDataCache.fallbackUsers && (now - userDataCache.lastFetched) < 60000){
+        return userDataCache.fallbackUsers;
+      }
+      const { owner, repo, branch } = getRepoDefaults();
+      const customPath = (window.USERS_FILE_PATH || '').trim();
+      const candidates = [];
+      if(customPath) candidates.push(customPath);
+      USERS_FILE_CANDIDATES.forEach(path=>candidates.push(path));
+      const tried = new Set();
+      for(const candidateRaw of candidates){
+        if(!candidateRaw) continue;
+        const clean = candidateRaw.replace(/^\/+/,'');
+        if(!clean || tried.has(clean)) continue;
+        tried.add(clean);
+        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePathForRaw(clean)}`;
+        try{
+          const resp = await fetch(url, { cache: 'no-store' });
+          if(!resp.ok) continue;
+          const text = await resp.text();
+          if(!text) continue;
+          let normalized = null;
+          try{
+            const parsedJson = JSON.parse(text);
+            normalized = parseUsersPayload(parsedJson);
+          }catch(_err){
+            const lines = text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+            if(lines.length){
+              normalized = lines.map((line, idx)=> normalizeUserRecord(line, idx)).filter(Boolean);
+            }
+          }
+          if(normalized && normalized.length){
+            userDataCache.fallbackUsers = normalized;
+            userDataCache.lastFetched = now;
+            return normalized;
+          }
+        }catch(_err){ /* ignore and try next */ }
+      }
+      return null;
+    }
+
+    function getOwnerFromFallback(usersList){
+      if(!Array.isArray(usersList)) return OWNER_USERNAME ? { id: OWNER_USERNAME, username: OWNER_USERNAME } : null;
+      const ownerMatch = usersList.find(u=> u && ((u.role || '').toLowerCase() === 'owner' || (u.username || '').toLowerCase() === OWNER_USERNAME_LOWER));
+      if(ownerMatch) return { id: ownerMatch.id || ownerMatch.username, username: ownerMatch.username };
+      return OWNER_USERNAME ? { id: OWNER_USERNAME, username: OWNER_USERNAME } : null;
+    }
+
+    function getModeratorsFromFallback(usersList){
+      if(!Array.isArray(usersList)) return [];
+      return usersList.filter(u=> (u.role || '').toLowerCase() === 'moderator').map(u=>({ id: u.id || u.username, username: u.username }));
+    }
 
     function inferRoleFromState(username){
       const normalized = (username || '').toLowerCase();
@@ -909,8 +1002,19 @@ Get a code from the character builder in jjs, then paste it here. When you click
         label.textContent = Number(data.count) || 0;
         label.removeAttribute('title');
       }catch(err){
-        label.textContent = '??';
-        label.title = 'Unable to load user count';
+        try{
+          const fallbackUsers = await fetchUsersFallback();
+          if(fallbackUsers && fallbackUsers.length){
+            label.textContent = fallbackUsers.length;
+            label.title = 'Loaded from GitHub users file';
+          }else{
+            label.textContent = '??';
+            label.title = 'Unable to load user count';
+          }
+        }catch(_fallbackErr){
+          label.textContent = '??';
+          label.title = 'Unable to load user count';
+        }
       }
     }
 
@@ -920,40 +1024,70 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(!ownerEl || !modsWrap) return;
       ownerEl.textContent = 'Loading...';
       modsWrap.innerHTML = '<span class="staffPill">Loading...</span>';
-      if(!USERS_URL){
-        ownerEl.textContent = 'Unavailable';
-        modsWrap.innerHTML = '<span class="staffPill staffError">Users endpoint not configured</span>';
-        return;
+      let ownerRecord = null;
+      let moderators = [];
+      let usedFallback = false;
+      let apiError = false;
+      if(USERS_URL){
+        try{
+          const resp = await fetch(USERS_URL + '?action=staff');
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to load staff');
+          ownerRecord = data.owner || null;
+          moderators = Array.isArray(data.moderators) ? data.moderators : [];
+        }catch(_err){
+          apiError = true;
+        }
+      }else{
+        apiError = true;
       }
-      try{
-        const resp = await fetch(USERS_URL + '?action=staff');
-        const data = await resp.json().catch(()=>null);
-        if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to load staff');
-        staffState.owner = data.owner || null;
-        staffState.moderators = Array.isArray(data.moderators) ? data.moderators : [];
-        ownerEl.textContent = staffState.owner && staffState.owner.username ? staffState.owner.username : '—';
-        modsWrap.innerHTML = '';
-        if(!staffState.moderators.length){
+      let fallbackUsers = null;
+      if(apiError || !ownerRecord || !moderators.length){
+        try{
+          fallbackUsers = await fetchUsersFallback();
+        }catch(_err){ fallbackUsers = null; }
+      }
+      if(!ownerRecord && fallbackUsers){
+        ownerRecord = getOwnerFromFallback(fallbackUsers);
+        usedFallback = true;
+      }
+      if((!moderators.length) && fallbackUsers){
+        const fallbackMods = getModeratorsFromFallback(fallbackUsers);
+        if(fallbackMods.length){
+          moderators = fallbackMods;
+          usedFallback = true;
+        }
+      }
+      if(!ownerRecord){
+        ownerRecord = OWNER_USERNAME ? { id: OWNER_USERNAME, username: OWNER_USERNAME } : { id: 'owner', username: '—' };
+      }
+      staffState.owner = ownerRecord;
+      staffState.moderators = moderators;
+      ownerEl.textContent = ownerRecord.username || '—';
+      if(usedFallback){
+        ownerEl.title = 'Loaded from GitHub users file';
+      }else{
+        ownerEl.removeAttribute('title');
+      }
+      modsWrap.innerHTML = '';
+      if(!moderators.length){
+        const span = document.createElement('span');
+        span.className = 'staffPill';
+        span.textContent = apiError ? 'Staff unavailable' : 'No moderators yet';
+        if(apiError) span.classList.add('staffError');
+        modsWrap.appendChild(span);
+      }else{
+        moderators.forEach(mod=>{
           const span = document.createElement('span');
           span.className = 'staffPill';
-          span.textContent = 'No moderators yet';
+          span.textContent = mod.username;
           modsWrap.appendChild(span);
-        }else{
-          staffState.moderators.forEach(mod=>{
-            const span = document.createElement('span');
-            span.className = 'staffPill';
-            span.textContent = mod.username;
-            modsWrap.appendChild(span);
-          });
-        }
-      }catch(err){
-        ownerEl.textContent = 'Unavailable';
-        modsWrap.innerHTML = '<span class="staffPill staffError">Failed to load staff</span>';
-      }finally{
-        updateAddModeratorButton();
-        updateStaffConsoleVisibility();
-        render(filter(search.value));
+        });
+        modsWrap.removeAttribute('title');
       }
+      updateAddModeratorButton();
+      updateStaffConsoleVisibility();
+      render(filter(search.value));
     }
 
     function updateAddModeratorButton(){
