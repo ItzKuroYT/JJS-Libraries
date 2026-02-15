@@ -164,6 +164,109 @@ Get a code from the character builder in jjs, then paste it here. When you click
     const tpl = document.getElementById('cardTpl');
     const search = document.getElementById('search');
 
+    function normalizeKey(value){
+      return (value || 'unknown').toString().replace(/[^a-z0-9_-]/gi,'_');
+    }
+
+    function getLibStorageId(lib){
+      if(!lib) return 'unknown';
+      return normalizeKey(lib.id || lib.__filename || lib.title || Date.now());
+    }
+
+    function getLocalComments(lib){
+      const key = 'jjs_comments_' + getLibStorageId(lib);
+      try{ return JSON.parse(localStorage.getItem(key) || '[]'); }
+      catch(_e){ return []; }
+    }
+
+    function saveLocalComments(lib, comments){
+      const key = 'jjs_comments_' + getLibStorageId(lib);
+      try{ localStorage.setItem(key, JSON.stringify(comments || [])); }
+      catch(_e){}
+    }
+
+    function ensureLibComments(lib){
+      if(!lib) return [];
+      if(Array.isArray(lib.comments) && lib.comments.length){
+        saveLocalComments(lib, lib.comments);
+        return lib.comments;
+      }
+      lib.comments = getLocalComments(lib);
+      return lib.comments;
+    }
+
+    function appendComment(lib, comment){
+      const comments = ensureLibComments(lib);
+      comments.push(comment);
+      saveLocalComments(lib, comments);
+      return comments;
+    }
+
+    function addReply(comments, parentId, reply){
+      for(const comment of comments){
+        if(comment.id === parentId){
+          comment.replies = comment.replies || [];
+          comment.replies.push(reply);
+          return true;
+        }
+        if(comment.replies && comment.replies.length && addReply(comment.replies, parentId, reply)){
+          return true;
+        }
+      }
+      return false;
+    }
+
+    const COMMENT_MAX_LENGTH = 200;
+
+    function getLibIdForApi(lib){
+      if(lib && lib.id) return lib.id;
+      const storageId = getLibStorageId(lib);
+      return storageId !== 'unknown' ? storageId : null;
+    }
+
+    async function postCommentToServer(lib, author, text, parentId){
+      if(!SERVERLESS_URL) throw new Error('Serverless endpoint not configured');
+      const libId = getLibIdForApi(lib);
+      if(!libId) throw new Error('Missing library identifier');
+      const payload = { libId, comment: { author, text, parentId } };
+      const resp = await fetch(SERVERLESS_URL + '?action=addComment', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'Failed to post comment');
+      return data.comment;
+    }
+
+    async function syncCommentsFromServer(lib, opts = {}){
+      if(!SERVERLESS_URL) return;
+      const list = document.getElementById('commentsList');
+      const libId = getLibIdForApi(lib);
+      if(!libId){ renderCommentsList(lib); return; }
+      if(opts.showSpinner && list){
+        list.innerHTML = '<div class="smallMuted">Loading comments...</div>';
+      }
+      try{
+        const resp = await fetch(SERVERLESS_URL + '?action=getComments&libId=' + encodeURIComponent(libId));
+        if(resp.status === 404){
+          lib.comments = [];
+          saveLocalComments(lib, []);
+          renderCommentsList(lib);
+          return;
+        }
+        const data = await resp.json().catch(()=>null);
+        if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed');
+        lib.comments = data.comments || [];
+        saveLocalComments(lib, lib.comments);
+        renderCommentsList(lib);
+      }catch(e){
+        if(opts.showError && list){
+          list.innerHTML = '<div class="smallMuted">Failed to load comments.</div>';
+        }
+      }
+    }
+
     function render(filtered){
         listEl.innerHTML = '';
       if(filtered.length===0){
@@ -355,7 +458,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
           // Add comment UI
           renderAddCommentUI(lib);
           // Fetch and render comments
-          fetchAndRenderComments(lib);
+          const hasLocalComments = ensureLibComments(lib).length > 0;
+          renderCommentsList(lib);
+          syncCommentsFromServer(lib, { showSpinner: !hasLocalComments, showError: true });
         }
 
         function renderAddCommentUI(lib) {
@@ -366,44 +471,44 @@ Get a code from the character builder in jjs, then paste it here. When you click
           form.innerHTML = `<div style="font-weight:bold;margin-bottom:4px">Add a comment</div><textarea class="commentInput" maxlength="200" placeholder="Add a comment (max 200 chars)" style="width:100%;min-height:48px;padding:8px;border-radius:8px;border:1px solid #333"></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button type="submit" class="ghost">Post</button><span class="smallMuted commentCount"></span></div>`;
           const input = form.querySelector('.commentInput');
           const count = form.querySelector('.commentCount');
-          input.addEventListener('input',()=>{ count.textContent = (input.value.length ? input.value.length + '/200' : ''); });
+          const submitBtn = form.querySelector('button');
+          input.addEventListener('input',()=>{ count.textContent = (input.value.length ? input.value.length + '/' + COMMENT_MAX_LENGTH : ''); });
           form.addEventListener('submit', async (ev)=>{
             ev.preventDefault();
             if(!u) return alert('Sign in to comment');
             const text = input.value.trim();
             if(!text) return;
-            if(text.length>200) return alert('Max 200 chars');
-            form.querySelector('button').disabled = true;
+            if(text.length>COMMENT_MAX_LENGTH) return alert('Max ' + COMMENT_MAX_LENGTH + ' chars');
+            submitBtn.disabled = true;
+            const tempComment = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: text.slice(0,COMMENT_MAX_LENGTH), t: Date.now(), replies: [] };
+            appendComment(lib, tempComment);
+            renderCommentsList(lib);
+            input.value = '';
+            count.textContent = '';
             try{
-              const resp = await fetch(SERVERLESS_URL + '?action=addComment', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ libId: lib.id, comment: { author: u.username, text } }) });
-              const j = await resp.json();
-              if(j.ok){ input.value=''; fetchAndRenderComments(lib); }
-              else alert(j.error||'Failed to post');
-            }catch(e){ alert('Failed to post'); }
-            form.querySelector('button').disabled = false;
+              if(SERVERLESS_URL){
+                await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), null);
+                await syncCommentsFromServer(lib);
+              }
+            }catch(err){
+              console.warn('Comment sync failed', err);
+              addNotification('Comment saved locally — server unreachable');
+            }
+            submitBtn.disabled = false;
           });
           wrap.appendChild(form);
         }
 
-        async function fetchAndRenderComments(lib) {
+        function renderCommentsList(lib) {
           const list = document.getElementById('commentsList');
-          list.innerHTML = '<div class="smallMuted">Loading comments...</div>';
-          try {
-            const resp = await fetch(SERVERLESS_URL + '?action=getComments&libId=' + encodeURIComponent(lib.id));
-            if(resp.status === 404) {
-              list.innerHTML = '<div class="smallMuted">Library not found.</div>';
-              return;
-            }
-            const j = await resp.json();
-            if (!j.ok) throw new Error('Failed to load');
-            if (!j.comments || j.comments.length === 0) {
-              list.innerHTML = '<div class="smallMuted">No comments yet.</div>';
-              return;
-            }
-            renderCommentsThread(j.comments||[], list, lib);
-          } catch (e) {
-            list.innerHTML = '<div class="smallMuted">Failed to load comments.</div>';
+          if(!list) return;
+          const comments = ensureLibComments(lib);
+          if(!comments || comments.length === 0){
+            list.innerHTML = '<div class="smallMuted">No comments yet.</div>';
+            return;
           }
+          list.innerHTML = '';
+          renderCommentsThread(comments, list, lib);
         }
 
         function renderCommentsThread(comments, parentEl, lib, depth=0) {
@@ -426,21 +531,36 @@ Get a code from the character builder in jjs, then paste it here. When you click
                 rf.innerHTML = `<textarea maxlength="200" placeholder="Reply (max 200 chars)" style="width:100%;min-height:28px;padding:4px;border-radius:6px;border:1px solid #333"></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:2px"><button type="submit" class="ghost">Post</button><span class="smallMuted replyCount"></span></div>`;
                 const rinput = rf.querySelector('textarea');
                 const rcount = rf.querySelector('.replyCount');
-                rinput.addEventListener('input',()=>{ rcount.textContent = (rinput.value.length ? rinput.value.length + '/200' : ''); });
+                rinput.addEventListener('input',()=>{ rcount.textContent = (rinput.value.length ? rinput.value.length + '/' + COMMENT_MAX_LENGTH : ''); });
                 rf.addEventListener('submit', async (ev)=>{
                   ev.preventDefault();
                   if(!u) return alert('Sign in to reply');
                   const text = rinput.value.trim();
                   if(!text) return;
-                  if(text.length>200) return alert('Max 200 chars');
-                  rf.querySelector('button').disabled = true;
-                  try{
-                    const resp = await fetch(SERVERLESS_URL + '?action=addComment', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ libId: lib.id, comment: { author: u.username, text, parentId: c.id } }) });
-                    const j = await resp.json();
-                    if(j.ok){ fetchAndRenderComments(lib); }
-                    else alert(j.error||'Failed to reply');
-                  }catch(e){ alert('Failed to reply'); }
-                  rf.querySelector('button').disabled = false;
+                  if(text.length>COMMENT_MAX_LENGTH) return alert('Max ' + COMMENT_MAX_LENGTH + ' chars');
+                  const btn = rf.querySelector('button');
+                  btn.disabled = true;
+                  const reply = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: text.slice(0,COMMENT_MAX_LENGTH), t: Date.now(), replies: [] };
+                  const comments = ensureLibComments(lib);
+                  const added = addReply(comments, c.id, reply);
+                  if(added){
+                    saveLocalComments(lib, comments);
+                    renderCommentsList(lib);
+                    rinput.value = '';
+                    rcount.textContent = '';
+                    try{
+                      if(SERVERLESS_URL){
+                        await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), c.id);
+                        await syncCommentsFromServer(lib);
+                      }
+                    }catch(err){
+                      console.warn('Reply sync failed', err);
+                      addNotification('Reply saved locally — server unreachable');
+                    }
+                  }else{
+                    alert('Failed to reply');
+                  }
+                  btn.disabled = false;
                 });
                 div.appendChild(rf);
               });
@@ -1106,4 +1226,5 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
