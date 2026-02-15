@@ -400,6 +400,84 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok:true, comments: [] });
     }
 
+    if(action === 'rate'){
+      const libId = payload.libId || (payload.lib && (payload.lib.id || payload.lib.libId));
+      const usernameRaw = payload.username || (payload.lib && payload.lib.username);
+      const ratingValue = Number(payload.rating);
+      const username = String(usernameRaw || '').trim().slice(0, 60);
+      if(!libId || !username) return res.status(400).json({ error: 'Missing libId or username' });
+      if(!Number.isFinite(ratingValue)) return res.status(400).json({ error: 'Invalid rating value' });
+      const value = Math.min(5, Math.max(1, Math.round(ratingValue)));
+      let libPath = `${basePath}/${libId}.json`;
+      let apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
+      let libData = null;
+      let sha = null;
+      let getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      if(getResp && getResp.status === 200){
+        const d = await getResp.json();
+        sha = d.sha;
+        try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
+        catch(e){ libData = null; }
+      }
+      if(!libData){
+        const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(basePath)}`;
+        const dirResp = await fetchFn(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+        if(dirResp && dirResp.status === 200){
+          const files = await dirResp.json();
+          const match = files.find(f=>f.name.startsWith(libId+'-') && f.name.endsWith('.json'));
+          if(match){
+            libPath = `${basePath}/${match.name}`;
+            apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
+            getResp = await fetchFn(apiLib + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+            if(getResp && getResp.status === 200){
+              const d = await getResp.json();
+              sha = d.sha;
+              try{ libData = JSON.parse(Buffer.from(d.content, 'base64').toString('utf8')); }
+              catch(e){ libData = null; }
+            }
+          }
+        }
+      }
+      if(!libData) return res.status(404).json({ error: 'Library not found' });
+      const ratings = Array.isArray(libData.ratings) ? libData.ratings : [];
+      const normalizedUser = username.toLowerCase();
+      const now = Date.now();
+      const newEntry = { user: username, value, t: now };
+      const existingIdx = ratings.findIndex(r => r && String(r.user || '').toLowerCase() === normalizedUser);
+      if(existingIdx >= 0){
+        ratings[existingIdx] = { ...ratings[existingIdx], ...newEntry };
+      }else{
+        ratings.push(newEntry);
+      }
+      libData.ratings = ratings;
+      const calcStats = (list)=>{
+        const values = list
+          .map(entry => {
+            if(!entry) return null;
+            const num = Number(entry.value);
+            if(!Number.isFinite(num)) return null;
+            return Math.min(5, Math.max(1, num));
+          })
+          .filter(val => typeof val === 'number');
+        if(!values.length) return { avg: 0, percent: 0, count: 0 };
+        const sum = values.reduce((acc, val)=> acc + val, 0);
+        const avg = sum / values.length;
+        const percent = Math.round(((avg - 1) / 4) * 100);
+        const clampedPercent = Math.max(0, Math.min(100, percent));
+        return { avg, percent: clampedPercent, count: values.length };
+      };
+      const stats = calcStats(ratings);
+      const content = toBase64(JSON.stringify(libData, null, 2));
+      const putBody = { message: `Update rating for ${libId}`, content, branch };
+      if(sha) putBody.sha = sha;
+      const putResp = await fetchFn(apiLib, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
+      if(!putResp.ok){
+        const txt = await putResp.text();
+        return res.status(putResp.status).json({ error: 'GitHub rating save error', detail: txt });
+      }
+      return res.status(200).json({ ok: true, ratings, stats });
+    }
+
     // POST add a comment: ?action=addComment, body: { libId, comment: { author, text, parentId (optional) } }
     if(action === 'addComment'){
       const libId = payload.libId;
@@ -556,3 +634,5 @@ function ensureBasePath(relPath, basePath){
   }
   return `${cleanBase}/${cleanRel}`;
 }
+
+
