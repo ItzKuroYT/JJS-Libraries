@@ -42,6 +42,36 @@ async function readBody(req){
   });
 }
 
+function sanitizeDmUser(username){
+  return String(username || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+}
+
+function buildConvId(userA, userB){
+  const clean = [sanitizeDmUser(userA), sanitizeDmUser(userB)].filter(Boolean);
+  if(clean.length < 2) return null;
+  clean.sort((a,b)=>a.localeCompare(b));
+  return `${clean[0]}__${clean[1]}`;
+}
+
+function resolveConvId(input){
+  if(!input) return null;
+  if(Array.isArray(input.participants) && input.participants.length === 2){
+    return buildConvId(input.participants[0], input.participants[1]);
+  }
+  if(input.userA && input.userB){
+    return buildConvId(input.userA, input.userB);
+  }
+  if(input.convId){
+    const parts = input.convId.split('__');
+    if(parts.length === 2) return buildConvId(parts[0], parts[1]);
+  }
+  if(input.conv){
+    const parts = input.conv.split('__');
+    if(parts.length === 2) return buildConvId(parts[0], parts[1]);
+  }
+  return null;
+}
+
 module.exports = async (req, res) => {
   // Basic CORS support
   res.setHeader('Access-Control-Allow-Origin','*');
@@ -76,6 +106,7 @@ module.exports = async (req, res) => {
   const repo = process.env.GITHUB_REPO;
   const branch = process.env.GITHUB_BRANCH || 'main';
   const basePath = (process.env.GITHUB_PATH || 'libs').replace(/^\/+|\/+$/g, '');
+  const dmBase = basePath ? `${basePath}/dm` : 'dm';
 
   if (!token || !owner || !repo) {
     console.error('Missing GITHUB_TOKEN/OWNER/REPO env vars');
@@ -195,25 +226,102 @@ module.exports = async (req, res) => {
 
     // handle DM saves
     if(action === 'saveDM'){
-      const conv = payload.conv || (payload.lib && payload.lib.conv);
       const entry = payload.entry || (payload.lib && payload.lib.entry);
-      if(!conv || !entry) return res.status(400).json({ error: 'Missing conv or entry' });
-      const dmBase = basePath ? `${basePath}/dms` : 'dms';
-      const dmPath = `${dmBase}/${conv}.json`;
+      const convId = resolveConvId({
+        convId: payload.convId || payload.conv || (payload.lib && (payload.lib.convId || payload.lib.conv)),
+        participants: payload.participants || (payload.lib && payload.lib.participants) || (entry ? [entry.from, entry.to] : null)
+      });
+      if(!convId || !entry) return res.status(400).json({ error: 'Missing conversation or entry' });
+      entry.message = String(entry.message || '').slice(0, 500);
+      entry.t = entry.t || Date.now();
+      const dmPath = `${dmBase}/${convId}.json`;
       const apiDm = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(dmPath)}`;
-      // get existing
       let existing = [];
       const getResp = await fetchFn(apiDm + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
       let sha = null;
-      if(getResp && getResp.status === 200){ const data = await getResp.json(); sha = data.sha; try{ existing = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8')); if(!Array.isArray(existing)) existing = []; }catch(e){ existing = []; } }
+      if(getResp && getResp.status === 200){
+        const data = await getResp.json();
+        sha = data.sha;
+        try{ existing = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8')); if(!Array.isArray(existing)) existing = []; }
+        catch(e){ existing = []; }
+      }
       existing.push(entry);
       const content = Buffer.from(JSON.stringify(existing, null, 2), 'utf8').toString('base64');
-      const putBody = { message: `Save DM convo ${conv}`, content, branch };
+      const putBody = { message: `Save DM convo ${convId}`, content, branch };
       if(sha) putBody.sha = sha;
       const putResp = await fetchFn(apiDm, { method: 'PUT', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(putBody) });
       if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub DM save error', detail: txt }); }
       const result = await putResp.json();
       return res.status(200).json({ ok: true, result });
+    }
+
+    if(action === 'getDMConversation'){
+      const convId = resolveConvId({
+        convId: urlObj.searchParams.get('convId') || (payload && (payload.convId || payload.conv)),
+        participants: payload && payload.participants
+      });
+      if(!convId) return res.status(400).json({ error: 'Missing conversation id' });
+      const dmPath = `${dmBase}/${convId}.json`;
+      const apiDm = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(dmPath)}`;
+      const getResp = await fetchFn(apiDm + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      if(getResp && getResp.status === 404) return res.status(200).json({ ok:true, messages: [] });
+      if(!getResp || getResp.status !== 200){
+        const txt = getResp ? await getResp.text() : 'No response';
+        return res.status(getResp ? getResp.status : 500).json({ error: 'Failed to load conversation', detail: txt });
+      }
+      const data = await getResp.json();
+      let messages = [];
+      try{ messages = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8')); if(!Array.isArray(messages)) messages = []; }
+      catch(e){ messages = []; }
+      return res.status(200).json({ ok:true, messages });
+    }
+
+    if(action === 'listDMs'){
+      const usernameRaw = (payload && payload.username) || urlObj.searchParams.get('username');
+      if(!usernameRaw) return res.status(400).json({ error: 'username required' });
+      const usernameKey = sanitizeDmUser(usernameRaw);
+      if(!usernameKey) return res.status(400).json({ error: 'username required' });
+      const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(dmBase)}`;
+      const dirResp = await fetchFn(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      if(dirResp && dirResp.status === 404) return res.status(200).json({ ok:true, conversations: [] });
+      if(!dirResp || dirResp.status !== 200){
+        const txt = dirResp ? await dirResp.text() : 'No response';
+        return res.status(dirResp ? dirResp.status : 500).json({ error: 'Failed to list DMs', detail: txt });
+      }
+      const files = await dirResp.json();
+      const conversations = [];
+      if(Array.isArray(files)){
+        for(const file of files){
+          if(file.type !== 'file' || !file.name.endsWith('.json')) continue;
+          const convFile = file.name.replace(/\.json$/,'');
+          const parts = convFile.split('__');
+          if(parts.length !== 2) continue;
+          const [a,b] = parts;
+          if(a !== usernameKey && b !== usernameKey) continue;
+          let otherDisplay = a === usernameKey ? b : a;
+          let lastMessage = null;
+          if(file.url){
+            try{
+              const fileResp = await fetchFn(file.url + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+              if(fileResp && fileResp.status === 200){
+                const fileData = await fileResp.json();
+                const text = Buffer.from(fileData.content || '', 'base64').toString('utf8');
+                const arr = JSON.parse(text);
+                if(Array.isArray(arr) && arr.length){
+                  const last = arr[arr.length - 1];
+                  if(last){
+                    lastMessage = { from: last.from || null, message: last.message || '', t: last.t || null };
+                    if(last.from && sanitizeDmUser(last.from) !== usernameKey) otherDisplay = last.from;
+                    else if(last.to) otherDisplay = last.to;
+                  }
+                }
+              }
+            }catch(e){ /* ignore parse errors */ }
+          }
+          conversations.push({ convId: convFile, participants: [a,b], withUser: otherDisplay, lastMessage });
+        }
+      }
+      return res.status(200).json({ ok:true, conversations });
     }
 
     // handle updateSocial (save full social object for user)
@@ -401,5 +509,7 @@ function sanitizeFilename(name){
 
 function toBase64(str){
   try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
+}
+
 }
 
