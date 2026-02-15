@@ -248,7 +248,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
         list.innerHTML = '<div class="smallMuted">Loading comments...</div>';
       }
       try{
-        const resp = await fetch(SERVERLESS_URL + '?action=getComments&libId=' + encodeURIComponent(libId));
+        const resp = await fetch(
+          SERVERLESS_URL + '?action=getComments&libId=' + encodeURIComponent(libId),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ libId })
+          }
+        );
         if(resp.status === 404){
           lib.comments = [];
           saveLocalComments(lib, []);
@@ -261,8 +268,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
         saveLocalComments(lib, lib.comments);
         renderCommentsList(lib);
       }catch(e){
+        console.error('syncCommentsFromServer failed', e);
         if(opts.showError && list){
-          list.innerHTML = '<div class="smallMuted">Failed to load comments.</div>';
+          const msg = e && e.message ? e.message : 'Unknown error';
+          list.innerHTML = `<div class="smallMuted">Failed to load comments. ${escapeHtml(msg)} <button class="ghost" id="retryCommentsSync">Retry</button></div>`;
+          const retryBtn = list.querySelector('#retryCommentsSync');
+          if(retryBtn){
+            retryBtn.addEventListener('click', ()=> syncCommentsFromServer(lib, { showSpinner: true, showError: true }));
+          }
         }
       }
     }
@@ -1226,5 +1239,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
 
