@@ -661,11 +661,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
           delBtn.addEventListener('click', async ()=>{
             const actingUser = getCurrentUser();
             if(!canDeleteLibrary(actingUser, lib)){
-              alert('Only the author or staff can delete this entry.');
+              alert('Only the author or owner can delete this entry.');
               return;
             }
-            const isStaffAction = actingUser && (actingUser.role === 'owner' || actingUser.role === 'moderator');
-            const promptMsg = isStaffAction ? 'Remove this library as staff?' : 'Delete this library?';
+            const isOwnerAction = actingUser && actingUser.role === 'owner';
+            const promptMsg = isOwnerAction ? 'Remove this library as the owner?' : 'Delete this library?';
             if(!confirm(promptMsg)) return;
             const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
             const fallbackFilename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title || 'library')}.json`;
@@ -1286,7 +1286,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     function canDeleteLibrary(user, lib){
       if(!user || !lib) return false;
-      if(user.role === 'owner' || user.role === 'moderator') return true;
+      if(user.role === 'owner') return true;
       return user.username === lib.author;
     }
     function updateUserLabel(){
@@ -2095,3 +2095,4 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
