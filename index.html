@@ -460,6 +460,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     // Users endpoint derived from serverless base
     const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
+    const socialCache = new Map();
 
     // --- Authentication helpers (client-side) ---
     function setToken(tok){ try{ localStorage.setItem('jjs_token', tok); updateUserLabel(); }catch(e){} }
@@ -627,38 +628,67 @@ Get a code from the character builder in jjs, then paste it here. When you click
     });
 
     // --- Sidebar / Profile / Notifications / DMs ---
-    function saveAvatarToServer(file){
-      if(!file) return Promise.reject('no file');
-      // Read file as data URL then POST JSON to serverless (simpler cross-platform)
-      return new Promise((res, rej)=>{
-        const fr = new FileReader();
-        fr.onload = async ()=>{
-          try{
-            const dataUrl = fr.result;
-            // try serverless JSON endpoint
-            if(SERVERLESS_URL){
-              try{
-                const username = getCurrentUser() ? getCurrentUser().username : 'anonymous';
-                const resp = await fetch(SERVERLESS_URL + '?action=uploadAvatar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dataUrl, username }) });
-                if(resp.ok){ const j = await resp.json().catch(()=>null); return res(j); }
-              }catch(e){ /* fall through to local */ }
-            }
-            // fallback: store locally
-            try{ localStorage.setItem('jjs_avatar_url', dataUrl); return res({ url: dataUrl }); }catch(e){ return rej(e); }
-          }catch(err){ rej(err); }
-        };
-        fr.onerror = rej;
-        fr.readAsDataURL(file);
+    function fileToDataUrl(file){
+      return new Promise((resolve, reject)=>{
+        const reader = new FileReader();
+        reader.onload = ()=>resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
     }
 
+    async function applyAvatarUpdate(username, url){
+      if(!username || !url) return;
+      let social = socialCache.get(username);
+      if(!social){
+        try{ social = JSON.parse(localStorage.getItem('jjs_social_' + username) || '{}'); }
+        catch(_e){ social = {}; }
+      }
+      social = social || {};
+      social.avatar_url = url;
+      await updateSocial(username, social);
+      try{ localStorage.setItem('jjs_avatar_url', url); }catch(_e){}
+    }
+
+    async function saveAvatarToServer(file){
+      const user = getCurrentUser();
+      if(!user) throw new Error('Sign in to upload an avatar.');
+      if(!file) throw new Error('No file selected.');
+      if(file.size && file.size > 1024 * 1024) throw new Error('Avatar max size is 1MB.');
+      const dataUrl = await fileToDataUrl(file);
+      const username = user.username;
+      if(SERVERLESS_URL){
+        try{
+          const resp = await fetch(SERVERLESS_URL + '?action=uploadAvatar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dataUrl, username }) });
+          if(resp.ok){
+            const j = await resp.json().catch(()=>null);
+            const remoteUrl = (j && j.url) || (j && j.result && j.result.content && j.result.content.download_url);
+            if(remoteUrl){
+              await applyAvatarUpdate(username, remoteUrl);
+              return { url: remoteUrl };
+            }
+          }
+        }catch(_err){ /* fall through to local */ }
+      }
+      await applyAvatarUpdate(username, dataUrl);
+      return { url: dataUrl, local: true };
+    }
+
     document.getElementById('avatarFile').addEventListener('change', async (ev)=>{
-      const f = ev.target.files && ev.target.files[0]; if(!f) return;
+      const file = ev.target.files && ev.target.files[0];
+      if(!file) return;
       try{
-        const j = await saveAvatarToServer(f);
-        const url = j && j.url ? j.url : null;
-        if(url){ localStorage.setItem('jjs_avatar_url', url); document.getElementById('avatarImg').src = url; addNotification('Avatar updated'); }
-      }catch(e){ alert('Avatar upload failed.'); }
+        const result = await saveAvatarToServer(file);
+        if(result && result.url){
+          document.getElementById('avatarImg').src = result.url;
+          addNotification('Avatar updated');
+          render(filter(search.value));
+        }
+      }catch(e){
+        alert(e && e.message ? e.message : 'Avatar upload failed.');
+      }finally{
+        ev.target.value = '';
+      }
     });
 
     function renderSidebar(){
@@ -698,38 +728,26 @@ Get a code from the character builder in jjs, then paste it here. When you click
         addNotification('Bio saved');
         render(filter(search.value));
       });
-      document.getElementById('saveAvatar').addEventListener('click', async ()=>{
+      document.getElementById('saveAvatar').addEventListener('click', ()=>{
         const me = getCurrentUser(); if(!me) return alert('Sign in to edit profile');
-        // Avatar upload UI: prompt for file
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = async ()=>{
-          if(!input.files||!input.files[0]) return;
-          const file = input.files[0];
-          if(file.size > 1024*1024) return alert('Max 1MB');
-          const form = new FormData();
-          form.append('avatar', file);
-          form.append('username', me.username);
-          try {
-            const resp = await fetch(SERVERLESS_URL + '?action=uploadAvatar', { method:'POST', body: form });
-            const j = await resp.json();
-            if(j.ok && j.url){
-              localStorage.setItem('jjs_avatar_url', j.url);
-              // update social profile with new avatar
-              const social = await fetchSocial(me.username) || {};
-              social.avatar_url = j.url;
-              await updateSocial(me.username, social);
+        const picker = document.createElement('input');
+        picker.type = 'file';
+        picker.accept = 'image/*';
+        picker.onchange = async ()=>{
+          const file = picker.files && picker.files[0];
+          if(!file) return;
+          try{
+            const result = await saveAvatarToServer(file);
+            if(result && result.url){
+              document.getElementById('avatarImg').src = result.url;
               addNotification('Avatar saved');
               render(filter(search.value));
-            } else {
-              alert(j.error||'Failed to upload avatar');
             }
-          } catch(e){
-            alert('Failed to upload avatar');
+          }catch(e){
+            alert(e && e.message ? e.message : 'Failed to upload avatar');
           }
         };
-        input.click();
+        picker.click();
       });
       document.getElementById('refreshProfile').addEventListener('click', async ()=>{
         const me = getCurrentUser(); if(!me) return alert('Sign in'); const s = await fetchSocial(me.username); document.getElementById('profileBio').value = s.bio || '';
@@ -739,19 +757,40 @@ Get a code from the character builder in jjs, then paste it here. When you click
     // --- Social helpers (friend requests, blocking, profiles) ---
     async function fetchSocial(username){
       if(!username) return {};
+      if(socialCache.has(username)) return socialCache.get(username);
       const key = 'jjs_social_' + username;
       if(SERVERLESS_URL){
-        try{ const resp = await fetch(SERVERLESS_URL + '?action=getSocial&username=' + encodeURIComponent(username)); if(resp.ok){ const j = await resp.json(); if(j && j.social){ try{ localStorage.setItem(key, JSON.stringify(j.social)); }catch(e){}; return j.social; } } }catch(e){}
+        try{
+          const resp = await fetch(SERVERLESS_URL + '?action=getSocial&username=' + encodeURIComponent(username));
+          if(resp.ok){
+            const j = await resp.json();
+            if(j && j.social){
+              try{ localStorage.setItem(key, JSON.stringify(j.social)); }catch(_e){}
+              socialCache.set(username, j.social);
+              return j.social;
+            }
+          }
+        }catch(_err){}
       }
-      try{ return JSON.parse(localStorage.getItem(key) || '{}'); }catch(e){ return {}; }
+      try{
+        const cached = JSON.parse(localStorage.getItem(key) || '{}');
+        socialCache.set(username, cached);
+        return cached;
+      }catch(_e){
+        return {};
+      }
     }
 
     async function updateSocial(username, social){
       if(!username || !social) return null;
       const key = 'jjs_social_' + username;
-      try{ localStorage.setItem(key, JSON.stringify(social)); }catch(e){}
+      try{ localStorage.setItem(key, JSON.stringify(social)); }catch(_e){}
+      socialCache.set(username, social);
       if(SERVERLESS_URL){
-        try{ const resp = await fetch(SERVERLESS_URL + '?action=updateSocial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, social }) }); if(resp.ok) return await resp.json(); }catch(e){}
+        try{
+          const resp = await fetch(SERVERLESS_URL + '?action=updateSocial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, social }) });
+          if(resp.ok) return await resp.json();
+        }catch(_err){}
       }
       return null;
     }
@@ -1009,4 +1048,5 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
