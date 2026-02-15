@@ -4,6 +4,7 @@
   "description": "JJS Libraries serverless and frontend project",
   "main": "api/save-lib.js",
   "scripts": {
+    "build": "echo \"Static site build not required\"",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "engines": {
