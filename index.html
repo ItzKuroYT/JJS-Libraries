@@ -184,6 +184,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         avatarImg.style.borderRadius = '50%';
         avatarImg.style.objectFit = 'cover';
         avatarImg.style.marginRight = '8px';
+        avatarImg.style.display = 'none';
         titleEl.parentElement.insertBefore(avatarImg, titleEl);
         titleEl.textContent = lib.title;
         // Show description if present
@@ -208,10 +209,25 @@ Get a code from the character builder in jjs, then paste it here. When you click
         (async ()=>{
           try{
             const s = await fetchSocial(lib.author);
-            avatarImg.src = (s && s.avatar_url) ? s.avatar_url : (localStorage.getItem('jjs_avatar_url')||'');
-            // optionally show small bio snippet in meta
-            if(s && s.bio){ const meta = node.querySelector('.meta'); const bioEl = document.createElement('div'); bioEl.className='smallMuted'; bioEl.style.marginTop='6px'; bioEl.textContent = s.bio.length>80? s.bio.slice(0,80)+'…': s.bio; meta.appendChild(bioEl); }
-          }catch(e){ avatarImg.src = localStorage.getItem('jjs_avatar_url')||''; }
+            if(s && s.avatar_url){
+              avatarImg.src = s.avatar_url;
+              avatarImg.style.display = 'inline-block';
+            }else{
+              avatarImg.removeAttribute('src');
+              avatarImg.style.display = 'none';
+            }
+            if(s && s.bio){
+              const meta = node.querySelector('.meta');
+              const bioEl = document.createElement('div');
+              bioEl.className='smallMuted';
+              bioEl.style.marginTop='6px';
+              bioEl.textContent = s.bio.length>80? s.bio.slice(0,80)+'…': s.bio;
+              meta.appendChild(bioEl);
+            }
+          }catch(e){
+            avatarImg.removeAttribute('src');
+            avatarImg.style.display='none';
+          }
         })();
 
         const card = node.querySelector('.card');
