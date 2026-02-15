@@ -174,13 +174,21 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const node = tpl.content.cloneNode(true);
         const titleEl = node.querySelector('.title');
         const avatarImg = node.querySelector('.cardAvatar');
+        const avatarWrap = avatarImg ? avatarImg.parentElement : null;
+        if(avatarWrap){
+          avatarWrap.style.width = '32px';
+          avatarWrap.style.height = '32px';
+          avatarWrap.style.borderRadius = '50%';
+          avatarWrap.style.overflow = 'hidden';
+          avatarWrap.style.background = 'none';
+          avatarWrap.style.display = 'none';
+          avatarWrap.style.marginRight = '8px';
+        }
         if(avatarImg){
-          avatarImg.style.width = '32px';
-          avatarImg.style.height = '32px';
-          avatarImg.style.borderRadius = '50%';
+          avatarImg.style.width = '100%';
+          avatarImg.style.height = '100%';
           avatarImg.style.objectFit = 'cover';
-          avatarImg.style.marginRight = '8px';
-          avatarImg.style.display = 'none';
+          avatarImg.style.display = 'block';
         }
         titleEl.textContent = lib.title;
         // Show description if present
@@ -208,10 +216,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
             const s = await fetchSocial(lib.author);
             if(s && s.avatar_url){
               avatarImg.src = s.avatar_url;
-              avatarImg.style.display = 'inline-block';
+              if(avatarWrap) avatarWrap.style.display = 'inline-block';
             }else{
               avatarImg.removeAttribute('src');
-              avatarImg.style.display = 'none';
+              if(avatarWrap) avatarWrap.style.display = 'none';
             }
             if(s && s.bio){
               const meta = node.querySelector('.meta');
@@ -223,7 +231,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
             }
           }catch(e){
             avatarImg.removeAttribute('src');
-            avatarImg.style.display='none';
+            if(avatarWrap) avatarWrap.style.display='none';
           }
         })();
 
@@ -1064,4 +1072,3 @@ Get a code from the character builder in jjs, then paste it here. When you click
 </body>
 </html>
 
-</html>
