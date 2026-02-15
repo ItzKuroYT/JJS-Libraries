@@ -240,7 +240,7 @@ module.exports = async (req, res) => {
     // --- COMMENTS SYSTEM (simple, robust) ---
     // GET comments for a library: ?action=getComments&libId=...
     if(action === 'getComments'){
-      const libId = urlObj.searchParams.get('libId');
+      const libId = urlObj.searchParams.get('libId') || (payload && (payload.libId || (payload.lib && (payload.lib.id || payload.lib.libId))));
       if(!libId) return res.status(400).json({ error: 'Missing libId' });
       let libPath = `${basePath}/${libId}.json`;
       let apiLib = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(libPath)}`;
@@ -402,3 +402,4 @@ function sanitizeFilename(name){
 function toBase64(str){
   try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
 }
+
