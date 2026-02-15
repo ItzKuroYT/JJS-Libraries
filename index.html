@@ -180,15 +180,17 @@ Get a code from the character builder in jjs, then paste it here. When you click
           avatarWrap.style.height = '32px';
           avatarWrap.style.borderRadius = '50%';
           avatarWrap.style.overflow = 'hidden';
-          avatarWrap.style.background = 'none';
-          avatarWrap.style.display = 'none';
+          avatarWrap.style.background = 'rgba(255,255,255,0.08)';
+          avatarWrap.style.display = 'inline-flex';
+          avatarWrap.style.alignItems = 'center';
+          avatarWrap.style.justifyContent = 'center';
           avatarWrap.style.marginRight = '8px';
         }
         if(avatarImg){
           avatarImg.style.width = '100%';
           avatarImg.style.height = '100%';
           avatarImg.style.objectFit = 'cover';
-          avatarImg.style.display = 'block';
+          avatarImg.style.display = 'none';
         }
         titleEl.textContent = lib.title;
         // Show description if present
@@ -217,19 +219,21 @@ Get a code from the character builder in jjs, then paste it here. When you click
             const avatarUrl = resolveAvatarUrl(lib.author, social);
             if(avatarUrl){
               avatarImg.onload = ()=>{
-                if(avatarWrap) avatarWrap.style.display = 'inline-flex';
+                avatarImg.style.display = 'block';
+                if(avatarWrap) avatarWrap.style.background = 'none';
                 avatarImg.onload = null;
               };
               avatarImg.onerror = ()=>{
                 avatarImg.removeAttribute('src');
-                if(avatarWrap) avatarWrap.style.display = 'none';
+                avatarImg.style.display = 'none';
+                if(avatarWrap) avatarWrap.style.background = 'rgba(255,255,255,0.08)';
                 avatarImg.onerror = null;
               };
               avatarImg.src = avatarUrl;
-              if(avatarWrap) avatarWrap.style.display = 'inline-flex';
             }else{
               avatarImg.removeAttribute('src');
-              if(avatarWrap) avatarWrap.style.display = 'none';
+              avatarImg.style.display = 'none';
+              if(avatarWrap) avatarWrap.style.background = 'rgba(255,255,255,0.08)';
             }
             if(social && social.bio){
               const meta = node.querySelector('.meta');
@@ -241,7 +245,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
             }
           }catch(e){
             avatarImg.removeAttribute('src');
-            if(avatarWrap) avatarWrap.style.display='none';
+            avatarImg.style.display='none';
+            if(avatarWrap) avatarWrap.style.background='rgba(255,255,255,0.08)';
           }
         })();
 
@@ -1101,3 +1106,4 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
