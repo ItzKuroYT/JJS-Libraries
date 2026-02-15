@@ -9,8 +9,20 @@
 const { URL } = require('url');
 
 // Try to use global fetch (Node 18+ / modern runtimes). Fallback to node-fetch if available.
-let fetchFn = global.fetch;
-try{ if(!fetchFn) fetchFn = require('node-fetch'); }catch(e){}
+let fetchFn = (typeof globalThis !== 'undefined' && globalThis.fetch) ? globalThis.fetch : null;
+if(!fetchFn){
+  try{
+    const nf = require('node-fetch');
+    fetchFn = nf && nf.default ? nf.default : nf;
+  }catch(e){
+    try{
+      // If node-fetch v3 (ESM) is installed, import dynamically
+      fetchFn = (...args) => import('node-fetch').then(m=>m.default(...args));
+    }catch(e2){
+      fetchFn = null;
+    }
+  }
+}
 
 async function readBody(req){
   if (req.body && Object.keys(req.body).length) return req.body;
@@ -181,7 +193,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // handle DM saves and fetches
+    // handle DM saves
     if(action === 'saveDM'){
       const conv = payload.conv || (payload.lib && payload.lib.conv);
       const entry = payload.entry || (payload.lib && payload.lib.entry);
@@ -202,37 +214,6 @@ module.exports = async (req, res) => {
       if(!putResp.ok){ const txt = await putResp.text(); return res.status(putResp.status).json({ error: 'GitHub DM save error', detail: txt }); }
       const result = await putResp.json();
       return res.status(200).json({ ok: true, result });
-    }
-
-    // GET a DM conversation: ?action=getDM&conv=key
-    if(action === 'getDM' && req.method === 'GET'){
-      const conv = urlObj.searchParams.get('conv');
-      if(!conv) return res.status(400).json({ error: 'Missing conv' });
-      const dmBase = basePath ? `${basePath}/dms` : 'dms';
-      const dmPath = `${dmBase}/${conv}.json`;
-      const apiDm = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(dmPath)}`;
-      const getResp = await fetchFn(apiDm + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
-      if(getResp && getResp.status === 200){
-        const data = await getResp.json();
-        try{
-          const dms = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
-          return res.status(200).json({ ok: true, dms });
-        }catch(e){ return res.status(200).json({ ok: true, dms: [] }); }
-      }
-      return res.status(200).json({ ok: true, dms: [] });
-    }
-
-    // List all DM convos for the user: ?action=listDMs
-    if(action === 'listDMs' && req.method === 'GET'){
-      const dmBase = basePath ? `${basePath}/dms` : 'dms';
-      const apiDir = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(dmBase)}`;
-      const getResp = await fetchFn(apiDir + `?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
-      if(getResp && getResp.status === 200){
-        const files = await getResp.json();
-        const convs = files.filter(f=>f.name.endsWith('.json')).map(f=>f.name.replace('.json',''));
-        return res.status(200).json({ ok: true, convs });
-      }
-      return res.status(200).json({ ok: true, convs: [] });
     }
 
     // handle updateSocial (save full social object for user)
@@ -422,5 +403,3 @@ function toBase64(str){
   try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
 }
 
-  try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
-}
