@@ -172,20 +172,16 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
       filtered.forEach(lib=>{
         const node = tpl.content.cloneNode(true);
-        // Add avatar next to title, remove any existing avatar
         const titleEl = node.querySelector('.title');
-        // Remove any existing avatar element
-        const existingAvatar = titleEl.parentElement.querySelector('.cardAvatar');
-        if(existingAvatar) existingAvatar.remove();
-        const avatarImg = document.createElement('img');
-        avatarImg.className = 'cardAvatar';
-        avatarImg.style.width = '32px';
-        avatarImg.style.height = '32px';
-        avatarImg.style.borderRadius = '50%';
-        avatarImg.style.objectFit = 'cover';
-        avatarImg.style.marginRight = '8px';
-        avatarImg.style.display = 'none';
-        titleEl.parentElement.insertBefore(avatarImg, titleEl);
+        const avatarImg = node.querySelector('.cardAvatar');
+        if(avatarImg){
+          avatarImg.style.width = '32px';
+          avatarImg.style.height = '32px';
+          avatarImg.style.borderRadius = '50%';
+          avatarImg.style.objectFit = 'cover';
+          avatarImg.style.marginRight = '8px';
+          avatarImg.style.display = 'none';
+        }
         titleEl.textContent = lib.title;
         // Show description if present
         if(lib.description){
@@ -207,6 +203,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
         // populate author avatar from social if available
         (async ()=>{
+          if(!avatarImg) return;
           try{
             const s = await fetchSocial(lib.author);
             if(s && s.avatar_url){
@@ -1065,4 +1062,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
     loadRemoteLibs();
   </script>
 </body>
+</html>
+
 </html>
