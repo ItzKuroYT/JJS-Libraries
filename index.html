@@ -26,6 +26,17 @@
     .ratingRow{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;position:relative}
     .ratingRow.ratingRowFlash{animation:ratingRowPulse 0.6s ease}
     .ratingStars{display:flex;gap:4px}
+    .communityStrip{margin:18px 0;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+    .statBlock{display:flex;flex-direction:column;gap:4px;min-width:120px}
+    .statLabel{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)}
+    .statValue{font-size:26px;font-weight:600}
+    .staffPanel{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+    .staffBlock{display:flex;flex-direction:column;gap:4px;min-width:160px}
+    .staffPills{display:flex;flex-wrap:wrap;gap:6px;min-height:26px}
+    .staffPill{padding:4px 10px;border-radius:999px;background:rgba(255,255,255,0.08);font-size:12px;font-weight:500}
+    .staffPill--owner{background:rgba(34,197,94,0.18);color:#86efac}
+    .staffError{color:var(--ratingNegative);font-size:12px}
+    #addModeratorBtn{margin-left:auto}
     .ratingStars button{background:transparent;border:none;padding:0;font-size:18px;line-height:1;color:rgba(255,255,255,0.25);cursor:pointer;transition:color 0.18s ease,transform 0.18s ease;will-change:color,transform}
     .ratingStars button.filled{color:#facc15;text-shadow:0 0 12px rgba(250,204,21,0.35);transform:scale(1)}
     .ratingStars button:not(:disabled):hover{color:#fde047;transform:translateY(-1px)}
@@ -37,13 +48,9 @@
     .ratingPercent--neutral{color:var(--ratingNeutral)}
     .ratingPercent--negative{color:var(--ratingNegative)}
     .ratingRow.ratingRowFlash .ratingPercent{transform:scale(1.06)}
-    .userStatsBanner{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;margin:12px 0;border-radius:10px;background:linear-gradient(120deg,rgba(124,58,237,0.28),rgba(30,64,175,0.25));border:1px solid rgba(255,255,255,0.08)}
-    .userStatsBanner h2{margin:0;font-size:15px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.78)}
-    .userStatsValue{font-size:26px;font-weight:600;letter-spacing:0.02em}
-    .userStatsTrend{font-size:12px;color:var(--muted)}
     @keyframes ratingRowPulse{0%{transform:scale(0.96);opacity:0.6;}60%{transform:scale(1.04);opacity:1;}100%{transform:scale(1);opacity:1;}}
     @media (prefers-reduced-motion:reduce){.ratingRow.ratingRowFlash{animation:none}.ratingPercent{transition:none}.ratingStars button{transition:none}}
-    @media(max-width:600px){.container{margin:18px;padding:16px}}
+    @media(max-width:600px){.container{margin:18px;padding:16px}.communityStrip{flex-direction:column;align-items:flex-start}.statBlock,.staffBlock{width:100%}.staffPanel{width:100%}#addModeratorBtn{width:100%;margin-left:0}}
   </style>
 </head>
 <body>
@@ -109,13 +116,6 @@
           </div>
           <div class="small">Made for Jujutsu Shenanigans</div>
         </header>
-        <div class="userStatsBanner" id="userStatsBanner">
-          <div>
-            <h2>Current Users</h2>
-            <div class="userStatsTrend" id="userStatsMeta">Tracking all registered accounts</div>
-          </div>
-          <div class="userStatsValue" id="userCount">—</div>
-        </div>
 
         <main style="flex:1">
           <div class="controls">
@@ -137,6 +137,28 @@
       <div id="tagPicker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       <input id="customTag" placeholder="Add tag" style="padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
       <button id="addTagBtn" class="ghost">Add Tag</button>
+    </div>
+
+    <div class="communityStrip">
+      <div class="statBlock">
+        <div class="statLabel">Current Users</div>
+        <div class="statValue" id="currentUsersValue">—</div>
+      </div>
+      <div class="staffPanel">
+        <div class="staffBlock">
+          <div class="statLabel">Owner</div>
+          <div class="staffPills">
+            <span class="staffPill staffPill--owner" id="staffOwnerValue">Loading...</span>
+          </div>
+        </div>
+        <div class="staffBlock">
+          <div class="statLabel">Moderators</div>
+          <div class="staffPills" id="staffModerators">
+            <span class="staffPill">Loading...</span>
+          </div>
+        </div>
+      </div>
+      <button id="addModeratorBtn" class="ghost small" style="display:none">Add Moderator</button>
     </div>
 
     <div id="list" class="list"></div>
@@ -321,7 +343,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const resp = await fetch(SERVERLESS_URL + '?action=rate', {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ libId, rating: value, username: me.username, path: lib.__path || null })
+        body: JSON.stringify({ libId, rating: value, username: me.username })
       });
       const data = await resp.json().catch(()=>null);
       if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to submit rating');
@@ -573,10 +595,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const editBtn = node.querySelector('.edit');
         const delBtn = node.querySelector('.del');
         const currentUser = getCurrentUser();
-        if(currentUser && currentUser.username === lib.author){
-          if(editBtn) editBtn.style.display = 'inline-block';
-          if(delBtn) delBtn.style.display = 'inline-block';
-        }
+        const isAuthor = !!(currentUser && currentUser.username === lib.author);
+        const canDelete = canDeleteLibrary(currentUser, lib);
+        if(isAuthor && editBtn) editBtn.style.display = 'inline-block';
+        if(canDelete && delBtn) delBtn.style.display = 'inline-block';
 
         if(editBtn){
           editBtn.addEventListener('click', async ()=>{
@@ -613,7 +635,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
         if(delBtn){
           delBtn.addEventListener('click', async ()=>{
-            if(!confirm('Delete this library?')) return;
+            const actingUser = getCurrentUser();
+            if(!canDeleteLibrary(actingUser, lib)){
+              alert('Only the author or staff can delete this entry.');
+              return;
+            }
+            const isStaffAction = actingUser && (actingUser.role === 'owner' || actingUser.role === 'moderator');
+            const promptMsg = isStaffAction ? 'Remove this library as staff?' : 'Delete this library?';
+            if(!confirm(promptMsg)) return;
             const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
             const fallbackFilename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title || 'library')}.json`;
             const resolvedPath = (lib.__path && lib.__path.trim()) || (localBasePath ? `${localBasePath}/${fallbackFilename}` : fallbackFilename);
@@ -650,6 +679,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
             const idx = libs.findIndex(x=>x.id===lib.id);
             if(idx>=0) libs.splice(idx,1);
             render(filter(search.value));
+            addNotification((isStaffAction ? 'Staff removed ' : 'Deleted ') + lib.title);
           });
         }
 
@@ -847,7 +877,209 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     // Users endpoint derived from serverless base
     const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
+    const OWNER_USERNAME = 'Kuro';
+    const OWNER_USERNAME_LOWER = OWNER_USERNAME.toLowerCase();
     const socialCache = new Map();
+    const staffState = { owner: null, moderators: [] };
+
+    function inferRoleFromState(username){
+      const normalized = (username || '').toLowerCase();
+      if(!normalized) return 'member';
+      if(staffState.owner && staffState.owner.username && staffState.owner.username.toLowerCase() === normalized) return 'owner';
+      if(staffState.moderators.some(mod=> (mod.username || '').toLowerCase() === normalized)) return 'moderator';
+      if(OWNER_USERNAME_LOWER && normalized === OWNER_USERNAME_LOWER) return 'owner';
+      return 'member';
+    }
+
+    function inferRoleFromPayload(payload){
+      if(!payload) return 'member';
+      if(payload.role) return payload.role;
+      return inferRoleFromState(payload.username);
+    }
+
+    async function refreshUserCount(){
+      const label = document.getElementById('currentUsersValue');
+      if(!label) return;
+      if(!USERS_URL){ label.textContent = 'n/a'; return; }
+      label.textContent = '...';
+      try{
+        const resp = await fetch(USERS_URL + '?action=list');
+        const data = await resp.json().catch(()=>null);
+        if(!resp.ok || !data || !data.ok) throw new Error('Failed to load');
+        label.textContent = Number(data.count) || 0;
+        label.removeAttribute('title');
+      }catch(err){
+        label.textContent = '??';
+        label.title = 'Unable to load user count';
+      }
+    }
+
+    async function refreshStaffDisplay(){
+      const ownerEl = document.getElementById('staffOwnerValue');
+      const modsWrap = document.getElementById('staffModerators');
+      if(!ownerEl || !modsWrap) return;
+      ownerEl.textContent = 'Loading...';
+      modsWrap.innerHTML = '<span class="staffPill">Loading...</span>';
+      if(!USERS_URL){
+        ownerEl.textContent = 'Unavailable';
+        modsWrap.innerHTML = '<span class="staffPill staffError">Users endpoint not configured</span>';
+        return;
+      }
+      try{
+        const resp = await fetch(USERS_URL + '?action=staff');
+        const data = await resp.json().catch(()=>null);
+        if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to load staff');
+        staffState.owner = data.owner || null;
+        staffState.moderators = Array.isArray(data.moderators) ? data.moderators : [];
+        ownerEl.textContent = staffState.owner && staffState.owner.username ? staffState.owner.username : '—';
+        modsWrap.innerHTML = '';
+        if(!staffState.moderators.length){
+          const span = document.createElement('span');
+          span.className = 'staffPill';
+          span.textContent = 'No moderators yet';
+          modsWrap.appendChild(span);
+        }else{
+          staffState.moderators.forEach(mod=>{
+            const span = document.createElement('span');
+            span.className = 'staffPill';
+            span.textContent = mod.username;
+            modsWrap.appendChild(span);
+          });
+        }
+      }catch(err){
+        ownerEl.textContent = 'Unavailable';
+        modsWrap.innerHTML = '<span class="staffPill staffError">Failed to load staff</span>';
+      }finally{
+        updateAddModeratorButton();
+        updateStaffConsoleVisibility();
+        render(filter(search.value));
+      }
+    }
+
+    function updateAddModeratorButton(){
+      const btn = document.getElementById('addModeratorBtn');
+      if(!btn) return;
+      const user = getCurrentUser();
+      const ownerName = staffState.owner && staffState.owner.username ? staffState.owner.username.toLowerCase() : '';
+      const userMatch = user && user.username ? user.username.toLowerCase() : '';
+      const isOwner = !!(user && (user.role === 'owner' || (ownerName && ownerName === userMatch) || (OWNER_USERNAME_LOWER && OWNER_USERNAME_LOWER === userMatch)));
+      btn.style.display = isOwner ? 'inline-flex' : 'none';
+      if(!isOwner){
+        btn.disabled = false;
+        btn.textContent = 'Add Moderator';
+      }
+    }
+
+    async function promoteToModerator(username){
+      const targetName = (username || '').trim();
+      if(!targetName) throw new Error('username required');
+      if(!USERS_URL) throw new Error('Users endpoint unavailable');
+      const token = getToken();
+      if(!token) throw new Error('Sign in as the owner to add staff');
+      const resp = await fetch(USERS_URL + '?action=addModerator', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer ' + token},
+        body: JSON.stringify({ username: targetName })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to update staff');
+      return data.user;
+    }
+
+    async function demoteModerator(username){
+      const targetName = (username || '').trim();
+      if(!targetName) throw new Error('username required');
+      if(!USERS_URL) throw new Error('Users endpoint unavailable');
+      const token = getToken();
+      if(!token) throw new Error('Sign in as the owner to update staff');
+      const resp = await fetch(USERS_URL + '?action=removeModerator', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer ' + token},
+        body: JSON.stringify({ username: targetName })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to update staff');
+      return data.user;
+    }
+
+    async function handleAddModeratorClick(){
+      const btn = document.getElementById('addModeratorBtn');
+      if(!btn) return;
+      const input = prompt('Enter username to promote to moderator');
+      if(!input) return;
+      const target = input.trim();
+      if(!target) return;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Adding...';
+      try{
+        const promoted = await promoteToModerator(target);
+        const displayName = promoted && promoted.username ? promoted.username : target;
+        addNotification(displayName + ' is now a moderator');
+        await refreshStaffDisplay();
+      }catch(err){
+        alert(err && err.message ? err.message : 'Failed to add moderator');
+      }finally{
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    async function runStaffConsoleCommand(command){
+      const match = command.match(/^\?(mod|unmod)\s+(.+)$/i);
+      if(!match) throw new Error('Use ?mod username or ?unmod username');
+      const action = match[1].toLowerCase();
+      let target = match[2].trim();
+      if(target.startsWith('(') && target.endsWith(')')) target = target.slice(1, -1).trim();
+      if(!target) throw new Error('Username required');
+      if(action === 'mod'){
+        const promoted = await promoteToModerator(target);
+        const name = promoted && promoted.username ? promoted.username : target;
+        addNotification(name + ' promoted to moderator');
+        await refreshStaffDisplay();
+        return name + ' promoted to moderator';
+      }
+      const demoted = await demoteModerator(target);
+      const name = demoted && demoted.username ? demoted.username : target;
+      addNotification(name + ' removed from moderators');
+      await refreshStaffDisplay();
+      return name + ' removed from moderators';
+    }
+
+    async function handleStaffConsoleSubmit(ev){
+      if(ev) ev.preventDefault();
+      const inputEl = document.getElementById('staffConsoleInput');
+      const statusEl = document.getElementById('staffConsoleStatus');
+      if(!inputEl) return;
+      const command = inputEl.value.trim();
+      if(!command){
+        if(statusEl) statusEl.textContent = 'Enter a command';
+        return;
+      }
+      if(statusEl) statusEl.textContent = 'Running...';
+      try{
+        const resultText = await runStaffConsoleCommand(command);
+        if(statusEl) statusEl.textContent = resultText;
+        inputEl.value = '';
+      }catch(err){
+        if(statusEl) statusEl.textContent = err && err.message ? err.message : 'Command failed';
+      }
+    }
+
+    function updateStaffConsoleVisibility(){
+      const consoleBlock = document.getElementById('staffConsoleBlock');
+      if(!consoleBlock) return;
+      const user = getCurrentUser();
+      const normalized = user && user.username ? user.username.toLowerCase() : '';
+      const isOwner = !!(user && (user.role === 'owner' || (normalized && (normalized === OWNER_USERNAME_LOWER))));
+      consoleBlock.style.display = isOwner ? 'block' : 'none';
+      if(!isOwner){
+        const statusEl = document.getElementById('staffConsoleStatus');
+        if(statusEl) statusEl.textContent = '';
+        const inputEl = document.getElementById('staffConsoleInput');
+        if(inputEl) inputEl.value = '';
+      }
+    }
 
     function normalizeUsernameForPath(username){
       return (username || '').replace(/[^a-z0-9_-]/gi,'_');
@@ -870,41 +1102,40 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     // --- Authentication helpers (client-side) ---
-    function setToken(tok){ try{ localStorage.setItem('jjs_token', tok); updateUserLabel(); }catch(e){} }
+    function setToken(tok){
+      try{
+        if(tok) localStorage.setItem('jjs_token', tok);
+        else localStorage.removeItem('jjs_token');
+      }catch(e){}
+      updateUserLabel();
+      updateAddModeratorButton();
+      updateStaffConsoleVisibility();
+      render(filter(search.value));
+    }
     function getToken(){ try{ return localStorage.getItem('jjs_token'); }catch(e){return null;} }
     function decodeToken(tok){ if(!tok) return null; try{ const parts = tok.split('.'); if(parts.length<2) return null; const payload = parts[1]; const json = JSON.parse(atob(payload.replace(/-/g,'+').replace(/_/g,'/'))); return json; }catch(e){return null;} }
-    function getCurrentUser(){ const tok = getToken(); const p = decodeToken(tok); return p ? { username: p.username, id: p.id } : null; }
-    function updateUserLabel(){ const lbl = document.getElementById('userLabel'); const u = getCurrentUser(); if(u) lbl.textContent = `Signed in: ${u.username}`; else lbl.textContent = ''; }
-
-    async function getUserCountFromServer(){
-      try{
-        const resp = await fetch(USERS_URL + '?action=list');
-        if(!resp.ok) throw new Error('Failed to load user count');
-        return await resp.json();
-      }catch(err){
-        throw err;
-      }
+    function getCurrentUser(){
+      const tok = getToken();
+      const p = decodeToken(tok);
+      if(!p || !p.username) return null;
+      const role = inferRoleFromPayload(p) || 'member';
+      return { username: p.username, id: p.id, role };
     }
 
-    async function refreshUserCount(){
-      const valueEl = document.getElementById('userCount');
-      const metaEl = document.getElementById('userStatsMeta');
-      if(!valueEl) return;
-      valueEl.textContent = '…';
-      if(metaEl) metaEl.textContent = 'Loading account stats';
-      try{
-        const data = await getUserCountFromServer();
-        if(data && typeof data.count === 'number'){
-          const formatted = data.count.toLocaleString();
-          valueEl.textContent = formatted;
-          if(metaEl) metaEl.textContent = data.count === 1 ? 'One registered account' : `${formatted} registered accounts`;
-        }else{
-          valueEl.textContent = '—';
-          if(metaEl) metaEl.textContent = 'Unable to read account count';
-        }
-      }catch(_err){
-        valueEl.textContent = '—';
-        if(metaEl) metaEl.textContent = 'Unable to load account stats';
+    function canDeleteLibrary(user, lib){
+      if(!user || !lib) return false;
+      if(user.role === 'owner' || user.role === 'moderator') return true;
+      return user.username === lib.author;
+    }
+    function updateUserLabel(){
+      const lbl = document.getElementById('userLabel');
+      if(!lbl) return;
+      const u = getCurrentUser();
+      if(u){
+        const roleLabel = u.role && u.role !== 'member' ? ` (${u.role})` : '';
+        lbl.textContent = `Signed in: ${u.username}${roleLabel}`;
+      }else{
+        lbl.textContent = '';
       }
     }
 
@@ -914,8 +1145,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const j = await resp.json().catch(()=>null);
         if(!resp.ok) throw new Error(JSON.stringify(j));
         if(j && j.token) setToken(j.token);
-        updateUserLabel();
-        refreshUserCount();
+        try{ await Promise.all([refreshUserCount(), refreshStaffDisplay()]); }catch(_err){}
         return j;
       }catch(err){ return null; }
     }
@@ -926,7 +1156,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const j = await resp.json().catch(()=>null);
         if(!resp.ok) throw new Error(JSON.stringify(j));
         if(j && j.token) setToken(j.token);
-        updateUserLabel();
+        try{ await refreshStaffDisplay(); }catch(_err){}
         return j;
       }catch(err){ return null; }
     }
@@ -945,6 +1175,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       authLogin(u,p);
     });
     updateUserLabel();
+    updateStaffConsoleVisibility();
 
     // --- Tag picker ---
     const PRESET_TAGS = ['Beginner moveset','Intermediate moveset','Advanced moveset','Custom','JJK','Dragonball','Sololeveling','Video-game','OP'];
@@ -981,7 +1212,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
     });
 
     renderTagPicker();
-    refreshUserCount();
+
+    const addModeratorBtnEl = document.getElementById('addModeratorBtn');
+    if(addModeratorBtnEl){
+      addModeratorBtnEl.addEventListener('click', handleAddModeratorClick);
+    }
 
     // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
     document.getElementById('createEntry').addEventListener('click', async ()=>{
@@ -1153,6 +1388,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       document.getElementById('myLibCount').textContent = my.length;
       my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; myLibsWrap.appendChild(d); });
       renderFriendRequests(); renderNotifications(); renderDMList();
+      updateStaffConsoleVisibility();
     }
 
     // Profile edit UI in sidebar
@@ -1167,6 +1403,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
             <button id="saveBio" class="ghost">Save Bio</button>
             <button id="saveAvatar" class="ghost">Save Avatar</button>
             <button id="refreshProfile" class="ghost">Refresh</button>
+          </div>
+          <div id="staffConsoleBlock" style="margin-top:10px;display:none">
+            <div class="smallMuted">Staff Console (?mod user / ?unmod user)</div>
+            <form id="staffConsoleForm" style="display:flex;gap:6px;margin-top:6px">
+              <input id="staffConsoleInput" placeholder="?mod username" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+              <button type="submit" class="ghost">Run</button>
+            </form>
+            <div class="smallMuted" id="staffConsoleStatus"></div>
           </div>
         </div>`;
       wrap.appendChild(div);
@@ -1203,6 +1447,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
       document.getElementById('refreshProfile').addEventListener('click', async ()=>{
         const me = getCurrentUser(); if(!me) return alert('Sign in'); const s = await fetchSocial(me.username); document.getElementById('profileBio').value = s.bio || '';
       });
+      const staffForm = document.getElementById('staffConsoleForm');
+      if(staffForm){
+        staffForm.addEventListener('submit', handleStaffConsoleSubmit);
+      }
+      updateStaffConsoleVisibility();
     })();
 
     // --- Social helpers (friend requests, blocking, profiles) ---
@@ -1664,6 +1913,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     render(libs);
     loadRemoteLibs();
+    refreshUserCount();
+    refreshStaffDisplay();
+    updateStaffConsoleVisibility();
   </script>
 </body>
 </html>

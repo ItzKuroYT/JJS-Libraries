@@ -78,6 +78,40 @@ async function putUsers(token, owner, repo, branch, usersPath, users, sha){
   return resp;
 }
 
+const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'Kuro').toLowerCase();
+
+function ensureUserRole(user){
+  if(!user) return 'member';
+  const normalized = (user.username || '').toLowerCase();
+  if(!user.role){
+    if(normalized && normalized === OWNER_USERNAME) user.role = 'owner';
+    else user.role = 'member';
+  }
+  return user.role;
+}
+
+function buildTokenPayload(user){
+  const now = Math.floor(Date.now()/1000);
+  return {
+    id: user.id,
+    username: user.username,
+    role: ensureUserRole(user),
+    iat: now,
+    exp: now + 60*60*24*30
+  };
+}
+
+function getAuthFromRequest(req, secret){
+  if(!secret) return null;
+  const header = req.headers['authorization'] || req.headers['Authorization'];
+  if(!header || !header.startsWith('Bearer ')) return null;
+  const token = header.slice(7).trim();
+  if(!token) return null;
+  const payload = verifyToken(token, secret);
+  if(payload && !payload.role && (payload.username || '').toLowerCase() === OWNER_USERNAME) payload.role = 'owner';
+  return payload;
+}
+
 module.exports = async (req,res) => {
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
@@ -104,6 +138,14 @@ module.exports = async (req,res) => {
       const { users } = await getUsers(token, owner, repo, branch, usersPath);
       return res.status(200).json({ ok:true, count: users.length });
     }
+    if(action === 'staff'){
+      if(!token || !owner || !repo) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO.' });
+      const { users } = await getUsers(token, owner, repo, branch, usersPath);
+      users.forEach(ensureUserRole);
+      const ownerUser = users.find(u=>u.role==='owner') || null;
+      const moderators = users.filter(u=>u.role==='moderator').map(u=>({ id:u.id, username:u.username, createdAt:u.createdAt }));
+      return res.status(200).json({ ok:true, owner: ownerUser ? { id: ownerUser.id, username: ownerUser.username } : null, moderators });
+    }
     return res.status(200).json({ ok:true, configured: !!(token && owner && repo && jwtSecret), owner: owner||null, repo: repo||null, usersPath });
   }
 
@@ -121,26 +163,69 @@ module.exports = async (req,res) => {
     if(users.some(u=>u.username.toLowerCase()===username.toLowerCase())) return res.status(409).json({ error:'Username taken' });
     const id = Date.now().toString();
     const passwordHash = hashPassword(password);
-    const user = { id, username, passwordHash, createdAt: new Date().toISOString() };
+    const user = { id, username, passwordHash, createdAt: new Date().toISOString(), role: username.toLowerCase()===OWNER_USERNAME ? 'owner' : 'member' };
     users.push(user);
     const putResp = await putUsers(token, owner, repo, branch, usersPath, users, sha);
     if(!putResp.ok) { const txt = await putResp.text(); return res.status(500).json({ error:'Failed to save users', detail: txt }); }
-    const payload = { id:user.id, username:user.username, iat: Math.floor(Date.now()/1000), exp: Math.floor(Date.now()/1000)+60*60*24*30 };
+    const payload = buildTokenPayload(user);
     const tok = signToken(payload, jwtSecret);
-    return res.status(200).json({ ok:true, token: tok, user: { id:user.id, username:user.username } });
+    return res.status(200).json({ ok:true, token: tok, user: { id:user.id, username:user.username, role: user.role } });
   }
 
   if(action==='login'){
     if(!token || !owner || !repo || !jwtSecret) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO/JWT_SECRET.' });
     const { username, password } = body;
     if(!username || !password) return res.status(400).json({ error:'username and password required' });
-    const { users } = await getUsers(token, owner, repo, branch, usersPath);
+    const { users, sha } = await getUsers(token, owner, repo, branch, usersPath);
+    let usersMutated = false;
     const user = users.find(u=>u.username.toLowerCase()===username.toLowerCase());
     if(!user) return res.status(401).json({ error:'Invalid credentials' });
     if(!verifyPassword(password, user.passwordHash)) return res.status(401).json({ error:'Invalid credentials' });
-    const payload = { id:user.id, username:user.username, iat: Math.floor(Date.now()/1000), exp: Math.floor(Date.now()/1000)+60*60*24*30 };
+    const previousRole = user.role;
+    ensureUserRole(user);
+    if(previousRole !== user.role){ usersMutated = true; }
+    if(usersMutated){ await putUsers(token, owner, repo, branch, usersPath, users, sha); }
+    const payload = buildTokenPayload(user);
     const tok = signToken(payload, jwtSecret);
-    return res.status(200).json({ ok:true, token: tok, user: { id:user.id, username:user.username } });
+    return res.status(200).json({ ok:true, token: tok, user: { id:user.id, username:user.username, role: user.role } });
+  }
+
+  if(action==='addModerator'){
+    if(!token || !owner || !repo || !jwtSecret) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO/JWT_SECRET.' });
+    const auth = getAuthFromRequest(req, jwtSecret);
+    if(!auth || auth.role !== 'owner') return res.status(403).json({ error:'Only the owner can modify staff.' });
+    const targetUsername = (body.username || '').trim();
+    if(!targetUsername) return res.status(400).json({ error:'username required' });
+    const normalizedTarget = targetUsername.toLowerCase();
+    const { users, sha } = await getUsers(token, owner, repo, branch, usersPath);
+    const target = users.find(u=>u.username.toLowerCase()===normalizedTarget);
+    if(!target) return res.status(404).json({ error:'User not found' });
+    ensureUserRole(target);
+    if(target.role === 'owner') return res.status(400).json({ error:'Owner is already highest role.' });
+    if(target.role === 'moderator') return res.status(200).json({ ok:true, user: { id: target.id, username: target.username, role: target.role } });
+    target.role = 'moderator';
+    const putResp = await putUsers(token, owner, repo, branch, usersPath, users, sha);
+    if(!putResp.ok){ const txt = await putResp.text(); return res.status(500).json({ error:'Failed to save users', detail: txt }); }
+    return res.status(200).json({ ok:true, user: { id: target.id, username: target.username, role: target.role } });
+  }
+
+  if(action==='removeModerator'){
+    if(!token || !owner || !repo || !jwtSecret) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO/JWT_SECRET.' });
+    const auth = getAuthFromRequest(req, jwtSecret);
+    if(!auth || auth.role !== 'owner') return res.status(403).json({ error:'Only the owner can modify staff.' });
+    const targetUsername = (body.username || '').trim();
+    if(!targetUsername) return res.status(400).json({ error:'username required' });
+    const normalizedTarget = targetUsername.toLowerCase();
+    const { users, sha } = await getUsers(token, owner, repo, branch, usersPath);
+    const target = users.find(u=>u.username.toLowerCase()===normalizedTarget);
+    if(!target) return res.status(404).json({ error:'User not found' });
+    ensureUserRole(target);
+    if(target.role === 'owner') return res.status(400).json({ error:'Cannot change owner role.' });
+    if(target.role !== 'moderator') return res.status(200).json({ ok:true, user: { id: target.id, username: target.username, role: target.role } });
+    target.role = 'member';
+    const putResp = await putUsers(token, owner, repo, branch, usersPath, users, sha);
+    if(!putResp.ok){ const txt = await putResp.text(); return res.status(500).json({ error:'Failed to save users', detail: txt }); }
+    return res.status(200).json({ ok:true, user: { id: target.id, username: target.username, role: target.role } });
   }
 
   return res.status(400).json({ error:'Unknown action' });
