@@ -1,0 +1,1408 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JJS Library — Search & Copy</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7c3aed;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#071024 0%,#081226 100%);color:#e6eef6}
+    .container{max-width:1248px;margin:40px auto;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.8)}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between}
+    h1{font-size:20px;margin:0}
+    .credits{font-size:13px;color:var(--muted)}
+    .controls{display:flex;gap:12px;align-items:center;margin-top:14px}
+    input.search{flex:1;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit}
+    .list{margin-top:18px;display:grid;gap:12px}
+    .card{background:var(--card);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+    .card h3{margin:0;font-size:16px}
+    .meta{font-size:13px;color:var(--muted);margin-top:6px;display:flex;gap:8px;align-items:center}
+    .actions{margin-top:10px;display:flex;gap:8px}
+    button{background:linear-gradient(180deg,var(--accent),#5b21b6);border:none;color:white;padding:8px 10px;border-radius:8px;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    pre.code{background:#020617;color:#dff0ff;padding:12px;border-radius:8px;overflow:auto;max-height:260px;margin:10px 0}
+    .small{font-size:13px}
+    .link{color:var(--accent);text-decoration:none}
+    @media(max-width:600px){.container{margin:18px;padding:16px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <style>
+      .layout{display:flex;gap:18px;margin-top:16px}
+      .sidebar{width:260px;background:transparent;padding:12px;border-radius:10px}
+      .sidebar .profile{display:flex;gap:12px;align-items:center}
+      .avatar{width:68px;height:68px;border-radius:10px;background:rgba(255,255,255,0.03);display:inline-block;overflow:hidden}
+      .avatar img{width:100%;height:100%;object-fit:cover}
+      .smallMuted{font-size:12px;color:var(--muted)}
+      .sideSection{margin-top:12px}
+      .libItem{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.02);margin-bottom:6px}
+      .notifications{max-height:140px;overflow:auto}
+      .dmList{max-height:140px;overflow:auto}
+      .postsCard{max-width:980px;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.8);color:inherit}
+    </style>
+
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="profile">
+          <div class="avatar" id="avatarWrap"><img id="avatarImg" src="" alt="avatar"/></div>
+          <div>
+            <div id="sideUsername" class="small"></div>
+            <div class="smallMuted">My account</div>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <input id="avatarFile" type="file" accept="image/*" style="width:100%" />
+        </div>
+
+        <div class="sideSection">
+          <div class="smallMuted">My libraries (<span id="myLibCount">0</span>)</div>
+          <div id="myLibs"></div>
+        </div>
+
+        <div class="sideSection">
+          <div class="smallMuted">Notifications</div>
+          <div id="notifications" class="notifications small"></div>
+        </div>
+
+        <div class="sideSection">
+          <div class="smallMuted">Friend Requests</div>
+          <div id="friendRequests"></div>
+        </div>
+
+        <div class="sideSection">
+          <div class="smallMuted">Direct Messages</div>
+          <div id="dmConvos" class="dmList small"></div>
+          <div style="margin-top:8px;display:flex;gap:6px">
+            <input id="dmTo" placeholder="To (username)" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+            <button id="openDm" class="ghost">Open</button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="postsCard">
+        <header>
+          <div>
+            <h1>JJS Library — Search & Copy</h1>
+            <div class="credits">Original credits shown in each library. Use code sections to view or copy.</div>
+          </div>
+          <div class="small">Made for Jujutsu Shenanigans</div>
+        </header>
+
+        <main style="flex:1">
+          <div class="controls">
+          <input id="search" class="search" placeholder="Search libraries (title, tags)..." />
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="authBox" style="display:flex;gap:8px;align-items:center">
+            <input id="authUser" placeholder="username" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+            <input id="authPass" type="password" placeholder="password" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+            <button id="signupBtn" class="ghost">Sign up</button>
+            <button id="loginBtn" class="ghost">Log in</button>
+            <div id="userLabel" class="small" style="margin-left:8px"></div>
+          </div>
+          <button id="createEntry" class="ghost">Create</button>
+          <button id="newEntry" class="ghost">Discord</button>
+        </div>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div id="tagPicker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <input id="customTag" placeholder="Add tag" style="padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+      <button id="addTagBtn" class="ghost">Add Tag</button>
+    </div>
+
+    <div id="list" class="list"></div>
+        </main>
+      </div>
+    </div>
+
+  <template id="cardTpl">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:40px;height:40px;overflow:hidden;border-radius:8px;background:rgba(255,255,255,0.03)"><img class="cardAvatar" src="" style="width:100%;height:100%;object-fit:cover"/></div>
+            <div>
+              <h3 class="title" style="margin:0"></h3>
+              <div class="meta"><span class="author"></span><span class="sep">•</span><a class="orig link" target="_blank">Original credit</a></div>
+            </div>
+          </div>
+        </div>
+        <div class="small">tag: <span class="tags"></span></div>
+      </div>
+      <div class="actions">
+        <button class="toggle">Show code</button>
+        <button class="copy">Copy</button>
+        <button class="edit ghost" style="display:none">Edit</button>
+        <button class="del ghost" style="display:none">Delete</button>
+        <button class="ghost viewOrig">Open credit</button>
+      </div>
+      <div class="codeWrap" style="display:none">
+        <pre class="code" data-full=""></pre>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    // Sample libraries array — you can extend this or load from a JSON endpoint
+    const libs = [
+      {
+        id: 'hollow-purple',
+        title: 'Create a post to share your library with the community! Include details like title, description, tags, and code. You can also link to an original credit if your library is inspired by or based on someone else\'s work.',
+        author: 'ADMIN - Kuro',
+        credit: 'https://www.youtube.com/@FFS-Productions',
+        tags: ['help','guide','how-to'],
+        // Put the long import code here (string). Keep it escaped as needed.
+        code: `
+Get a code from the character builder in jjs, then paste it here. When you click "Copy", the full code will be copied to your clipboard for easy sharing or use in your own builds.
+`
+      }
+    ];
+
+    const listEl = document.getElementById('list');
+    const tpl = document.getElementById('cardTpl');
+    const search = document.getElementById('search');
+
+    function normalizeKey(value){
+      return (value || 'unknown').toString().replace(/[^a-z0-9_-]/gi,'_');
+    }
+
+    function getLibStorageId(lib){
+      if(!lib) return 'unknown';
+      return normalizeKey(lib.id || lib.__filename || lib.title || Date.now());
+    }
+
+    function getLocalComments(lib){
+      const key = 'jjs_comments_' + getLibStorageId(lib);
+      try{ return JSON.parse(localStorage.getItem(key) || '[]'); }
+      catch(_e){ return []; }
+    }
+
+    function saveLocalComments(lib, comments){
+      const key = 'jjs_comments_' + getLibStorageId(lib);
+      try{ localStorage.setItem(key, JSON.stringify(comments || [])); }
+      catch(_e){}
+    }
+
+    function ensureLibComments(lib){
+      if(!lib) return [];
+      if(Array.isArray(lib.comments) && lib.comments.length){
+        saveLocalComments(lib, lib.comments);
+        return lib.comments;
+      }
+      lib.comments = getLocalComments(lib);
+      return lib.comments;
+    }
+
+    function appendComment(lib, comment){
+      const comments = ensureLibComments(lib);
+      comments.push(comment);
+      saveLocalComments(lib, comments);
+      return comments;
+    }
+
+    function addReply(comments, parentId, reply){
+      for(const comment of comments){
+        if(comment.id === parentId){
+          comment.replies = comment.replies || [];
+          comment.replies.push(reply);
+          return true;
+        }
+        if(comment.replies && comment.replies.length && addReply(comment.replies, parentId, reply)){
+          return true;
+        }
+      }
+      return false;
+    }
+
+    const COMMENT_MAX_LENGTH = 200;
+
+    function getLibIdForApi(lib){
+      if(lib && lib.id) return lib.id;
+      const storageId = getLibStorageId(lib);
+      return storageId !== 'unknown' ? storageId : null;
+    }
+
+    async function postCommentToServer(lib, author, text, parentId){
+      if(!SERVERLESS_URL) throw new Error('Serverless endpoint not configured');
+      const libId = getLibIdForApi(lib);
+      if(!libId) throw new Error('Missing library identifier');
+      const payload = { libId, comment: { author, text, parentId } };
+      const resp = await fetch(SERVERLESS_URL + '?action=addComment', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || !data.ok) throw new Error(data && data.error ? data.error : 'Failed to post comment');
+      return data.comment;
+    }
+
+    async function syncCommentsFromServer(lib, opts = {}){
+      if(!SERVERLESS_URL) return;
+      const list = document.getElementById('commentsList');
+      const libId = getLibIdForApi(lib);
+      const rerender = typeof opts.renderFn === 'function' ? opts.renderFn : null;
+      if(!libId){ if(rerender) rerender(); return; }
+      if(opts.showSpinner && list){
+        list.innerHTML = '<div class="smallMuted">Loading comments...</div>';
+      }
+      try{
+        const resp = await fetch(
+          SERVERLESS_URL + '?action=getComments&libId=' + encodeURIComponent(libId),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ libId })
+          }
+        );
+        if(resp.status === 404){
+          lib.comments = [];
+          saveLocalComments(lib, []);
+          if(rerender) rerender();
+          return;
+        }
+        const data = await resp.json().catch(()=>null);
+        if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed');
+        lib.comments = data.comments || [];
+        saveLocalComments(lib, lib.comments);
+        if(rerender) rerender();
+      }catch(e){
+        console.error('syncCommentsFromServer failed', e);
+        if(opts.showError && list){
+          const msg = e && e.message ? e.message : 'Unknown error';
+          list.innerHTML = `<div class="smallMuted">Failed to load comments. ${escapeHtml(msg)} <button class="ghost" id="retryCommentsSync">Retry</button></div>`;
+          const retryBtn = list.querySelector('#retryCommentsSync');
+          if(retryBtn){
+            retryBtn.addEventListener('click', ()=> syncCommentsFromServer(lib, Object.assign({}, opts, { showSpinner: true, showError: true })));
+          }
+        }
+      }
+    }
+
+    function render(filtered){
+        listEl.innerHTML = '';
+      if(filtered.length===0){
+        listEl.innerHTML = '<div class="small">No libraries match your search.</div>';
+        return;
+      }
+      filtered.forEach(lib=>{
+        const node = tpl.content.cloneNode(true);
+        const titleEl = node.querySelector('.title');
+        const avatarImg = node.querySelector('.cardAvatar');
+        const avatarWrap = avatarImg ? avatarImg.parentElement : null;
+        if(avatarWrap){
+          avatarWrap.style.width = '32px';
+          avatarWrap.style.height = '32px';
+          avatarWrap.style.borderRadius = '50%';
+          avatarWrap.style.overflow = 'hidden';
+          avatarWrap.style.background = 'rgba(255,255,255,0.08)';
+          avatarWrap.style.display = 'inline-flex';
+          avatarWrap.style.alignItems = 'center';
+          avatarWrap.style.justifyContent = 'center';
+          avatarWrap.style.marginRight = '8px';
+        }
+        if(avatarImg){
+          avatarImg.style.width = '100%';
+          avatarImg.style.height = '100%';
+          avatarImg.style.objectFit = 'cover';
+          avatarImg.style.display = 'none';
+        }
+        titleEl.textContent = lib.title;
+        // Show description if present
+        if(lib.description){
+          const desc = document.createElement('div');
+          desc.className = 'smallMuted';
+          desc.style.margin = '6px 0 0 0';
+          desc.textContent = lib.description.length>250? lib.description.slice(0,250)+'…': lib.description;
+          titleEl.parentElement.appendChild(desc);
+        }
+        node.querySelector('.author').textContent = lib.author;
+        // make author clickable to open profile
+        try{ const authorEl = node.querySelector('.author'); authorEl.style.cursor='pointer'; authorEl.addEventListener('click', ()=> openProfile(lib.author)); }catch(e){}
+        node.querySelector('.orig').href = lib.credit;
+        node.querySelector('.orig').textContent = 'Credit';
+        node.querySelector('.tags').textContent = lib.tags.join(', ');
+        const pre = node.querySelector('.code');
+        pre.textContent = lib.code;
+        pre.setAttribute('data-full', lib.code);
+
+        // populate author avatar from social if available
+        (async ()=>{
+          if(!avatarImg) return;
+          try{
+            const social = await fetchSocial(lib.author);
+            const avatarUrl = resolveAvatarUrl(lib.author, social);
+            if(avatarUrl){
+              avatarImg.onload = ()=>{
+                avatarImg.style.display = 'block';
+                if(avatarWrap) avatarWrap.style.background = 'none';
+                avatarImg.onload = null;
+              };
+              avatarImg.onerror = ()=>{
+                avatarImg.removeAttribute('src');
+                avatarImg.style.display = 'none';
+                if(avatarWrap) avatarWrap.style.background = 'rgba(255,255,255,0.08)';
+                avatarImg.onerror = null;
+              };
+              avatarImg.src = avatarUrl;
+            }else{
+              avatarImg.removeAttribute('src');
+              avatarImg.style.display = 'none';
+              if(avatarWrap) avatarWrap.style.background = 'rgba(255,255,255,0.08)';
+            }
+            if(social && social.bio){
+              const meta = node.querySelector('.meta');
+              const bioEl = document.createElement('div');
+              bioEl.className='smallMuted';
+              bioEl.style.marginTop='6px';
+              bioEl.textContent = social.bio.length>80? social.bio.slice(0,80)+'…': social.bio;
+              meta.appendChild(bioEl);
+            }
+          }catch(e){
+            avatarImg.removeAttribute('src');
+            avatarImg.style.display='none';
+            if(avatarWrap) avatarWrap.style.background='rgba(255,255,255,0.08)';
+          }
+        })();
+
+        const card = node.querySelector('.card');
+        const toggle = node.querySelector('.toggle');
+        const copyBtn = node.querySelector('.copy');
+        const viewOrig = node.querySelector('.viewOrig');
+        const wrap = node.querySelector('.codeWrap');
+
+        toggle.addEventListener('click', ()=>{
+          if(wrap.style.display==='none'){
+            wrap.style.display='block'; toggle.textContent='Hide code';
+          } else { wrap.style.display='none'; toggle.textContent='Show code'; }
+        });
+
+        copyBtn.addEventListener('click', async ()=>{
+          try{
+            await navigator.clipboard.writeText(pre.getAttribute('data-full'));
+            copyBtn.textContent='Copied!';
+            setTimeout(()=>copyBtn.textContent='Copy',1400);
+          }catch(e){
+            alert('Copy failed — select and copy manually.');
+          }
+        });
+
+        viewOrig.addEventListener('click', ()=>window.open(lib.credit,'_blank'));
+        // show edit/delete if current user is author
+        const editBtn = node.querySelector('.edit');
+        const delBtn = node.querySelector('.del');
+        const currentUser = getCurrentUser();
+        if(currentUser && currentUser.username === lib.author){
+          if(editBtn) editBtn.style.display = 'inline-block';
+          if(delBtn) delBtn.style.display = 'inline-block';
+        }
+
+        if(editBtn){
+          editBtn.addEventListener('click', async ()=>{
+            const newTitle = prompt('Edit title:', lib.title) || lib.title;
+            const newCredit = prompt('Edit credit URL (optional):', lib.credit||'') || lib.credit;
+            const newCode = prompt('Edit code:', lib.code||'') || lib.code;
+            lib.title = newTitle; lib.credit = newCredit; lib.code = newCode;
+            // preserve tags — could implement edit tags UI later
+            // save via serverless if available
+            const filename = lib.__filename || `${lib.id}-${sanitizeFilename(lib.title)}.json`;
+            try{
+              if(SERVERLESS_URL){ await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) }); }
+              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){ await saveToGitHub(lib, filename); }
+            }catch(e){ /* ignore save errors silently */ }
+            render(filter(search.value));
+          });
+        }
+
+        if(delBtn){
+          delBtn.addEventListener('click', async ()=>{
+            if(!confirm('Delete this library?')) return;
+            const path = lib.__path || (GITHUB.path?GITHUB.path + '/' + lib.__filename:lib.__filename);
+            try{
+              if(SERVERLESS_URL){ await fetch(SERVERLESS_URL + '?action=delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ path }) }); }
+              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){
+                // delete via contents API
+                const apiBase = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(path)}`;
+                const getResp = await fetch(apiBase + `?ref=${encodeURIComponent(GITHUB.branch)}`, { headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}` } });
+                if(getResp.status===200){ const data = await getResp.json(); const delResp = await fetch(apiBase, { method:'DELETE', headers: { 'Accept':'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}`, 'Content-Type':'application/json' }, body: JSON.stringify({ message: 'Delete library', sha: data.sha, branch: GITHUB.branch }) }); }
+              }
+            }catch(e){ /* ignore */ }
+            // remove locally
+            const idx = libs.findIndex(x=>x.id===lib.id);
+            if(idx>=0) libs.splice(idx,1);
+            render(filter(search.value));
+          });
+        }
+
+        // --- COMMENTS UI (modal) ---
+        const commentsBtn = document.createElement('button');
+        commentsBtn.className = 'ghost';
+        commentsBtn.textContent = 'Comments';
+        commentsBtn.style.marginTop = '12px';
+        card.appendChild(commentsBtn);
+
+        commentsBtn.addEventListener('click', () => openCommentsModal(lib));
+        // --- Comments Modal ---
+        function openCommentsModal(lib) {
+          let modal = document.getElementById('commentsModal');
+          if(modal) modal.remove();
+          modal = document.createElement('div');
+          modal.id = 'commentsModal';
+          modal.style.position = 'fixed';
+          modal.style.left = '0';
+          modal.style.top = '0';
+          modal.style.width = '100vw';
+          modal.style.height = '100vh';
+          modal.style.background = 'rgba(0,0,0,0.55)';
+          modal.style.zIndex = '9999';
+          modal.style.display = 'flex';
+          modal.style.alignItems = 'center';
+          modal.style.justifyContent = 'center';
+          modal.innerHTML = `<div id="commentsModalInner" style="background:var(--card);padding:24px 18px 18px 18px;min-width:340px;max-width:98vw;max-height:90vh;overflow:auto;border-radius:12px;box-shadow:0 8px 32px #000a;position:relative;">
+            <button id="closeCommentsModal" style="position:absolute;top:10px;right:10px;" class="ghost">Close</button>
+            <h3 style="margin-top:0">Comments for <span style="color:#6cf">${escapeHtml(lib.title)}</span></h3>
+            <div id="addCommentSection"></div>
+            <hr style="margin:16px 0 10px 0;opacity:0.2">
+            <div id="commentsList"></div>
+          </div>`;
+          document.body.appendChild(modal);
+          document.getElementById('closeCommentsModal').onclick = ()=>modal.remove();
+          const rerenderComments = () => renderCommentsList(lib);
+          // Add comment UI
+          renderAddCommentUI(lib, rerenderComments);
+          // Fetch and render comments
+          const hasLocalComments = ensureLibComments(lib).length > 0;
+          rerenderComments();
+          syncCommentsFromServer(lib, { showSpinner: !hasLocalComments, showError: true, renderFn: rerenderComments });
+        }
+
+        function renderAddCommentUI(lib, rerenderCb) {
+          const u = getCurrentUser();
+          const wrap = document.getElementById('addCommentSection');
+          wrap.innerHTML = '';
+          const form = document.createElement('form');
+          form.innerHTML = `<div style="font-weight:bold;margin-bottom:4px">Add a comment</div><textarea class="commentInput" maxlength="200" placeholder="Add a comment (max 200 chars)" style="width:100%;min-height:48px;padding:8px;border-radius:8px;border:1px solid #333"></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button type="submit" class="ghost">Post</button><span class="smallMuted commentCount"></span></div>`;
+          const input = form.querySelector('.commentInput');
+          const count = form.querySelector('.commentCount');
+          const submitBtn = form.querySelector('button');
+          input.addEventListener('input',()=>{ count.textContent = (input.value.length ? input.value.length + '/' + COMMENT_MAX_LENGTH : ''); });
+          form.addEventListener('submit', async (ev)=>{
+            ev.preventDefault();
+            if(!u) return alert('Sign in to comment');
+            const text = input.value.trim();
+            if(!text) return;
+            if(text.length>COMMENT_MAX_LENGTH) return alert('Max ' + COMMENT_MAX_LENGTH + ' chars');
+            submitBtn.disabled = true;
+            const tempComment = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: text.slice(0,COMMENT_MAX_LENGTH), t: Date.now(), replies: [] };
+            appendComment(lib, tempComment);
+            if(rerenderCb) rerenderCb(); else renderCommentsList(lib);
+            input.value = '';
+            count.textContent = '';
+            try{
+              if(SERVERLESS_URL){
+                await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), null);
+                await syncCommentsFromServer(lib, { renderFn: rerenderCb });
+              }
+            }catch(err){
+              console.warn('Comment sync failed', err);
+              addNotification('Comment saved locally — server unreachable');
+            }
+            submitBtn.disabled = false;
+          });
+          wrap.appendChild(form);
+        }
+
+        function renderCommentsList(lib) {
+          const list = document.getElementById('commentsList');
+          if(!list) return;
+          const comments = ensureLibComments(lib);
+          if(!comments || comments.length === 0){
+            list.innerHTML = '<div class="smallMuted">No comments yet.</div>';
+            return;
+          }
+          list.innerHTML = '';
+          renderCommentsThread(comments, list, lib);
+        }
+
+        function renderCommentsThread(comments, parentEl, lib, depth=0) {
+          const u = getCurrentUser();
+          comments.forEach(c=>{
+            const div = document.createElement('div');
+            div.className = 'commentItem';
+            div.style.marginLeft = (depth*18)+'px';
+            div.style.marginTop = '10px';
+            div.style.padding = '8px';
+            div.style.background = 'rgba(255,255,255,0.03)';
+            div.style.borderRadius = '8px';
+            div.innerHTML = `<span class="small"><b>${c.author}</b>:</span> <span>${escapeHtml(c.text)}</span> <span class="smallMuted" style="margin-left:8px">${new Date(c.t).toLocaleString()}</span>`;
+            // Reply button
+            if(depth<4){
+              const replyBtn = document.createElement('button'); replyBtn.className='ghost'; replyBtn.textContent='Reply'; replyBtn.style.marginLeft='8px';
+              replyBtn.addEventListener('click',()=>{
+                if(div.querySelector('.replyForm')) return;
+                const rf = document.createElement('form'); rf.className='replyForm'; rf.style.marginTop='8px';
+                rf.innerHTML = `<textarea maxlength="200" placeholder="Reply (max 200 chars)" style="width:100%;min-height:28px;padding:4px;border-radius:6px;border:1px solid #333"></textarea><div style="display:flex;gap:8px;align-items:center;margin-top:2px"><button type="submit" class="ghost">Post</button><span class="smallMuted replyCount"></span></div>`;
+                const rinput = rf.querySelector('textarea');
+                const rcount = rf.querySelector('.replyCount');
+                rinput.addEventListener('input',()=>{ rcount.textContent = (rinput.value.length ? rinput.value.length + '/' + COMMENT_MAX_LENGTH : ''); });
+                rf.addEventListener('submit', async (ev)=>{
+                  ev.preventDefault();
+                  if(!u) return alert('Sign in to reply');
+                  const text = rinput.value.trim();
+                  if(!text) return;
+                  if(text.length>COMMENT_MAX_LENGTH) return alert('Max ' + COMMENT_MAX_LENGTH + ' chars');
+                  const btn = rf.querySelector('button');
+                  btn.disabled = true;
+                  const reply = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: text.slice(0,COMMENT_MAX_LENGTH), t: Date.now(), replies: [] };
+                  const comments = ensureLibComments(lib);
+                  const added = addReply(comments, c.id, reply);
+                  if(added){
+                    saveLocalComments(lib, comments);
+                    renderCommentsList(lib);
+                    rinput.value = '';
+                    rcount.textContent = '';
+                    try{
+                      if(SERVERLESS_URL){
+                        await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), c.id);
+                        await syncCommentsFromServer(lib, { renderFn: ()=>renderCommentsList(lib) });
+                      }
+                    }catch(err){
+                      console.warn('Reply sync failed', err);
+                      addNotification('Reply saved locally — server unreachable');
+                    }
+                  }else{
+                    alert('Failed to reply');
+                  }
+                  btn.disabled = false;
+                });
+                div.appendChild(rf);
+              });
+              div.appendChild(replyBtn);
+            }
+            parentEl.appendChild(div);
+            if(c.replies && c.replies.length) renderCommentsThread(c.replies, parentEl, lib, depth+1);
+          });
+        }
+        listEl.appendChild(node);
+        });
+        // diagnostics removed
+    }
+
+    function escapeHtml(str){
+      const map = {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"};
+      return String(str).replace(/[&<>"']/g, (m)=>map[m] || m);
+    }
+
+    function filter(q){
+      q = q.trim().toLowerCase();
+      if(!q) return libs.slice();
+      return libs.filter(l=>{
+        return l.title.toLowerCase().includes(q) || (l.tags||[]).some(t=>t.includes(q)) || l.author.toLowerCase().includes(q);
+      });
+    }
+
+    search.addEventListener('input', ()=>{
+      render(filter(search.value));
+    });
+
+    // Add button opens Discord invite (manual additions are done by editing the file)
+    document.getElementById('newEntry').addEventListener('click', ()=>{
+      window.open('https://discord.gg/VqwDPu6K', '_blank');
+    });
+
+    /*
+      GitHub auto-save configuration (client-side fallback)
+      WARNING: Do NOT place a PAT here in production. Use the serverless endpoint below instead.
+    */
+    const GITHUB = {
+      owner: '', // e.g. 'your-username'
+      repo: '',  // e.g. 'JJS-Library'
+      path: 'libs', // path inside repo to save files
+      branch: 'main',
+      token: '' // insecure: only for quick testing
+    };
+
+    // Serverless endpoint (preferred). If deployed on Vercel you can use
+    // https://<your-project>.vercel.app/api/save-lib. Defaulting to your known deploy URL.
+    const SERVERLESS_URL = 'https://jjs-libraries.vercel.app/api/save-lib';
+
+    // Users endpoint derived from serverless base
+    const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
+    const socialCache = new Map();
+
+    function normalizeUsernameForPath(username){
+      return (username || '').replace(/[^a-z0-9_-]/gi,'_');
+    }
+
+    function buildAvatarUrl(username){
+      const safeUser = normalizeUsernameForPath(username);
+      if(!safeUser) return '';
+      const owner = GITHUB.owner || 'ItzKuroYT';
+      const repo = GITHUB.repo || 'JJS-Libraries';
+      const branch = GITHUB.branch || 'main';
+      const cleanPath = (GITHUB.path || 'libs').replace(/^\/+/,'').replace(/\/+$/,'');
+      const base = cleanPath ? `${cleanPath}/avatars` : 'avatars';
+      return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${base}/${encodeURIComponent(safeUser)}.png`;
+    }
+
+    function resolveAvatarUrl(username, social){
+      if(social && social.avatar_url) return social.avatar_url;
+      return buildAvatarUrl(username);
+    }
+
+    // --- Authentication helpers (client-side) ---
+    function setToken(tok){ try{ localStorage.setItem('jjs_token', tok); updateUserLabel(); }catch(e){} }
+    function getToken(){ try{ return localStorage.getItem('jjs_token'); }catch(e){return null;} }
+    function decodeToken(tok){ if(!tok) return null; try{ const parts = tok.split('.'); if(parts.length<2) return null; const payload = parts[1]; const json = JSON.parse(atob(payload.replace(/-/g,'+').replace(/_/g,'/'))); return json; }catch(e){return null;} }
+    function getCurrentUser(){ const tok = getToken(); const p = decodeToken(tok); return p ? { username: p.username, id: p.id } : null; }
+    function updateUserLabel(){ const lbl = document.getElementById('userLabel'); const u = getCurrentUser(); if(u) lbl.textContent = `Signed in: ${u.username}`; else lbl.textContent = ''; }
+
+    async function authSignup(username,password){
+      try{
+        const resp = await fetch(USERS_URL + '?action=signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+        const j = await resp.json().catch(()=>null);
+        if(!resp.ok) throw new Error(JSON.stringify(j));
+        if(j && j.token) setToken(j.token);
+        updateUserLabel();
+        return j;
+      }catch(err){ return null; }
+    }
+
+    async function authLogin(username,password){
+      try{
+        const resp = await fetch(USERS_URL + '?action=login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+        const j = await resp.json().catch(()=>null);
+        if(!resp.ok) throw new Error(JSON.stringify(j));
+        if(j && j.token) setToken(j.token);
+        updateUserLabel();
+        return j;
+      }catch(err){ return null; }
+    }
+
+    // attach auth button handlers
+    document.getElementById('signupBtn').addEventListener('click', ()=>{
+      const u = document.getElementById('authUser').value.trim();
+      const p = document.getElementById('authPass').value;
+      if(!u||!p) return alert('username and password required');
+      authSignup(u,p);
+    });
+    document.getElementById('loginBtn').addEventListener('click', ()=>{
+      const u = document.getElementById('authUser').value.trim();
+      const p = document.getElementById('authPass').value;
+      if(!u||!p) return alert('username and password required');
+      authLogin(u,p);
+    });
+    updateUserLabel();
+
+    // --- Tag picker ---
+    const PRESET_TAGS = ['Beginner moveset','Intermediate moveset','Advanced moveset','Custom','JJK','Dragonball','Sololeveling','Video-game','OP'];
+    function renderTagPicker(){
+      const wrap = document.getElementById('tagPicker'); if(!wrap) return;
+      wrap.innerHTML = '';
+      PRESET_TAGS.forEach(t=>{
+        const id = 'tag_' + t.replace(/[^a-z0-9]/gi,'_');
+        const label = document.createElement('label'); label.style.display='inline-flex'; label.style.alignItems='center'; label.style.gap='6px';
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.value = t; cb.id = id;
+        const span = document.createElement('span'); span.textContent = t; span.className='small';
+        label.appendChild(cb); label.appendChild(span); wrap.appendChild(label);
+      });
+    }
+
+    function getSelectedTags(){
+      const wrap = document.getElementById('tagPicker'); if(!wrap) return [];
+      const checks = Array.from(wrap.querySelectorAll('input[type="checkbox"]'));
+      return checks.filter(i=>i.checked).map(i=>i.value);
+    }
+
+    document.getElementById('addTagBtn').addEventListener('click', ()=>{
+      const v = (document.getElementById('customTag').value||'').trim();
+      if(!v) return; const wrap = document.getElementById('tagPicker');
+      // avoid duplicates
+      const exists = Array.from(wrap.querySelectorAll('input')).some(i=>i.value.toLowerCase()===v.toLowerCase());
+      if(exists){ document.getElementById('customTag').value=''; return; }
+      const id = 'tag_' + v.replace(/[^a-z0-9]/gi,'_');
+      const label = document.createElement('label'); label.style.display='inline-flex'; label.style.alignItems='center'; label.style.gap='6px';
+      const cb = document.createElement('input'); cb.type='checkbox'; cb.value = v; cb.id = id; cb.checked = true;
+      const span = document.createElement('span'); span.textContent = v; span.className='small';
+      label.appendChild(cb); label.appendChild(span); wrap.appendChild(label);
+      document.getElementById('customTag').value = '';
+    });
+
+    renderTagPicker();
+
+    // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
+    document.getElementById('createEntry').addEventListener('click', async ()=>{
+      const currentUser = getCurrentUser();
+      if(!currentUser) return alert('You must be signed in to create a library.');
+      // Modal for new post
+      let modal = document.getElementById('createModal');
+      if(modal) modal.remove();
+      modal = document.createElement('div');
+      modal.id = 'createModal';
+      modal.style.position = 'fixed';
+      modal.style.left = '0';
+      modal.style.top = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.55)';
+      modal.style.zIndex = '9999';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.innerHTML = `<div style="background:var(--card);padding:24px 18px 18px 18px;min-width:340px;max-width:98vw;max-height:90vh;overflow:auto;border-radius:12px;box-shadow:0 8px 32px #000a;position:relative;">
+        <button id="closeCreateModal" style="position:absolute;top:10px;right:10px;" class="ghost">Close</button>
+        <h3 style="margin-top:0">Create New Library</h3>
+        <form id="createForm">
+          <div style="margin-bottom:10px"><input id="newTitle" placeholder="Title" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333" maxlength="60" required></div>
+          <div style="margin-bottom:10px"><textarea id="newDesc" placeholder="Description (max 250 chars)" maxlength="250" style="width:100%;min-height:48px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea><div class="smallMuted" id="descCount"></div></div>
+          <div style="margin-bottom:10px"><input id="newCredit" placeholder="Credit / original link (optional)" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333"></div>
+          <div style="margin-bottom:10px"><textarea id="newCode" placeholder="Paste code here" style="width:100%;min-height:80px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea></div>
+          <div style="margin-bottom:10px"><span class="smallMuted">Tags: (select below before posting)</span></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">${document.getElementById('tagPicker').outerHTML}</div>
+          <button type="submit" class="ghost">Post</button>
+        </form>
+      </div>`;
+      document.body.appendChild(modal);
+      document.getElementById('closeCreateModal').onclick = ()=>modal.remove();
+      // Description char count
+      const desc = modal.querySelector('#newDesc');
+      const descCount = modal.querySelector('#descCount');
+      desc.addEventListener('input',()=>{ descCount.textContent = desc.value.length + '/250'; });
+      // Tag picker: sync with main
+      const tagPicker = modal.querySelector('#tagPicker');
+      tagPicker.innerHTML = document.getElementById('tagPicker').innerHTML;
+      // Form submit
+      modal.querySelector('#createForm').onsubmit = async (ev)=>{
+        ev.preventDefault();
+        const title = modal.querySelector('#newTitle').value.trim();
+        const description = modal.querySelector('#newDesc').value.trim();
+        const credit = modal.querySelector('#newCredit').value.trim();
+        const code = modal.querySelector('#newCode').value;
+        // Tags
+        const checks = Array.from(tagPicker.querySelectorAll('input[type="checkbox"]'));
+        const tags = checks.filter(i=>i.checked).map(i=>i.value);
+        if(!title) return alert('Title required');
+        if(!description) return alert('Description required');
+        if(description.length>250) return alert('Description too long');
+        if(!code) return alert('Code required');
+        const author = currentUser.username;
+        const lib = {id:Date.now().toString(),title,description,author,credit,code,tags,comments:[]};
+        libs.push(lib);
+        render(filter(search.value));
+        modal.remove();
+        const filename = `${lib.id}-${sanitizeFilename(lib.title)}.json`;
+        // Try serverless endpoint first (recommended)
+        if(SERVERLESS_URL){
+          try{
+            const resp = await fetch(SERVERLESS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ lib, filename }) });
+            const j = await resp.json().catch(()=>null);
+            if(!resp.ok) throw new Error(JSON.stringify(j));
+            return;
+          }catch(_err){ }
+        }
+        // If serverless not configured, try client-side GitHub commit (NOT RECOMMENDED)
+        if(GITHUB.token && GITHUB.owner && GITHUB.repo){
+          try{
+            await saveToGitHub(lib, filename);
+            alert('Saved to repository path: ' + (GITHUB.path?GITHUB.path + '/':'') + filename);
+          }catch(_err){
+            downloadJSON(lib, filename);
+          }
+        } else {
+          downloadJSON(lib, filename);
+          alert('No serverless URL or GitHub config set — downloaded JSON locally for manual upload.');
+        }
+      };
+    });
+
+    // --- Sidebar / Profile / Notifications / DMs ---
+    function fileToDataUrl(file){
+      return new Promise((resolve, reject)=>{
+        const reader = new FileReader();
+        reader.onload = ()=>resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function applyAvatarUpdate(username, url){
+      if(!username || !url) return;
+      let social = socialCache.get(username);
+      if(!social){
+        try{ social = JSON.parse(localStorage.getItem('jjs_social_' + username) || '{}'); }
+        catch(_e){ social = {}; }
+      }
+      social = social || {};
+      social.avatar_url = url;
+      await updateSocial(username, social);
+      try{ localStorage.setItem('jjs_avatar_url', url); }catch(_e){}
+    }
+
+    async function saveAvatarToServer(file){
+      const user = getCurrentUser();
+      if(!user) throw new Error('Sign in to upload an avatar.');
+      if(!file) throw new Error('No file selected.');
+      if(file.size && file.size > 1024 * 1024) throw new Error('Avatar max size is 1MB.');
+      const dataUrl = await fileToDataUrl(file);
+      const username = user.username;
+      if(SERVERLESS_URL){
+        try{
+          const resp = await fetch(SERVERLESS_URL + '?action=uploadAvatar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dataUrl, username }) });
+          if(resp.ok){
+            const j = await resp.json().catch(()=>null);
+            const remoteUrl = (j && j.url) || (j && j.result && j.result.content && j.result.content.download_url);
+            if(remoteUrl){
+              await applyAvatarUpdate(username, remoteUrl);
+              return { url: remoteUrl };
+            }
+          }
+        }catch(_err){ /* fall through to local */ }
+      }
+      await applyAvatarUpdate(username, dataUrl);
+      return { url: dataUrl, local: true };
+    }
+
+    document.getElementById('avatarFile').addEventListener('change', async (ev)=>{
+      const file = ev.target.files && ev.target.files[0];
+      if(!file) return;
+      try{
+        const result = await saveAvatarToServer(file);
+        if(result && result.url){
+          document.getElementById('avatarImg').src = result.url;
+          addNotification('Avatar updated');
+          render(filter(search.value));
+        }
+      }catch(e){
+        alert(e && e.message ? e.message : 'Avatar upload failed.');
+      }finally{
+        ev.target.value = '';
+      }
+    });
+
+    function renderSidebar(){
+      const u = getCurrentUser(); document.getElementById('sideUsername').textContent = u ? u.username : 'Not signed in';
+      const av = localStorage.getItem('jjs_avatar_url') || '';
+      if(av) document.getElementById('avatarImg').src = av; else document.getElementById('avatarImg').src = '';
+      // my libs
+      const myLibsWrap = document.getElementById('myLibs'); myLibsWrap.innerHTML = '';
+      const author = u ? u.username : null;
+      const my = author ? libs.filter(l=>l.author===author) : [];
+      document.getElementById('myLibCount').textContent = my.length;
+      my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; myLibsWrap.appendChild(d); });
+      renderFriendRequests(); renderNotifications(); renderDMList();
+    }
+
+    // Profile edit UI in sidebar
+    (function addProfileEditor(){
+      const wrap = document.getElementById('sidebar');
+      if(!wrap) return;
+      const div = document.createElement('div'); div.className='sideSection';
+      div.innerHTML = `<div class="smallMuted">Edit Profile</div>
+        <div style="margin-top:6px">
+          <textarea id="profileBio" placeholder="Bio" style="width:100%;min-height:60px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)"></textarea>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button id="saveBio" class="ghost">Save Bio</button>
+            <button id="saveAvatar" class="ghost">Save Avatar</button>
+            <button id="refreshProfile" class="ghost">Refresh</button>
+          </div>
+        </div>`;
+      wrap.appendChild(div);
+      document.getElementById('saveBio').addEventListener('click', async ()=>{
+        const me = getCurrentUser(); if(!me) return alert('Sign in to edit profile');
+        const bio = document.getElementById('profileBio').value.trim();
+        const social = await fetchSocial(me.username) || {};
+        social.bio = bio;
+        await updateSocial(me.username, social);
+        addNotification('Bio saved');
+        render(filter(search.value));
+      });
+      document.getElementById('saveAvatar').addEventListener('click', ()=>{
+        const me = getCurrentUser(); if(!me) return alert('Sign in to edit profile');
+        const picker = document.createElement('input');
+        picker.type = 'file';
+        picker.accept = 'image/*';
+        picker.onchange = async ()=>{
+          const file = picker.files && picker.files[0];
+          if(!file) return;
+          try{
+            const result = await saveAvatarToServer(file);
+            if(result && result.url){
+              document.getElementById('avatarImg').src = result.url;
+              addNotification('Avatar saved');
+              render(filter(search.value));
+            }
+          }catch(e){
+            alert(e && e.message ? e.message : 'Failed to upload avatar');
+          }
+        };
+        picker.click();
+      });
+      document.getElementById('refreshProfile').addEventListener('click', async ()=>{
+        const me = getCurrentUser(); if(!me) return alert('Sign in'); const s = await fetchSocial(me.username); document.getElementById('profileBio').value = s.bio || '';
+      });
+    })();
+
+    // --- Social helpers (friend requests, blocking, profiles) ---
+    async function fetchSocial(username){
+      if(!username) return {};
+      if(socialCache.has(username)) return socialCache.get(username);
+      const key = 'jjs_social_' + username;
+      if(SERVERLESS_URL){
+        try{
+          const resp = await fetch(SERVERLESS_URL + '?action=getSocial&username=' + encodeURIComponent(username));
+          if(resp.ok){
+            const j = await resp.json();
+            if(j && j.social){
+              try{ localStorage.setItem(key, JSON.stringify(j.social)); }catch(_e){}
+              socialCache.set(username, j.social);
+              return j.social;
+            }
+          }
+        }catch(_err){}
+      }
+      try{
+        const cached = JSON.parse(localStorage.getItem(key) || '{}');
+        socialCache.set(username, cached);
+        return cached;
+      }catch(_e){
+        return {};
+      }
+    }
+
+    async function updateSocial(username, social){
+      if(!username || !social) return null;
+      const key = 'jjs_social_' + username;
+      try{ localStorage.setItem(key, JSON.stringify(social)); }catch(_e){}
+      socialCache.set(username, social);
+      if(SERVERLESS_URL){
+        try{
+          const resp = await fetch(SERVERLESS_URL + '?action=updateSocial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, social }) });
+          if(resp.ok) return await resp.json();
+        }catch(_err){}
+      }
+      return null;
+    }
+
+    async function sendFriendRequest(to){
+      const me = getCurrentUser(); if(!me) return alert('Sign in to add friends');
+      const from = me.username; if(from === to) return;
+      const mySocial = await fetchSocial(from) || {};
+      const theirSocial = await fetchSocial(to) || {};
+      if((theirSocial.blocked||[]).includes(from)) return alert('User has blocked you.');
+      if((mySocial.blocked||[]).includes(to)) return alert('You have blocked this user.');
+      mySocial.outgoingRequests = Array.from(new Set([...(mySocial.outgoingRequests||[]), to]));
+      theirSocial.incomingRequests = Array.from(new Set([...(theirSocial.incomingRequests||[]), from]));
+      await updateSocial(from, mySocial);
+      await updateSocial(to, theirSocial);
+      addNotification('Friend request sent to ' + to);
+      renderSidebar();
+    }
+
+    async function acceptFriendRequest(from){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username;
+      const mySocial = await fetchSocial(meName) || {};
+      const theirSocial = await fetchSocial(from) || {};
+      mySocial.incomingRequests = (mySocial.incomingRequests||[]).filter(x=>x!==from);
+      theirSocial.outgoingRequests = (theirSocial.outgoingRequests||[]).filter(x=>x!==meName);
+      mySocial.friends = Array.from(new Set([...(mySocial.friends||[]), from]));
+      theirSocial.friends = Array.from(new Set([...(theirSocial.friends||[]), meName]));
+      await updateSocial(meName, mySocial);
+      await updateSocial(from, theirSocial);
+      addNotification('You and ' + from + ' are now friends');
+      renderSidebar();
+    }
+
+    async function declineFriendRequest(from){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username;
+      const mySocial = await fetchSocial(meName) || {};
+      const theirSocial = await fetchSocial(from) || {};
+      mySocial.incomingRequests = (mySocial.incomingRequests||[]).filter(x=>x!==from);
+      theirSocial.outgoingRequests = (theirSocial.outgoingRequests||[]).filter(x=>x!==meName);
+      await updateSocial(meName, mySocial);
+      await updateSocial(from, theirSocial);
+      renderSidebar();
+    }
+
+    async function blockUser(target){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username; if(meName === target) return;
+      const mySocial = await fetchSocial(meName) || {};
+      const theirSocial = await fetchSocial(target) || {};
+      mySocial.blocked = Array.from(new Set([...(mySocial.blocked||[]), target]));
+      mySocial.friends = (mySocial.friends||[]).filter(x=>x!==target);
+      mySocial.outgoingRequests = (mySocial.outgoingRequests||[]).filter(x=>x!==target);
+      mySocial.incomingRequests = (mySocial.incomingRequests||[]).filter(x=>x!==target);
+      theirSocial.friends = (theirSocial.friends||[]).filter(x=>x!==meName);
+      theirSocial.outgoingRequests = (theirSocial.outgoingRequests||[]).filter(x=>x!==meName);
+      theirSocial.incomingRequests = (theirSocial.incomingRequests||[]).filter(x=>x!==meName);
+      await updateSocial(meName, mySocial);
+      await updateSocial(target, theirSocial);
+      addNotification('Blocked ' + target);
+      renderSidebar();
+    }
+
+    async function unblockUser(target){
+      const me = getCurrentUser(); if(!me) return alert('Sign in');
+      const meName = me.username;
+      const mySocial = await fetchSocial(meName) || {};
+      mySocial.blocked = (mySocial.blocked||[]).filter(x=>x!==target);
+      await updateSocial(meName, mySocial);
+      addNotification('Unblocked ' + target);
+      renderSidebar();
+    }
+
+    function renderFriendRequests(){
+      const wrap = document.getElementById('friendRequests'); if(!wrap) return;
+      wrap.innerHTML = '';
+      const u = getCurrentUser(); if(!u) { wrap.innerHTML = '<div class="smallMuted">Sign in to manage friends</div>'; return; }
+      fetchSocial(u.username).then(s=>{
+        const inc = s.incomingRequests||[];
+        if(inc.length===0) { wrap.innerHTML = '<div class="smallMuted">No incoming requests</div>'; return; }
+        inc.forEach(from=>{
+          const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.marginBottom='6px';
+          const link = document.createElement('a'); link.href = '#'; link.textContent = from; link.className='small'; link.addEventListener('click',(e)=>{ e.preventDefault(); openProfile(from); });
+          const left = document.createElement('div'); left.appendChild(link);
+          row.appendChild(left);
+          const btns = document.createElement('div');
+          const a = document.createElement('button'); a.className='ghost'; a.textContent='Accept'; a.addEventListener('click',()=>acceptFriendRequest(from));
+          const d = document.createElement('button'); d.className='ghost'; d.textContent='Decline'; d.addEventListener('click',()=>declineFriendRequest(from));
+          btns.appendChild(a); btns.appendChild(d); row.appendChild(btns); wrap.appendChild(row);
+        });
+      });
+    }
+
+    async function openProfile(username){
+      const social = await fetchSocial(username);
+      let modal = document.getElementById('profileModal'); if(!modal){ modal = document.createElement('div'); modal.id='profileModal'; modal.style.position='fixed'; modal.style.left='20px'; modal.style.top='20px'; modal.style.width='320px'; modal.style.maxHeight='80vh'; modal.style.background='var(--card)'; modal.style.padding='12px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
+      const avatar = social && social.avatar_url ? escapeHtml(social.avatar_url) : '';
+      const friends = (social.friends||[]).length || 0;
+      const bio = social && social.bio ? escapeHtml(social.bio) : '';
+      const avatarBlock = avatar ? `<div style="width:56px;height:56px;overflow:hidden;border-radius:8px;background:rgba(255,255,255,0.03)"><img src="${avatar}" style="width:100%;height:100%;object-fit:cover"/></div>` : '';
+      const bioBlock = bio ? `<div class="smallMuted" style="margin-top:4px">${bio}</div>` : '';
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} friends</div>${bioBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Recent libraries</strong><div id="profileLibs"></div></div>`;
+      document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
+      const me = getCurrentUser(); const actions = document.getElementById('profileActions'); actions.innerHTML='';
+      if(me && me.username !== username){
+        const mySocial = await fetchSocial(me.username);
+        const theirSocial = social || {};
+        const isFriend = (mySocial.friends||[]).includes(username);
+        const outgoing = (mySocial.outgoingRequests||[]).includes(username);
+        const incoming = (mySocial.incomingRequests||[]).includes(username);
+        const blocked = (mySocial.blocked||[]).includes(username);
+        if(isFriend){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Friends'; actions.appendChild(b); }
+        else if(outgoing){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Request sent'; actions.appendChild(b); }
+        else if(incoming){ const a = document.createElement('button'); a.className='ghost'; a.textContent='Accept'; a.addEventListener('click', ()=>{ acceptFriendRequest(username); openProfile(username); }); actions.appendChild(a); }
+        else { const a = document.createElement('button'); a.className='ghost'; a.textContent='Add friend'; a.addEventListener('click', ()=>{ sendFriendRequest(username); openProfile(username); }); actions.appendChild(a); }
+        if(blocked){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Unblock'; b.addEventListener('click', ()=>{ unblockUser(username); openProfile(username); }); actions.appendChild(b); }
+        else { const b = document.createElement('button'); b.className='ghost'; b.textContent='Block'; b.addEventListener('click', ()=>{ if(confirm('Block user? This will remove friends and stop messages.')){ blockUser(username); openProfile(username); } }); actions.appendChild(b); }
+      }
+      const libWrap = document.getElementById('profileLibs'); libWrap.innerHTML=''; libs.filter(l=>l.author===username).slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; libWrap.appendChild(d); });
+    }
+
+    // Notifications (stored in localStorage)
+    function addNotification(text){ try{ const key='jjs_notifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift({t:Date.now(),text}); localStorage.setItem(key, JSON.stringify(arr.slice(0,50))); renderNotifications(); }catch(e){} }
+    function renderNotifications(){ const key='jjs_notifications'; const el = document.getElementById('notifications'); el.innerHTML=''; try{ const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.forEach(n=>{ const div = document.createElement('div'); div.textContent = new Date(n.t).toLocaleString() + ' — ' + n.text; el.appendChild(div); }); }catch(e){}
+    }
+
+    const DM_MESSAGE_MAX_LENGTH = 500;
+
+    function sanitizeDmUser(username){
+      return (username || '').toString().trim().replace(/[^a-z0-9_-]/gi,'_') || 'anonymous';
+    }
+
+    function getDmConvId(userA, userB){
+      return [sanitizeDmUser(userA), sanitizeDmUser(userB)].sort((a,b)=>a.localeCompare(b)).join('__');
+    }
+
+    async function fetchDmConversation(withUser){
+      const me = getCurrentUser();
+      if(!me) throw new Error('Sign in to load DMs');
+      if(!SERVERLESS_URL) throw new Error('DM server unavailable');
+      const convId = getDmConvId(me.username, withUser);
+      const resp = await fetch(SERVERLESS_URL + '?action=getDMConversation', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ convId, participants:[me.username, withUser] })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load conversation');
+      const messages = Array.isArray(data.messages) ? data.messages : [];
+      return { convId, messages };
+    }
+
+    async function listServerDMs(username){
+      if(!SERVERLESS_URL) throw new Error('DM server unavailable');
+      const resp = await fetch(SERVERLESS_URL + '?action=listDMs', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ username })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load DMs');
+      return Array.isArray(data.conversations) ? data.conversations : [];
+    }
+
+    async function sendDmMessage(withUser, text){
+      const me = getCurrentUser();
+      if(!me) throw new Error('Sign in to DM');
+      if(!SERVERLESS_URL) throw new Error('DM server unavailable');
+      const trimmed = text.trim();
+      if(!trimmed) throw new Error('Message required');
+      const entry = { from: me.username, to: withUser, message: trimmed.slice(0, DM_MESSAGE_MAX_LENGTH), t: Date.now() };
+      const convId = getDmConvId(me.username, withUser);
+      const resp = await fetch(SERVERLESS_URL + '?action=saveDM', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ convId, entry, participants:[me.username, withUser] })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to send message');
+      return entry;
+    }
+
+    function renderDMList(){
+      const wrap = document.getElementById('dmConvos');
+      if(!wrap) return;
+      const me = getCurrentUser();
+      if(!me){
+        wrap.innerHTML = '<div class="smallMuted">Sign in to view DMs</div>';
+        return;
+      }
+      if(!SERVERLESS_URL){
+        wrap.innerHTML = '<div class="smallMuted">DM server unavailable</div>';
+        return;
+      }
+      wrap.innerHTML = '<div class="smallMuted">Loading...</div>';
+      const meKey = sanitizeDmUser(me.username);
+      listServerDMs(me.username).then(convos=>{
+        if(!convos.length){
+          wrap.innerHTML = '<div class="smallMuted">No conversations yet</div>';
+          return;
+        }
+        convos.sort((a,b)=> (b.lastMessage && b.lastMessage.t ? b.lastMessage.t : 0) - (a.lastMessage && a.lastMessage.t ? a.lastMessage.t : 0));
+        wrap.innerHTML = '';
+        convos.forEach(convo=>{
+          const row = document.createElement('div');
+          row.className = 'libItem';
+          row.style.cursor = 'pointer';
+          const previewMsg = (convo.lastMessage && typeof convo.lastMessage.message === 'string') ? convo.lastMessage.message : '';
+          const preview = convo.lastMessage ? `${convo.lastMessage.from || ''}: ${previewMsg.slice(0,60)}`.trim() : 'No messages yet';
+          const fallbackUser = (Array.isArray(convo.participants) ? convo.participants : []).find(part=>sanitizeDmUser(part) !== meKey);
+          const targetUser = convo.withUser || fallbackUser || '';
+          const displayName = targetUser || 'unknown';
+          row.innerHTML = `<strong>${escapeHtml(displayName)}</strong><div class="smallMuted">${escapeHtml(preview)}</div>`;
+          row.addEventListener('click', ()=>{
+            if(!targetUser) return alert('Unable to open this conversation');
+            openDMWindow(targetUser);
+          });
+          wrap.appendChild(row);
+        });
+      }).catch(err=>{
+        console.warn('renderDMList error', err);
+        wrap.innerHTML = '<div class="smallMuted">Failed to load DMs</div>';
+      });
+    }
+
+    async function openDMWindow(username){
+      const me = getCurrentUser();
+      if(!me) return alert('Sign in to DM');
+      let mySocial = {};
+      let theirSocial = {};
+      try{
+        [mySocial, theirSocial] = await Promise.all([fetchSocial(me.username), fetchSocial(username)]);
+      }catch(err){
+        console.warn('openDMWindow social fetch failed', err);
+      }
+      if((mySocial && mySocial.blocked || []).includes(username)) return alert('You have blocked this user — unblock to message.');
+      if((theirSocial && theirSocial.blocked || []).includes(me.username)) return alert('User has blocked you — cannot message.');
+      let modal = document.getElementById('dmModal');
+      if(!modal){
+        modal = document.createElement('div');
+        modal.id='dmModal';
+        modal.style.position='fixed';
+        modal.style.right='20px';
+        modal.style.bottom='20px';
+        modal.style.width='320px';
+        modal.style.maxHeight='60vh';
+        modal.style.background='var(--card)';
+        modal.style.padding='10px';
+        modal.style.borderRadius='10px';
+        modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>DM: ${escapeHtml(username)}</strong><button id="closeDm" class="ghost">Close</button></div><div id="dmStatus" class="smallMuted" style="margin-top:4px"></div><div id="dmMessages" style="max-height:300px;overflow:auto;margin-top:4px"></div><div style="display:flex;gap:8px;margin-top:8px"><input id="dmMsgInput" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" placeholder="Message (max ${DM_MESSAGE_MAX_LENGTH} chars)"><button id="sendDmBtn" class="ghost">Send</button></div>`;
+      document.getElementById('closeDm').addEventListener('click', ()=>modal.remove());
+      const statusEl = document.getElementById('dmStatus');
+      const messagesEl = document.getElementById('dmMessages');
+      const inputEl = document.getElementById('dmMsgInput');
+      const sendBtn = document.getElementById('sendDmBtn');
+
+      function renderMessages(msgs){
+        messagesEl.innerHTML = '';
+        if(!msgs.length){
+          messagesEl.innerHTML = '<div class="smallMuted">No messages yet</div>';
+          return;
+        }
+        msgs.forEach(m=>{
+          const div = document.createElement('div');
+          div.className='libItem';
+          div.style.marginBottom='4px';
+          const meta = document.createElement('div');
+          meta.innerHTML = `<strong>${escapeHtml(m.from || 'Unknown')}</strong> <span class="smallMuted">${new Date(m.t || Date.now()).toLocaleString()}</span>`;
+          const body = document.createElement('div');
+          body.textContent = m.message || '';
+          div.appendChild(meta);
+          div.appendChild(body);
+          messagesEl.appendChild(div);
+        });
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      async function refreshConversation(){
+        statusEl.textContent = 'Loading conversation...';
+        try{
+          const { messages } = await fetchDmConversation(username);
+          statusEl.textContent = '';
+          renderMessages(messages);
+        }catch(err){
+          statusEl.textContent = 'Failed to load conversation: ' + (err && err.message ? err.message : 'Unknown error');
+        }
+      }
+
+      sendBtn.addEventListener('click', async ()=>{
+        const txt = (inputEl.value || '').trim();
+        if(!txt) return;
+        if(txt.length > DM_MESSAGE_MAX_LENGTH) return alert('Max ' + DM_MESSAGE_MAX_LENGTH + ' chars');
+        sendBtn.disabled = true;
+        try{
+          await sendDmMessage(username, txt);
+          inputEl.value = '';
+          await refreshConversation();
+          renderDMList();
+        }catch(err){
+          alert(err && err.message ? err.message : 'Failed to send message');
+        }finally{
+          sendBtn.disabled = false;
+        }
+      });
+
+      inputEl.addEventListener('keydown', (ev)=>{
+        if(ev.key === 'Enter' && !ev.shiftKey){
+          ev.preventDefault();
+          sendBtn.click();
+        }
+      });
+
+      refreshConversation();
+    }
+
+    document.getElementById('openDm').addEventListener('click', ()=>{
+      const to = document.getElementById('dmTo').value.trim();
+      if(!to) return alert('Enter username');
+      openDMWindow(to).catch(err=>{
+        alert(err && err.message ? err.message : 'Failed to open DM');
+      });
+      document.getElementById('dmTo').value='';
+    });
+
+    // ensure sidebar updates when user/ libs change
+    const origRender = render;
+    render = function(filtered){ origRender(filtered); renderSidebar(); };
+
+    // Helper: download an object as JSON file (local fallback)
+    function downloadJSON(obj, filename){
+      const blob = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename || 'data.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function sanitizeFilename(name){
+      return name.replace(/[^a-z0-9-_. ]/gi,'_').slice(0,60);
+    }
+
+    // Save a library file into the configured GitHub repo (creates or updates file)
+    async function saveToGitHub(obj, filename){
+      const basePath = GITHUB.path ? GITHUB.path.replace(/^\/+|\/+$/g,'') + '/' : '';
+      const path = `${basePath}${filename}`;
+      const apiBase = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(path)}`;
+      const headers = { 'Accept': 'application/vnd.github.v3+json', 'Authorization': `token ${GITHUB.token}` };
+
+      // check if file exists to obtain sha
+      let sha = null;
+      const getResp = await fetch(apiBase + `?ref=${encodeURIComponent(GITHUB.branch)}`, { headers });
+      if(getResp.status === 200){
+        const data = await getResp.json(); sha = data.sha;
+      }
+
+      const content = toBase64(JSON.stringify(obj, null, 2));
+      const body = { message: `Add/Update library ${obj.title}`, content, branch: GITHUB.branch };
+      if(sha) body.sha = sha;
+
+      const putResp = await fetch(apiBase, { method: 'PUT', headers: Object.assign({'Content-Type':'application/json'}, headers), body: JSON.stringify(body) });
+      if(!putResp.ok) throw new Error('GitHub API error: ' + putResp.status + ' ' + await putResp.text());
+      return await putResp.json();
+    }
+
+    // Basic unicode-safe base64
+    function toBase64(str){
+      try{ return btoa(unescape(encodeURIComponent(str))); }catch(e){
+        // fallback using TextEncoder
+        const bytes = new TextEncoder().encode(str);
+        let binary = '';
+        bytes.forEach(b=>binary += String.fromCharCode(b));
+        return btoa(binary);
+      }
+    }
+
+    // Load remote libraries (if any) then render
+    async function loadRemoteLibs(){
+      const diagnostics = document.getElementById('diagnostics');
+      if(diagnostics) diagnostics.textContent = 'Loading remote libraries...';
+      const owner = (typeof GITHUB !== 'undefined' && GITHUB.owner) ? GITHUB.owner : 'ItzKuroYT';
+      const repo = (typeof GITHUB !== 'undefined' && GITHUB.repo) ? GITHUB.repo : 'JJS-Libraries';
+      const path = (typeof GITHUB !== 'undefined' && GITHUB.path) ? GITHUB.path : 'libs';
+      const api = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      try{
+        const listResp = await fetch(api);
+        if(!listResp.ok){
+          if(diagnostics) diagnostics.textContent = `Failed to list remote libs: ${listResp.status} ${await listResp.text()}`;
+          render(libs);
+          return;
+        }
+        const list = await listResp.json();
+        if(!Array.isArray(list)){ if(diagnostics) diagnostics.textContent = 'No remote files found.'; render(libs); return; }
+        let added = 0;
+        for(const item of list){
+          if(item.type==='file' && item.name.endsWith('.json')){
+            try{
+              const j = await fetch(item.download_url).then(r=>r.json());
+              if(j){
+                // attach filename/path so client can edit/delete
+                j.__filename = item.name;
+                j.__path = item.path || (path + '/' + item.name);
+                if(j.id && !libs.some(l=>l.id===j.id)) { libs.push(j); added++; }
+                else if(!j.id){ j.id = Date.now().toString() + Math.random().toString(36).slice(2,6); libs.push(j); added++; }
+              }
+            }catch(e){ /* ignore load error */ }
+          }
+        }
+        if(diagnostics) diagnostics.textContent = `Loaded ${added} remote libraries from ${owner}/${repo}/${path}.`;
+        render(filter(search.value));
+      }catch(err){
+        if(diagnostics) diagnostics.textContent = 'Error loading remote libs: ' + String(err);
+        render(libs);
+      }
+    }
+
+    render(libs);
+    loadRemoteLibs();
+  </script>
+</body>
+</html>

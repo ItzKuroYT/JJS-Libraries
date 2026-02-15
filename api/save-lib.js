@@ -510,6 +510,3 @@ function sanitizeFilename(name){
 function toBase64(str){
   try{ return Buffer.from(str, 'utf8').toString('base64'); }catch(e){ return Buffer.from(String(str)).toString('base64'); }
 }
-
-}
-
