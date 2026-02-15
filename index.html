@@ -213,20 +213,30 @@ Get a code from the character builder in jjs, then paste it here. When you click
         (async ()=>{
           if(!avatarImg) return;
           try{
-            const s = await fetchSocial(lib.author);
-            if(s && s.avatar_url){
-              avatarImg.src = s.avatar_url;
-              if(avatarWrap) avatarWrap.style.display = 'inline-block';
+            const social = await fetchSocial(lib.author);
+            const avatarUrl = resolveAvatarUrl(lib.author, social);
+            if(avatarUrl){
+              avatarImg.onload = ()=>{
+                if(avatarWrap) avatarWrap.style.display = 'inline-flex';
+                avatarImg.onload = null;
+              };
+              avatarImg.onerror = ()=>{
+                avatarImg.removeAttribute('src');
+                if(avatarWrap) avatarWrap.style.display = 'none';
+                avatarImg.onerror = null;
+              };
+              avatarImg.src = avatarUrl;
+              if(avatarWrap) avatarWrap.style.display = 'inline-flex';
             }else{
               avatarImg.removeAttribute('src');
               if(avatarWrap) avatarWrap.style.display = 'none';
             }
-            if(s && s.bio){
+            if(social && social.bio){
               const meta = node.querySelector('.meta');
               const bioEl = document.createElement('div');
               bioEl.className='smallMuted';
               bioEl.style.marginTop='6px';
-              bioEl.textContent = s.bio.length>80? s.bio.slice(0,80)+'…': s.bio;
+              bioEl.textContent = social.bio.length>80? social.bio.slice(0,80)+'…': social.bio;
               meta.appendChild(bioEl);
             }
           }catch(e){
@@ -481,6 +491,26 @@ Get a code from the character builder in jjs, then paste it here. When you click
     // Users endpoint derived from serverless base
     const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
     const socialCache = new Map();
+
+    function normalizeUsernameForPath(username){
+      return (username || '').replace(/[^a-z0-9_-]/gi,'_');
+    }
+
+    function buildAvatarUrl(username){
+      const safeUser = normalizeUsernameForPath(username);
+      if(!safeUser) return '';
+      const owner = GITHUB.owner || 'ItzKuroYT';
+      const repo = GITHUB.repo || 'JJS-Libraries';
+      const branch = GITHUB.branch || 'main';
+      const cleanPath = (GITHUB.path || 'libs').replace(/^\/+/,'').replace(/\/+$/,'');
+      const base = cleanPath ? `${cleanPath}/avatars` : 'avatars';
+      return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${base}/${encodeURIComponent(safeUser)}.png`;
+    }
+
+    function resolveAvatarUrl(username, social){
+      if(social && social.avatar_url) return social.avatar_url;
+      return buildAvatarUrl(username);
+    }
 
     // --- Authentication helpers (client-side) ---
     function setToken(tok){ try{ localStorage.setItem('jjs_token', tok); updateUserLabel(); }catch(e){} }
@@ -1071,4 +1101,3 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
-
