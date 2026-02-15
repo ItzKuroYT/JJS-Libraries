@@ -1,0 +1,11 @@
+{
+  "name": "jjs-libraries",
+  "version": "1.0.0",
+  "description": "JJS Libraries serverless and frontend project",
+  "main": "api/save-lib.js",
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "author": "",
+  "license": "MIT"
+}
