@@ -212,6 +212,25 @@ Get a code from the character builder in jjs, then paste it here. When you click
     const listEl = document.getElementById('list');
     const tpl = document.getElementById('cardTpl');
     const search = document.getElementById('search');
+    const BAD_WORDS = ['fuck','nigger','nigga','bitch','shit','pussy'];
+    const BAD_WORD_REPLACEMENT = '@#%!';
+    const BAD_WORD_REGEX = new RegExp('\\b(' + BAD_WORDS.map(w=>w.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|') + ')\\b','gi');
+
+    function censorBadWords(text){
+      if(typeof text !== 'string' || !text.trim()) return text;
+      return text.replace(BAD_WORD_REGEX, BAD_WORD_REPLACEMENT);
+    }
+
+    function sanitizeLibraryContent(lib){
+      if(!lib) return lib;
+      if(typeof lib.title === 'string') lib.title = censorBadWords(lib.title);
+      if(typeof lib.description === 'string') lib.description = censorBadWords(lib.description);
+      if(typeof lib.author === 'string') lib.author = censorBadWords(lib.author);
+      if(Array.isArray(lib.tags)) lib.tags = lib.tags.map(tag=>censorBadWords(tag || ''));
+      return lib;
+    }
+
+    libs.forEach(sanitizeLibraryContent);
 
     function normalizeKey(value){
       return (value || 'unknown').toString().replace(/[^a-z0-9_-]/gi,'_');
@@ -502,21 +521,23 @@ Get a code from the character builder in jjs, then paste it here. When you click
           avatarImg.style.objectFit = 'cover';
           avatarImg.style.display = 'none';
         }
-        titleEl.textContent = lib.title;
+        titleEl.textContent = censorBadWords(lib.title || '');
         // Show description if present
         if(lib.description){
           const desc = document.createElement('div');
           desc.className = 'smallMuted';
           desc.style.margin = '6px 0 0 0';
-          desc.textContent = lib.description.length>250? lib.description.slice(0,250)+'…': lib.description;
+          const safeDesc = censorBadWords(lib.description);
+          desc.textContent = safeDesc.length>250? safeDesc.slice(0,250)+'…': safeDesc;
           titleEl.parentElement.appendChild(desc);
         }
-        node.querySelector('.author').textContent = lib.author;
+        node.querySelector('.author').textContent = censorBadWords(lib.author || '');
         // make author clickable to open profile
         try{ const authorEl = node.querySelector('.author'); authorEl.style.cursor='pointer'; authorEl.addEventListener('click', ()=> openProfile(lib.author)); }catch(e){}
         node.querySelector('.orig').href = lib.credit;
         node.querySelector('.orig').textContent = 'Credit';
-        node.querySelector('.tags').textContent = lib.tags.join(', ');
+        const safeTags = (lib.tags || []).map(tag=>censorBadWords(tag || ''));
+        node.querySelector('.tags').textContent = safeTags.join(', ');
         const pre = node.querySelector('.code');
         pre.textContent = lib.code;
         pre.setAttribute('data-full', lib.code);
@@ -605,7 +626,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
             const newTitle = prompt('Edit title:', lib.title) || lib.title;
             const newCredit = prompt('Edit credit URL (optional):', lib.credit||'') || lib.credit;
             const newCode = prompt('Edit code:', lib.code||'') || lib.code;
-            lib.title = newTitle; lib.credit = newCredit; lib.code = newCode;
+            lib.title = censorBadWords(newTitle);
+            lib.credit = newCredit;
+            lib.code = newCode;
+            sanitizeLibraryContent(lib);
             // preserve tags — could implement edit tags UI later
             // save via serverless if available
             const filename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title)}.json`;
@@ -742,14 +766,15 @@ Get a code from the character builder in jjs, then paste it here. When you click
             if(!text) return;
             if(text.length>COMMENT_MAX_LENGTH) return alert('Max ' + COMMENT_MAX_LENGTH + ' chars');
             submitBtn.disabled = true;
-            const tempComment = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: text.slice(0,COMMENT_MAX_LENGTH), t: Date.now(), replies: [] };
+            const cleanText = censorBadWords(text).slice(0,COMMENT_MAX_LENGTH);
+            const tempComment = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: cleanText, t: Date.now(), replies: [] };
             appendComment(lib, tempComment);
             if(rerenderCb) rerenderCb(); else renderCommentsList(lib);
             input.value = '';
             count.textContent = '';
             try{
               if(SERVERLESS_URL){
-                await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), null);
+                await postCommentToServer(lib, u.username, cleanText, null);
                 await syncCommentsFromServer(lib, { renderFn: rerenderCb });
               }
             }catch(err){
@@ -783,7 +808,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
             div.style.padding = '8px';
             div.style.background = 'rgba(255,255,255,0.03)';
             div.style.borderRadius = '8px';
-            div.innerHTML = `<span class="small"><b>${c.author}</b>:</span> <span>${escapeHtml(c.text)}</span> <span class="smallMuted" style="margin-left:8px">${new Date(c.t).toLocaleString()}</span>`;
+            const safeAuthor = censorBadWords(c.author || '');
+            const safeCommentText = escapeHtml(censorBadWords(c.text || ''));
+            div.innerHTML = `<span class="small"><b>${safeAuthor}</b>:</span> <span>${safeCommentText}</span> <span class="smallMuted" style="margin-left:8px">${new Date(c.t).toLocaleString()}</span>`;
             // Reply button
             if(depth<4){
               const replyBtn = document.createElement('button'); replyBtn.className='ghost'; replyBtn.textContent='Reply'; replyBtn.style.marginLeft='8px';
@@ -802,7 +829,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
                   if(text.length>COMMENT_MAX_LENGTH) return alert('Max ' + COMMENT_MAX_LENGTH + ' chars');
                   const btn = rf.querySelector('button');
                   btn.disabled = true;
-                  const reply = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: text.slice(0,COMMENT_MAX_LENGTH), t: Date.now(), replies: [] };
+                  const cleanReplyText = censorBadWords(text).slice(0,COMMENT_MAX_LENGTH);
+                  const reply = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,8), author: u.username, text: cleanReplyText, t: Date.now(), replies: [] };
                   const comments = ensureLibComments(lib);
                   const added = addReply(comments, c.id, reply);
                   if(added){
@@ -812,7 +840,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
                     rcount.textContent = '';
                     try{
                       if(SERVERLESS_URL){
-                        await postCommentToServer(lib, u.username, text.slice(0,COMMENT_MAX_LENGTH), c.id);
+                        await postCommentToServer(lib, u.username, cleanReplyText, c.id);
                         await syncCommentsFromServer(lib, { renderFn: ()=>renderCommentsList(lib) });
                       }
                     }catch(err){
@@ -1403,12 +1431,23 @@ Get a code from the character builder in jjs, then paste it here. When you click
         // Tags
         const checks = Array.from(tagPicker.querySelectorAll('input[type="checkbox"]'));
         const tags = checks.filter(i=>i.checked).map(i=>i.value);
+        const safeTags = tags.map(tag=>censorBadWords(tag));
         if(!title) return alert('Title required');
         if(!description) return alert('Description required');
         if(description.length>250) return alert('Description too long');
         if(!code) return alert('Code required');
         const author = currentUser.username;
-        const lib = {id:Date.now().toString(),title,description,author,credit,code,tags,comments:[]};
+        const safeLib = {
+          id: Date.now().toString(),
+          title: censorBadWords(title),
+          description: censorBadWords(description),
+          author: censorBadWords(author),
+          credit,
+          code,
+          tags: safeTags,
+          comments: []
+        };
+        const lib = sanitizeLibraryContent(safeLib);
         libs.push(lib);
         render(filter(search.value));
         modal.remove();
@@ -1520,7 +1559,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const author = u ? u.username : null;
       const my = author ? libs.filter(l=>l.author===author) : [];
       document.getElementById('myLibCount').textContent = my.length;
-      my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; myLibsWrap.appendChild(d); });
+      my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = censorBadWords(l.title || ''); myLibsWrap.appendChild(d); });
       renderFriendRequests(); renderNotifications(); renderDMList();
       updateStaffConsoleVisibility();
     }
@@ -1796,7 +1835,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(!SERVERLESS_URL) throw new Error('DM server unavailable');
       const trimmed = text.trim();
       if(!trimmed) throw new Error('Message required');
-      const entry = { from: me.username, to: withUser, message: trimmed.slice(0, DM_MESSAGE_MAX_LENGTH), t: Date.now() };
+      const cleanMessage = censorBadWords(trimmed).slice(0, DM_MESSAGE_MAX_LENGTH);
+      const entry = { from: me.username, to: withUser, message: cleanMessage, t: Date.now() };
       const convId = getDmConvId(me.username, withUser);
       const resp = await fetch(SERVERLESS_URL + '?action=saveDM', {
         method:'POST',
@@ -1833,12 +1873,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
           const row = document.createElement('div');
           row.className = 'libItem';
           row.style.cursor = 'pointer';
-          const previewMsg = (convo.lastMessage && typeof convo.lastMessage.message === 'string') ? convo.lastMessage.message : '';
-          const preview = convo.lastMessage ? `${convo.lastMessage.from || ''}: ${previewMsg.slice(0,60)}`.trim() : 'No messages yet';
+          const previewMsg = (convo.lastMessage && typeof convo.lastMessage.message === 'string') ? censorBadWords(convo.lastMessage.message) : '';
+          const previewUser = convo.lastMessage && convo.lastMessage.from ? censorBadWords(convo.lastMessage.from) : '';
+          const preview = convo.lastMessage ? `${previewUser}: ${previewMsg.slice(0,60)}`.trim() : 'No messages yet';
           const fallbackUser = (Array.isArray(convo.participants) ? convo.participants : []).find(part=>sanitizeDmUser(part) !== meKey);
           const targetUser = convo.withUser || fallbackUser || '';
           const displayName = targetUser || 'unknown';
-          row.innerHTML = `<strong>${escapeHtml(displayName)}</strong><div class="smallMuted">${escapeHtml(preview)}</div>`;
+          row.innerHTML = `<strong>${escapeHtml(censorBadWords(displayName))}</strong><div class="smallMuted">${escapeHtml(censorBadWords(preview))}</div>`;
           row.addEventListener('click', ()=>{
             if(!targetUser) return alert('Unable to open this conversation');
             openDMWindow(targetUser);
@@ -1878,7 +1919,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)';
         document.body.appendChild(modal);
       }
-      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>DM: ${escapeHtml(username)}</strong><button id="closeDm" class="ghost">Close</button></div><div id="dmStatus" class="smallMuted" style="margin-top:4px"></div><div id="dmMessages" style="max-height:300px;overflow:auto;margin-top:4px"></div><div style="display:flex;gap:8px;margin-top:8px"><input id="dmMsgInput" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" placeholder="Message (max ${DM_MESSAGE_MAX_LENGTH} chars)"><button id="sendDmBtn" class="ghost">Send</button></div>`;
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>DM: ${escapeHtml(censorBadWords(username))}</strong><button id="closeDm" class="ghost">Close</button></div><div id="dmStatus" class="smallMuted" style="margin-top:4px"></div><div id="dmMessages" style="max-height:300px;overflow:auto;margin-top:4px"></div><div style="display:flex;gap:8px;margin-top:8px"><input id="dmMsgInput" style="flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" placeholder="Message (max ${DM_MESSAGE_MAX_LENGTH} chars)"><button id="sendDmBtn" class="ghost">Send</button></div>`;
       document.getElementById('closeDm').addEventListener('click', ()=>modal.remove());
       const statusEl = document.getElementById('dmStatus');
       const messagesEl = document.getElementById('dmMessages');
@@ -1896,9 +1937,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
           div.className='libItem';
           div.style.marginBottom='4px';
           const meta = document.createElement('div');
-          meta.innerHTML = `<strong>${escapeHtml(m.from || 'Unknown')}</strong> <span class="smallMuted">${new Date(m.t || Date.now()).toLocaleString()}</span>`;
+          meta.innerHTML = `<strong>${escapeHtml(censorBadWords(m.from || 'Unknown'))}</strong> <span class="smallMuted">${new Date(m.t || Date.now()).toLocaleString()}</span>`;
           const body = document.createElement('div');
-          body.textContent = m.message || '';
+          body.textContent = censorBadWords(m.message || '');
           div.appendChild(meta);
           div.appendChild(body);
           messagesEl.appendChild(div);
@@ -2028,6 +2069,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
             try{
               const j = await fetch(item.download_url).then(r=>r.json());
               if(j){
+                sanitizeLibraryContent(j);
                 // attach filename/path so client can edit/delete
                 j.__filename = item.name;
                 j.__path = item.path || (path + '/' + item.name);
