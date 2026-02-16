@@ -1390,7 +1390,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     function canDeleteLibrary(user, lib){
       if(!user || !lib) return false;
-      if(user.role === 'owner') return true;
+      if(user.role === 'owner' || user.role === 'moderator') return true;
       return user.username === lib.author;
     }
     function updateUserLabel(){
