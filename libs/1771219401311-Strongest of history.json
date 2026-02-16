@@ -10,7 +10,13 @@
     "JJK"
   ],
   "comments": [],
-  "ratings": [],
+  "ratings": [
+    {
+      "user": "Kuro",
+      "value": 5,
+      "t": 1771261051023
+    }
+  ],
   "__filename": "1771219401311-Strongest of history.json",
   "__path": "libs/1771219401311-Strongest of history.json"
 }
