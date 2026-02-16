@@ -437,6 +437,10 @@ module.exports = async (req, res) => {
         }
       }
       if(!libData) return res.status(404).json({ error: 'Library not found' });
+      const authorName = typeof libData.author === 'string' ? libData.author.trim().toLowerCase() : '';
+      if(authorName && authorName === normalizedUser){
+        return res.status(403).json({ error: 'Authors cannot rate their own posts' });
+      }
       const ratings = Array.isArray(libData.ratings) ? libData.ratings : [];
       const normalizedUser = username.toLowerCase();
       const now = Date.now();

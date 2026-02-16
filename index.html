@@ -618,6 +618,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(!SERVERLESS_URL) throw new Error('Serverless endpoint not configured');
       const me = getCurrentUser();
       if(!me) throw new Error('Sign in to rate');
+      const normalizedAuthor = (lib && typeof lib.author === 'string') ? lib.author.toLowerCase() : '';
+      const normalizedUser = (me.username || '').toLowerCase();
+      if(normalizedAuthor && normalizedAuthor === normalizedUser){
+        throw new Error('You cannot rate your own post');
+      }
       const libId = getLibIdForApi(lib);
       if(!libId) throw new Error('Missing library identifier');
       const resp = await fetch(SERVERLESS_URL + '?action=rate', {
@@ -635,6 +640,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const stats = getRatingStats(lib);
       const avgRounded = Math.round(stats.avg);
       const me = getCurrentUser();
+      const normalizedAuthor = (lib && typeof lib.author === 'string') ? lib.author.toLowerCase() : '';
+      const normalizedUser = me && me.username ? me.username.toLowerCase() : '';
+      const isOwnLibrary = !!(normalizedAuthor && normalizedUser && normalizedAuthor === normalizedUser);
+      const canRate = !!(me && !isOwnLibrary);
       const toneClasses = ['ratingPercent--positive','ratingPercent--neutral','ratingPercent--negative'];
       const shouldFlash = container.dataset.justRated === 'true';
       container.innerHTML = '';
@@ -664,9 +673,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
         btn.textContent = '★';
         btn.dataset.value = i;
         btn.setAttribute('aria-label', `Rate ${i} star${i===1?'':'s'}`);
-        if(!me){
+        if(!canRate){
           btn.disabled = true;
-          btn.title = 'Sign in to rate';
+          btn.title = me ? 'You cannot rate your own post' : 'Sign in to rate';
         }
         btn.addEventListener('mouseenter', ()=>{
           if(btn.disabled) return;
@@ -688,7 +697,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
             addNotification(`Rated ${lib.title} ${starValue} star${starValue===1?'':'s'}`);
           }catch(err){
             alert(err && err.message ? err.message : 'Failed to submit rating');
-            starButtons.forEach(b=> b.disabled = !me);
+            starButtons.forEach(b=> b.disabled = !canRate);
             const fallbackStats = getRatingStats(lib);
             percentEl.textContent = formatRatingSummary(fallbackStats);
             if(fallbackStats.count){
@@ -2952,7 +2961,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       };
       if(SERVERLESS_URL){
         try{
-          const resp = await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) });
+          const resp = await fetch(SERVERLESS_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) });
           const data = await resp.json().catch(()=>null);
           if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || 'Save failed');
           if(data && data.result && data.result.content && data.result.content.path){
@@ -3080,4 +3089,3 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
-
