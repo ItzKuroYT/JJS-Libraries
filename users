@@ -79,5 +79,12 @@
     "passwordHash": "bb967726c80c03bb916b85404d05aa30$fef6079115c614032ccaee8d6124c79f2d4855cfc8bac0c7014d31ad30c3aafcc29617e8af0b2e3622ea3427bdbd7173d87d80e9fbd55234f83a8d55c7d23ac3",
     "createdAt": "2026-02-16T01:29:58.296Z",
     "role": "member"
+  },
+  {
+    "id": "1771205420315",
+    "username": "freddyjay7",
+    "passwordHash": "c2a8bee20b84096a4b1d14bb4e70aabb$15c20b8582786e29f023302f3d1ec30928d4c7cb0ea7b7936c59273333e310c02991e14ad6b2babc2d54baca5c8f62376a99e85d6669d2f39d2042924ddc2d2b",
+    "createdAt": "2026-02-16T01:30:20.381Z",
+    "role": "member"
   }
 ]
