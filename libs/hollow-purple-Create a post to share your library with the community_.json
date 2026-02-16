@@ -1,0 +1,28 @@
+{
+  "id": "hollow-purple",
+  "title": "Create a post to share your library with the community!",
+  "author": "ADMIN - Kuro",
+  "description": "Include details like title, description, tags, and code. You can also link to an original credit if your library is inspired by or based on someone else's work.",
+  "credit": "https://www.youtube.com/@FFS-Productions",
+  "tags": [
+    "help",
+    "guide",
+    "how-to"
+  ],
+  "visibility": "public",
+  "code": "\nGet a code from the character builder in jjs, then paste it here. When you click \"Copy\", the full code will be copied to your clipboard for easy sharing or use in your own builds.\n",
+  "whitelist": [],
+  "createdAt": 1771286247987,
+  "views": 1,
+  "pinned": false,
+  "reactions": {
+    "👍": [
+      "Kuro"
+    ],
+    "❤️": [],
+    "😂": [],
+    "😮": [],
+    "🔥": []
+  },
+  "ratings": []
+}
