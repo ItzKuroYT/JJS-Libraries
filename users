@@ -100,5 +100,12 @@
     "passwordHash": "07f9df3c7c5fa923bce3c01123a07e22$ee0de67f279a83bfc52e67d31252606c3f84b39dee15412d5b6cd86ef625e81fc1dd7a34680044a0b9fa79ecfec0f9a7067448b1f0027c732bd88d5a73370f40",
     "createdAt": "2026-02-16T03:02:19.823Z",
     "role": "member"
+  },
+  {
+    "id": "1771215600711",
+    "username": "nick",
+    "passwordHash": "0efb0a31fb2c0098ca92782374fc1e3a$a46a12a3dfe9132474f5da4b24bcc2a0cd747520f63d0220ca62db55a098f426de9ed0f1677af9f4c4c362eae6c119dc40bb7dac01b501e68c87b78bae9b3c88",
+    "createdAt": "2026-02-16T04:20:00.777Z",
+    "role": "member"
   }
 ]
