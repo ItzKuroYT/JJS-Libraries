@@ -9,7 +9,7 @@
     :root{
       --bg-top:#030616;
       --bg-bottom:#160636;
-      --aurora-left:#54e0c7;
+      --aurora-left:#73efff;
       --aurora-right:#8a64ff;
       --surface:rgba(8,12,30,0.95);
       --surface-alt:rgba(12,18,42,0.92);
@@ -21,7 +21,7 @@
       --accent:#7ef9c2;
       --accent-strong:#7b5bff;
       --accent-fade:rgba(126,249,194,0.18);
-      --glow:0 32px 90px rgba(8,7,35,0.65);
+      --glow:0 32px 90px rgba(18, 15, 101, 0.65);
       --ratingPositive:#46f0a2;
       --ratingNeutral:#ffd166;
       --ratingNegative:#ff7b7b;
@@ -29,7 +29,6 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:'Space Grotesk','General Sans',sans-serif;background:var(--bg-bottom);color:var(--text)}
-    notifyFollowersOfNewPost(lib);
     body{
       min-height:100vh;
       background-image:
@@ -219,8 +218,8 @@
       <div class="postsCard">
         <header>
           <div>
-            <h1>JJS Library — Search & Copy</h1>
-            <div class="credits">Original credits shown in each library. Use code sections to view or copy.</div>
+            <h1>JJS Library — Search & Share</h1>
+            <div class="credits">Search for a moveset, or share your own with the community! You may also self-promote your content using credits or profile links.</div>
           </div>
           <div class="small">Made for Jujutsu Shenanigans</div>
         </header>
@@ -478,6 +477,19 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const dataUrl = await fileToDataUrl(file);
       base.dataUrl = dataUrl;
       return base;
+    }
+
+    function buildVideoAttachment(videoPayload){
+      if(!videoPayload) return null;
+      const attachment = {
+        dataUrl: videoPayload.dataUrl,
+        name: censorBadWords(videoPayload.name || 'video'),
+        type: videoPayload.type,
+        duration: videoPayload.duration,
+        size: videoPayload.size
+      };
+      if(!attachment.dataUrl) return null;
+      return attachment;
     }
 
     function normalizeKey(value){
@@ -899,20 +911,38 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(canDelete && delBtn) delBtn.style.display = 'inline-block';
 
         if(editBtn){
-          editBtn.addEventListener('click', async ()=>{
-            const newTitle = prompt('Edit title:', lib.title) || lib.title;
-            const newCredit = prompt('Edit credit URL (optional):', lib.credit||'') || lib.credit;
-            const newCode = prompt('Edit code:', lib.code||'') || lib.code;
-            lib.title = censorBadWords(newTitle);
-            lib.credit = newCredit;
-            lib.code = newCode;
-            sanitizeLibraryContent(lib);
-            // preserve tags — could implement edit tags UI later
-            // save via serverless if available
-            try{
-              await persistLibraryFile(lib);
-            }catch(e){ /* ignore save errors silently */ }
-            refreshListView({ refilter:true });
+          editBtn.addEventListener('click', ()=>{
+            openLibraryModal({
+              mode: 'edit',
+              lib,
+              onSubmit: async (payload)=>{
+                const { title, description, credit, code, tags, visibility, video, videoRemoved } = payload;
+                if(!title) throw new Error('Title required');
+                if(!description) throw new Error('Description required');
+                if(description.length > 250) throw new Error('Description too long');
+                if(!code) throw new Error('Code required');
+                lib.title = censorBadWords(title);
+                lib.description = censorBadWords(description);
+                lib.credit = credit;
+                lib.code = code;
+                lib.tags = (tags || []).map(tag=>censorBadWords(tag));
+                lib.visibility = visibility;
+                if(videoRemoved){
+                  delete lib.video;
+                }else if(video){
+                  if(video !== lib.video){
+                    const attachment = buildVideoAttachment(video);
+                    if(attachment) lib.video = attachment;
+                  }
+                }else{
+                  delete lib.video;
+                }
+                sanitizeLibraryContent(lib);
+                await persistLibraryFile(lib);
+                addNotification('Library updated');
+                refreshListView({ refilter:true });
+              }
+            });
           });
         }
 
@@ -1770,6 +1800,33 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const wrap = document.getElementById('tagPicker'); if(!wrap) return [];
       const checks = Array.from(wrap.querySelectorAll('input[type="checkbox"]'));
       return checks.filter(i=>i.checked).map(i=>i.value);
+    }
+
+    function cloneTagPickerElement(){
+      const source = document.getElementById('tagPicker');
+      if(!source){
+        const fallback = document.createElement('div');
+        fallback.className = 'tagPicker';
+        return fallback;
+      }
+      const clone = source.cloneNode(true);
+      clone.removeAttribute('id');
+      return clone;
+    }
+
+    function applySelectedTagsToPicker(pickerEl, selectedTags){
+      if(!pickerEl) return;
+      const selected = new Set((selectedTags || []).map(tag=> (tag || '').toLowerCase()));
+      const checkboxes = pickerEl.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(cb=>{
+        cb.checked = selected.has((cb.value || '').toLowerCase());
+      });
+    }
+
+    function collectTagsFromPicker(pickerEl){
+      if(!pickerEl) return [];
+      const checkboxes = Array.from(pickerEl.querySelectorAll('input[type="checkbox"]'));
+      return checkboxes.filter(cb=>cb.checked).map(cb=>cb.value);
     }
 
     document.getElementById('addTagBtn').addEventListener('click', ()=>{
@@ -2807,19 +2864,19 @@ Get a code from the character builder in jjs, then paste it here. When you click
           lib.__filename = filename;
           lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
         }
-        return { filename: lib.__filename };
+        return { filename: lib.__filename, method: 'serverless' };
       }
       if(GITHUB.token && GITHUB.owner && GITHUB.repo){
         await saveToGitHub(lib, filename);
         lib.__filename = filename;
         lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
-        return { filename: lib.__filename };
+        return { filename: lib.__filename, method: 'github' };
       }
       if(opts.downloadOnMissingConfig){
         lib.__filename = filename;
         lib.__path = lib.__path || filename;
         downloadJSON(lib, filename);
-        return { filename: lib.__filename, downloaded: true };
+        return { filename: lib.__filename, downloaded: true, method: 'download' };
       }
       return null;
     }
@@ -2926,5 +2983,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
 
