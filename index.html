@@ -103,6 +103,8 @@
     .card:hover{transform:translateY(-4px);border-color:rgba(126,249,194,0.35)}
     .card:hover::before{opacity:1}
     .card h3{margin:0;font-size:18px}
+    .cardAvatarWrap{width:58px;height:58px;min-width:58px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,0.08);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(255,255,255,0.04)}
+    .cardAvatar{width:100%;height:100%;object-fit:cover;display:block}
     .meta{font-size:13px;color:var(--muted);margin-top:6px;display:flex;gap:8px;align-items:center}
     .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
     pre.code{background:linear-gradient(160deg,rgba(5,10,25,0.94),rgba(3,6,18,0.85));color:#dff0ff;padding:14px;border-radius:16px;overflow:auto;max-height:280px;margin:12px 0;border:1px solid rgba(255,255,255,0.04)}
@@ -144,7 +146,7 @@
       .layout{display:grid;grid-template-columns:clamp(300px,26vw,360px) minmax(0,1fr);gap:36px;margin-top:30px;align-items:flex-start}
       .sidebar{position:sticky;top:34px;height:fit-content;background:linear-gradient(160deg,rgba(9,16,40,0.96),rgba(5,10,26,0.9));padding:30px;border-radius:30px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 26px 60px rgba(5,8,25,0.65);backdrop-filter:blur(20px);display:flex;flex-direction:column;gap:22px}
       .sidebar .profile{display:flex;gap:16px;align-items:center;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.05)}
-      .avatar{width:78px;height:78px;border-radius:22px;background:linear-gradient(135deg,rgba(126,249,194,0.3),rgba(123,91,255,0.35));display:inline-block;overflow:hidden;border:1px solid rgba(255,255,255,0.08)}
+      .avatar{width:100px;height:100px;border-radius:100%;background:linear-gradient(135deg,rgba(126,249,194,0.3),rgba(123,91,255,0.35));display:inline-block;overflow:hidden;border:1px solid rgba(255,255,255,0.08)}
       .avatar img{width:100%;height:100%;object-fit:cover;display:block}
       .smallMuted{font-size:12px;color:var(--muted)}
       .sideSection{padding:18px;border-radius:20px;background:rgba(6,12,29,0.78);border:1px solid rgba(255,255,255,0.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02)}
@@ -267,7 +269,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="display:flex;align-items:center;gap:10px">
-            <div style="width:40px;height:40px;overflow:hidden;border-radius:8px;background:rgba(255,255,255,0.03)"><img class="cardAvatar" src="" style="width:100%;height:100%;object-fit:cover"/></div>
+            <div class="cardAvatarWrap"><img class="cardAvatar" src="" alt="avatar"/></div>
             <div>
               <h3 class="title" style="margin:0"></h3>
               <div class="meta"><span class="author"></span><span class="sep">•</span><a class="orig link" target="_blank">Original credit</a></div>
@@ -304,6 +306,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
 `
       }
     ];
+
+    const DEFAULT_AVATAR_URL = 'avatars/default.png';
 
     const listEl = document.getElementById('list');
     const tpl = document.getElementById('cardTpl');
@@ -602,8 +606,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const avatarImg = node.querySelector('.cardAvatar');
         const avatarWrap = avatarImg ? avatarImg.parentElement : null;
         if(avatarWrap){
-          avatarWrap.style.width = '32px';
-          avatarWrap.style.height = '32px';
+          avatarWrap.style.width = '50px';
+          avatarWrap.style.height = '50px';
           avatarWrap.style.borderRadius = '50%';
           avatarWrap.style.overflow = 'hidden';
           avatarWrap.style.background = 'rgba(255,255,255,0.08)';
@@ -616,7 +620,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
           avatarImg.style.width = '100%';
           avatarImg.style.height = '100%';
           avatarImg.style.objectFit = 'cover';
-          avatarImg.style.display = 'none';
+          avatarImg.style.display = 'block';
+          avatarImg.src = DEFAULT_AVATAR_URL;
         }
         titleEl.textContent = censorBadWords(lib.title || '');
         // Show description if present
@@ -645,24 +650,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
           try{
             const social = await fetchSocial(lib.author);
             const avatarUrl = resolveAvatarUrl(lib.author, social);
-            if(avatarUrl){
-              avatarImg.onload = ()=>{
-                avatarImg.style.display = 'block';
-                if(avatarWrap) avatarWrap.style.background = 'none';
-                avatarImg.onload = null;
-              };
-              avatarImg.onerror = ()=>{
-                avatarImg.removeAttribute('src');
-                avatarImg.style.display = 'none';
-                if(avatarWrap) avatarWrap.style.background = 'rgba(255,255,255,0.08)';
-                avatarImg.onerror = null;
-              };
-              avatarImg.src = avatarUrl;
-            }else{
-              avatarImg.removeAttribute('src');
-              avatarImg.style.display = 'none';
-              if(avatarWrap) avatarWrap.style.background = 'rgba(255,255,255,0.08)';
-            }
+            avatarImg.dataset.fallbackApplied = 'false';
+            avatarImg.src = avatarUrl || DEFAULT_AVATAR_URL;
+            avatarImg.onerror = ()=>{
+              if(avatarImg.dataset.fallbackApplied === 'true') return;
+              avatarImg.dataset.fallbackApplied = 'true';
+              avatarImg.src = DEFAULT_AVATAR_URL;
+            };
+            if(avatarWrap) avatarWrap.style.background = 'none';
             if(social && social.bio){
               const meta = node.querySelector('.meta');
               const bioEl = document.createElement('div');
@@ -672,8 +667,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
               meta.appendChild(bioEl);
             }
           }catch(e){
-            avatarImg.removeAttribute('src');
-            avatarImg.style.display='none';
+            avatarImg.dataset.fallbackApplied = 'true';
+            avatarImg.src = DEFAULT_AVATAR_URL;
             if(avatarWrap) avatarWrap.style.background='rgba(255,255,255,0.08)';
           }
         })();
@@ -1353,7 +1348,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     function buildAvatarUrl(username){
       const safeUser = normalizeUsernameForPath(username);
-      if(!safeUser) return '';
+      if(!safeUser) return DEFAULT_AVATAR_URL;
       const owner = GITHUB.owner || 'ItzKuroYT';
       const repo = GITHUB.repo || 'JJS-Libraries';
       const branch = GITHUB.branch || 'main';
@@ -1364,7 +1359,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     function resolveAvatarUrl(username, social){
       if(social && social.avatar_url) return social.avatar_url;
-      return buildAvatarUrl(username);
+      const candidate = buildAvatarUrl(username);
+      return candidate || DEFAULT_AVATAR_URL;
     }
 
     // --- Authentication helpers (client-side) ---
@@ -1656,8 +1652,17 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     function renderSidebar(){
       const u = getCurrentUser(); document.getElementById('sideUsername').textContent = u ? u.username : 'Not signed in';
-      const av = localStorage.getItem('jjs_avatar_url') || '';
-      if(av) document.getElementById('avatarImg').src = av; else document.getElementById('avatarImg').src = '';
+      const avatarEl = document.getElementById('avatarImg');
+      if(avatarEl){
+        const storedAvatar = localStorage.getItem('jjs_avatar_url');
+        avatarEl.dataset.fallbackApplied = 'false';
+        avatarEl.src = storedAvatar || DEFAULT_AVATAR_URL;
+        avatarEl.onerror = ()=>{
+          if(avatarEl.dataset.fallbackApplied === 'true') return;
+          avatarEl.dataset.fallbackApplied = 'true';
+          avatarEl.src = DEFAULT_AVATAR_URL;
+        };
+      }
       // my libs
       const myLibsWrap = document.getElementById('myLibs'); myLibsWrap.innerHTML = '';
       const author = u ? u.username : null;
@@ -1865,13 +1870,22 @@ Get a code from the character builder in jjs, then paste it here. When you click
     async function openProfile(username){
       const social = await fetchSocial(username);
       let modal = document.getElementById('profileModal'); if(!modal){ modal = document.createElement('div'); modal.id='profileModal'; modal.style.position='fixed'; modal.style.left='20px'; modal.style.top='20px'; modal.style.width='320px'; modal.style.maxHeight='80vh'; modal.style.background='var(--card)'; modal.style.padding='12px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
-      const avatar = social && social.avatar_url ? escapeHtml(social.avatar_url) : '';
+      const avatarUrl = resolveAvatarUrl(username, social) || DEFAULT_AVATAR_URL;
       const friends = (social.friends||[]).length || 0;
       const bio = social && social.bio ? escapeHtml(social.bio) : '';
-      const avatarBlock = avatar ? `<div style="width:56px;height:56px;overflow:hidden;border-radius:8px;background:rgba(255,255,255,0.03)"><img src="${avatar}" style="width:100%;height:100%;object-fit:cover"/></div>` : '';
+      const avatarBlock = `<div style="width:66px;height:66px;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.03)"><img id="profileAvatar" src="${escapeHtml(avatarUrl)}" style="width:100%;height:100%;object-fit:cover"/></div>`;
       const bioBlock = bio ? `<div class="smallMuted" style="margin-top:4px">${bio}</div>` : '';
       modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} friends</div>${bioBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Recent libraries</strong><div id="profileLibs"></div></div>`;
       document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
+      const profileAvatarImg = document.getElementById('profileAvatar');
+      if(profileAvatarImg){
+        profileAvatarImg.dataset.fallbackApplied = 'false';
+        profileAvatarImg.addEventListener('error', ()=>{
+          if(profileAvatarImg.dataset.fallbackApplied === 'true') return;
+          profileAvatarImg.dataset.fallbackApplied = 'true';
+          profileAvatarImg.src = DEFAULT_AVATAR_URL;
+        }, { once: false });
+      }
       const me = getCurrentUser(); const actions = document.getElementById('profileActions'); actions.innerHTML='';
       if(me && me.username !== username){
         const mySocial = await fetchSocial(me.username);
