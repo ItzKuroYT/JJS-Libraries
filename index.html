@@ -29,6 +29,7 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:'Space Grotesk','General Sans',sans-serif;background:var(--bg-bottom);color:var(--text)}
+    notifyFollowersOfNewPost(lib);
     body{
       min-height:100vh;
       background-image:
@@ -97,7 +98,16 @@
     .staffPills{display:flex;flex-wrap:wrap;gap:8px;min-height:30px}
     .staffPill{padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.08);font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,0.06)}
     .staffPill--owner{background:var(--accent-fade);color:var(--accent)}
-    .list{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+    .list{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;transition:opacity 0.28s ease,transform 0.28s ease;will-change:opacity,transform}
+    .list.list--fading{opacity:0;transform:translateY(12px)}
+    .paginationBar{margin-top:28px;display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap}
+    .paginationBar--hidden{display:none}
+    .pageBtn{min-width:44px;padding:8px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--text);font-weight:500;cursor:pointer;transition:background 0.2s ease,color 0.2s ease,transform 0.2s ease}
+    .pageBtn--nav{font-size:13px}
+    .pageBtn--active{background:linear-gradient(115deg,var(--accent-strong),#1cc9ff);color:#050914;border-color:transparent}
+    .pageBtn:disabled{opacity:0.35;cursor:not-allowed}
+    .pageBtn:not(:disabled):hover{background:rgba(255,255,255,0.12);transform:translateY(-1px)}
+    .pageEllipsis{padding:6px 4px;color:var(--muted);font-size:13px}
     .card{position:relative;background:var(--surface-alt);padding:22px;border-radius:22px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 18px 44px rgba(6,8,27,0.55);backdrop-filter:blur(14px);transition:transform 0.25s ease,border-color 0.25s ease}
     .card::before{content:'';position:absolute;inset:0;border-radius:22px;border:1px solid rgba(126,249,194,0.08);opacity:0;pointer-events:none;transition:opacity 0.2s ease}
     .card:hover{transform:translateY(-4px);border-color:rgba(126,249,194,0.35)}
@@ -107,6 +117,9 @@
     .cardAvatar{width:100%;height:100%;object-fit:cover;display:block}
     .meta{font-size:13px;color:var(--muted);margin-top:6px;display:flex;gap:8px;align-items:center}
     .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+    .cardVideoWrap{margin-top:14px;border-radius:18px;overflow:hidden;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.05);box-shadow:0 14px 30px rgba(4,6,18,0.6)}
+    .cardVideoWrap video{width:100%;display:block;max-height:320px;background:#000}
+    .cardVideoMeta{padding:8px 12px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);background:rgba(0,0,0,0.35);border-top:1px solid rgba(255,255,255,0.04)}
     pre.code{background:linear-gradient(160deg,rgba(5,10,25,0.94),rgba(3,6,18,0.85));color:#dff0ff;padding:14px;border-radius:16px;overflow:auto;max-height:280px;margin:12px 0;border:1px solid rgba(255,255,255,0.04)}
     .link{color:var(--accent);text-decoration:none}
     .ratingRow{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;position:relative}
@@ -152,6 +165,9 @@
       .sideSection{padding:18px;border-radius:20px;background:rgba(6,12,29,0.78);border:1px solid rgba(255,255,255,0.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02)}
       .sideSection + .sideSection{margin-top:6px}
       .sideSection > .smallMuted{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(156,174,203,0.9)}
+      .profileLinksList{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+      .profileLinkRow{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);font-size:12px}
+      .profileLinkRow button{margin-left:8px}
       .libItem{padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:8px;background:rgba(255,255,255,0.02)}
       .notifications,.dmList{max-height:190px;overflow:auto;margin-top:12px;padding-right:6px}
       .postsCard{width:100%;padding:48px;background:var(--panel);border-radius:34px;border:1px solid rgba(255,255,255,0.06);box-shadow:0 30px 64px rgba(7,10,30,0.72);color:inherit;backdrop-filter:blur(20px)}
@@ -168,6 +184,7 @@
           <div>
             <div id="sideUsername" class="small"></div>
             <div class="smallMuted">My account</div>
+            <div class="smallMuted" id="sideFollowSummary"></div>
           </div>
         </div>
         <div style="margin-top:8px">
@@ -260,6 +277,7 @@
     </div>
 
     <div id="list" class="list"></div>
+    <div id="pagination" class="paginationBar paginationBar--hidden"></div>
         </main>
       </div>
     </div>
@@ -307,16 +325,24 @@ Get a code from the character builder in jjs, then paste it here. When you click
 `
       }
     ];
+    const PAGE_SIZE = 12;
+    let currentPage = 1;
+    let filteredResults = libs.slice();
+    let remoteLibsInitialized = false;
     const AVATAR_FOLDER = (window.AVATAR_FOLDER || 'avatars').toString().replace(/\\/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
     const DEFAULT_AVATAR_URL = AVATAR_FOLDER ? `${AVATAR_FOLDER}/default.png` : 'default.png';
     const FALLBACK_AVATAR_DATA_URI = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="26" fill="%231f2436"/><circle cx="40" cy="30" r="18" fill="%23495773"/><rect x="18" y="52" width="44" height="18" rx="9" fill="%23495773"/></svg>';
 
     const listEl = document.getElementById('list');
+    const paginationEl = document.getElementById('pagination');
     const tpl = document.getElementById('cardTpl');
     const search = document.getElementById('search');
     const BAD_WORDS = ['fuck','nigger','nigga','bitch','shit','pussy'];
     const BAD_WORD_REPLACEMENT = '@#%!';
     const BAD_WORD_REGEX = new RegExp('\\b(' + BAD_WORDS.map(w=>w.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|') + ')\\b','gi');
+    const VIDEO_DURATION_LIMIT_SECONDS = 60;
+    const VIDEO_MAX_SIZE_BYTES = 25 * 1024 * 1024;
+    const ALLOWED_VIDEO_TYPES = ['video/mp4','video/webm','video/ogg'];
 
     function censorBadWords(text){
       if(typeof text !== 'string' || !text.trim()) return text;
@@ -333,6 +359,111 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     libs.forEach(sanitizeLibraryContent);
+
+    function normalizeProfileLinkEntry(entry){
+      if(!entry) return null;
+      let label = typeof entry.label === 'string' ? entry.label.trim() : '';
+      let url = typeof entry.url === 'string' ? entry.url.trim() : '';
+      if(!url) return null;
+      if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      try{
+        const parsed = new URL(url);
+        url = parsed.href;
+      }catch(_e){
+        return null;
+      }
+      label = censorBadWords(label).slice(0, 40);
+      if(!label) label = url.replace(/^https?:\/\//i,'').slice(0,40);
+      return { label, url };
+    }
+
+    function sanitizeProfileLinks(list){
+      if(!Array.isArray(list)) return [];
+      const seen = new Set();
+      const cleaned = [];
+      list.forEach(item=>{
+        const normalized = normalizeProfileLinkEntry(item);
+        if(!normalized) return;
+        const key = normalized.url.toLowerCase();
+        if(seen.has(key)) return;
+        seen.add(key);
+        cleaned.push(normalized);
+      });
+      return cleaned.slice(0, 6);
+    }
+
+    function formatVideoDuration(seconds){
+      if(!Number.isFinite(seconds) || seconds <= 0) return '0:00';
+      const totalSeconds = Math.round(seconds);
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = (totalSeconds % 60).toString().padStart(2,'0');
+      return `${mins}:${secs}`;
+    }
+
+    function formatBytes(bytes){
+      if(!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+      const units = ['B','KB','MB','GB'];
+      let value = bytes;
+      let unitIndex = 0;
+      while(value >= 1024 && unitIndex < units.length - 1){
+        value /= 1024;
+        unitIndex++;
+      }
+      const precision = value >= 10 || unitIndex === 0 ? 0 : 1;
+      return `${value.toFixed(precision)} ${units[unitIndex]}`;
+    }
+
+    function readVideoDuration(file){
+      return new Promise((resolve,reject)=>{
+        const video = document.createElement('video');
+        let objectUrl = '';
+        const cleanup = ()=>{
+          if(objectUrl){
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = '';
+          }
+          video.removeAttribute('src');
+          video.load();
+        };
+        video.preload = 'metadata';
+        video.onloadedmetadata = ()=>{
+          const duration = video.duration || 0;
+          cleanup();
+          resolve(duration);
+        };
+        video.onerror = ()=>{
+          cleanup();
+          reject(new Error('Could not read video metadata.'));
+        };
+        objectUrl = URL.createObjectURL(file);
+        video.src = objectUrl;
+      });
+    }
+
+    async function processVideoFile(file, opts = {}){
+      if(!file) throw new Error('Select a video file first.');
+      if(!file.type || !file.type.startsWith('video/')) throw new Error('File must be a video.');
+      if(ALLOWED_VIDEO_TYPES.length && !ALLOWED_VIDEO_TYPES.includes(file.type)){
+        throw new Error('Video must be MP4, WebM, or Ogg.');
+      }
+      if(file.size > VIDEO_MAX_SIZE_BYTES){
+        throw new Error(`Video must be under ${formatBytes(VIDEO_MAX_SIZE_BYTES)}.`);
+      }
+      const duration = await readVideoDuration(file);
+      if(duration > VIDEO_DURATION_LIMIT_SECONDS){
+        throw new Error('Video must be 60 seconds or shorter.');
+      }
+      const base = {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        duration: Math.round(duration * 10) / 10
+      };
+      if(opts.skipEncoding) return base;
+      const dataUrl = await fileToDataUrl(file);
+      base.dataUrl = dataUrl;
+      return base;
+    }
 
     function normalizeKey(value){
       return (value || 'unknown').toString().replace(/[^a-z0-9_-]/gi,'_');
@@ -651,14 +782,37 @@ Get a code from the character builder in jjs, then paste it here. When you click
         })();
 
         const card = node.querySelector('.card');
+        const actionsEl = node.querySelector('.actions');
+
+        if(lib.video && lib.video.dataUrl && card){
+          const videoWrap = document.createElement('div');
+          videoWrap.className = 'cardVideoWrap';
+          const videoEl = document.createElement('video');
+          videoEl.controls = true;
+          videoEl.playsInline = true;
+          videoEl.preload = 'metadata';
+          videoEl.muted = true;
+          videoEl.src = lib.video.dataUrl;
+          videoWrap.appendChild(videoEl);
+          if(lib.video.duration || lib.video.name || lib.video.size){
+            const meta = document.createElement('div');
+            meta.className = 'cardVideoMeta';
+            const parts = [];
+            if(Number.isFinite(lib.video.duration)) parts.push(`Duration ${formatVideoDuration(lib.video.duration)}`);
+            if(typeof lib.video.size === 'number') parts.push(formatBytes(lib.video.size));
+            if(lib.video.name) parts.push(censorBadWords(lib.video.name));
+            meta.textContent = parts.join(' • ');
+            videoWrap.appendChild(meta);
+          }
+          if(actionsEl) card.insertBefore(videoWrap, actionsEl); else card.appendChild(videoWrap);
+        }
 
         // Ratings UI
         const ratingRow = document.createElement('div');
         ratingRow.className = 'ratingRow';
         ensureLibRatings(lib);
         renderRatingRow(lib, ratingRow);
-        const actionsEl = node.querySelector('.actions');
-        card.insertBefore(ratingRow, actionsEl);
+        if(actionsEl) card.insertBefore(ratingRow, actionsEl); else card.appendChild(ratingRow);
         const toggle = node.querySelector('.toggle');
         const copyBtn = node.querySelector('.copy');
         const viewOrig = node.querySelector('.viewOrig');
@@ -722,7 +876,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
                 lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
               }
             }catch(e){ /* ignore save errors silently */ }
-            render(filter(search.value));
+            refreshListView({ refilter:true });
           });
         }
 
@@ -771,7 +925,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
             if(!deleted) return;
             const idx = libs.findIndex(x=>x.id===lib.id);
             if(idx>=0) libs.splice(idx,1);
-            render(filter(search.value));
+            refreshListView({ refilter:true });
             addNotification((isStaffAction ? 'Staff removed ' : 'Deleted ') + lib.title);
           });
         }
@@ -947,8 +1101,115 @@ Get a code from the character builder in jjs, then paste it here. When you click
       });
     }
 
+    function updateFilteredResults(){
+      const query = (search && typeof search.value === 'string') ? search.value : '';
+      filteredResults = filter(query);
+    }
+
+    function ensureValidPage(){
+      const totalPages = Math.max(1, Math.ceil((filteredResults.length || 0) / PAGE_SIZE) || 1);
+      if(currentPage > totalPages) currentPage = totalPages;
+      if(currentPage < 1) currentPage = 1;
+      return totalPages;
+    }
+
+    function getCurrentPageItems(){
+      const start = (currentPage - 1) * PAGE_SIZE;
+      return filteredResults.slice(start, start + PAGE_SIZE);
+    }
+
+    function animatePageTransition(callback){
+      if(!listEl){ callback(); return; }
+      listEl.classList.add('list--fading');
+      setTimeout(()=>{
+        callback();
+        requestAnimationFrame(()=> listEl.classList.remove('list--fading'));
+      }, 200);
+    }
+
+    function buildPageList(totalPages){
+      if(totalPages <= 7){
+        return Array.from({ length: totalPages }, (_, idx)=> idx + 1);
+      }
+      const slots = new Set([1, totalPages, currentPage, currentPage - 1, currentPage + 1]);
+      if(currentPage <= 3){ slots.add(2); slots.add(3); slots.add(4); }
+      if(currentPage >= totalPages - 2){ slots.add(totalPages - 1); slots.add(totalPages - 2); slots.add(totalPages - 3); }
+      const ordered = Array.from(slots).filter(p=>p >= 1 && p <= totalPages).sort((a,b)=>a-b);
+      const result = [];
+      ordered.forEach((page, idx)=>{
+        if(idx>0 && page - ordered[idx-1] > 1){
+          result.push('ellipsis');
+        }
+        result.push(page);
+      });
+      return result;
+    }
+
+    function renderPaginationControls(totalPages){
+      if(!paginationEl) return;
+      if(filteredResults.length <= PAGE_SIZE){
+        paginationEl.innerHTML = '';
+        paginationEl.classList.add('paginationBar--hidden');
+        return;
+      }
+      paginationEl.classList.remove('paginationBar--hidden');
+      paginationEl.innerHTML = '';
+      const createBtn = (label, opts = {})=>{
+        const btn = document.createElement('button');
+        btn.className = 'pageBtn';
+        if(opts.nav) btn.classList.add('pageBtn--nav');
+        if(opts.active) btn.classList.add('pageBtn--active');
+        btn.textContent = label;
+        btn.disabled = !!opts.disabled;
+        if(!btn.disabled && typeof opts.onClick === 'function'){
+          btn.addEventListener('click', opts.onClick);
+        }
+        return btn;
+      };
+      paginationEl.appendChild(createBtn('‹ Previous', { nav:true, disabled: currentPage === 1, onClick: ()=> goToPage(currentPage - 1) }));
+      buildPageList(totalPages).forEach(entry=>{
+        if(entry === 'ellipsis'){
+          const span = document.createElement('span');
+          span.className = 'pageEllipsis';
+          span.textContent = '...';
+          paginationEl.appendChild(span);
+        }else{
+          const pageNumber = Number(entry);
+          paginationEl.appendChild(createBtn(String(pageNumber), {
+            active: pageNumber === currentPage,
+            onClick: ()=> goToPage(pageNumber)
+          }));
+        }
+      });
+      const total = Math.max(1, totalPages);
+      paginationEl.appendChild(createBtn('Next ›', { nav:true, disabled: currentPage === total, onClick: ()=> goToPage(currentPage + 1) }));
+    }
+
+    function goToPage(page){
+      const totalPages = ensureValidPage();
+      const target = Math.min(Math.max(page,1), totalPages);
+      if(target === currentPage) return;
+      currentPage = target;
+      refreshListView({ animate:true });
+    }
+
+    function refreshListView(opts = {}){
+      const { refilter = false, resetPage = false, animate = false } = opts;
+      if(refilter){ updateFilteredResults(); }
+      if(resetPage) currentPage = 1;
+      const totalPages = ensureValidPage();
+      const items = getCurrentPageItems();
+      const renderNow = ()=> render(items);
+      if(animate){
+        animatePageTransition(renderNow);
+      }else{
+        renderNow();
+      }
+      renderPaginationControls(totalPages);
+    }
+
     search.addEventListener('input', ()=>{
-      render(filter(search.value));
+      refreshListView({ refilter:true, resetPage:true, animate:true });
     });
 
     // Add button opens Discord invite (manual additions are done by editing the file)
@@ -1191,7 +1452,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
       updateAddModeratorButton();
       updateStaffConsoleVisibility();
-      render(filter(search.value));
+      refreshListView({ refilter:true });
     }
 
     function updateAddModeratorButton(){
@@ -1382,7 +1643,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       updateUserLabel();
       updateAddModeratorButton();
       updateStaffConsoleVisibility();
-      render(filter(search.value));
+      refreshListView({ refilter:true });
     }
     function getToken(){ try{ return localStorage.getItem('jjs_token'); }catch(e){return null;} }
     function decodeToken(tok){ if(!tok) return null; try{ const parts = tok.split('.'); if(parts.length<2) return null; const payload = parts[1]; const json = JSON.parse(atob(payload.replace(/-/g,'+').replace(/_/g,'/'))); return json; }catch(e){return null;} }
@@ -1517,6 +1778,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
           <div style="margin-bottom:10px"><textarea id="newDesc" placeholder="Description (max 250 chars)" maxlength="250" style="width:100%;min-height:48px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea><div class="smallMuted" id="descCount"></div></div>
           <div style="margin-bottom:10px"><input id="newCredit" placeholder="Credit / original link (optional)" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333"></div>
           <div style="margin-bottom:10px"><textarea id="newCode" placeholder="Paste code here" style="width:100%;min-height:80px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea></div>
+          <div style="margin-bottom:12px">
+            <label class="smallMuted" style="display:block;margin-bottom:4px">Attach a gameplay video (optional, max 60s)</label>
+            <input id="newVideo" type="file" accept="video/mp4,video/webm,video/ogg" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333">
+            <div class="smallMuted" id="newVideoStatus"></div>
+          </div>
           <div style="margin-bottom:10px"><span class="smallMuted">Tags: (select below before posting)</span></div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">${document.getElementById('tagPicker').outerHTML}</div>
           <button type="submit" class="ghost">Post</button>
@@ -1531,6 +1797,25 @@ Get a code from the character builder in jjs, then paste it here. When you click
       // Tag picker: sync with main
       const tagPicker = modal.querySelector('#tagPicker');
       tagPicker.innerHTML = document.getElementById('tagPicker').innerHTML;
+      const videoInput = modal.querySelector('#newVideo');
+      const videoStatus = modal.querySelector('#newVideoStatus');
+      if(videoInput){
+        videoInput.addEventListener('change', async ()=>{
+          if(!videoInput.files || !videoInput.files[0]){
+            if(videoStatus) videoStatus.textContent = '';
+            return;
+          }
+          if(videoStatus) videoStatus.textContent = 'Checking video...';
+          try{
+            const info = await processVideoFile(videoInput.files[0], { skipEncoding: true });
+            if(videoStatus) videoStatus.textContent = `Ready: ${formatVideoDuration(info.duration)} • ${formatBytes(info.size)}`;
+          }catch(err){
+            if(videoStatus) videoStatus.textContent = '';
+            alert(err && err.message ? err.message : 'Video must be 60 seconds or shorter.');
+            videoInput.value = '';
+          }
+        });
+      }
       // Form submit
       modal.querySelector('#createForm').onsubmit = async (ev)=>{
         ev.preventDefault();
@@ -1542,6 +1827,17 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const checks = Array.from(tagPicker.querySelectorAll('input[type="checkbox"]'));
         const tags = checks.filter(i=>i.checked).map(i=>i.value);
         const safeTags = tags.map(tag=>censorBadWords(tag));
+        let videoPayload = null;
+        if(videoInput && videoInput.files && videoInput.files[0]){
+          if(videoStatus) videoStatus.textContent = 'Encoding video...';
+          try{
+            videoPayload = await processVideoFile(videoInput.files[0]);
+          }catch(err){
+            if(videoStatus) videoStatus.textContent = '';
+            alert(err && err.message ? err.message : 'Video processing failed');
+            return;
+          }
+        }
         if(!title) return alert('Title required');
         if(!description) return alert('Description required');
         if(description.length>250) return alert('Description too long');
@@ -1557,9 +1853,20 @@ Get a code from the character builder in jjs, then paste it here. When you click
           tags: safeTags,
           comments: []
         };
+        if(videoPayload){
+          safeLib.video = {
+            dataUrl: videoPayload.dataUrl,
+            name: censorBadWords(videoPayload.name || 'video'),
+            type: videoPayload.type,
+            duration: videoPayload.duration,
+            size: videoPayload.size
+          };
+          if(videoStatus) videoStatus.textContent = `Attached: ${formatVideoDuration(videoPayload.duration)} • ${formatBytes(videoPayload.size)}`;
+        }
         const lib = sanitizeLibraryContent(safeLib);
         libs.push(lib);
-        render(filter(search.value));
+        notifyFollowersOfNewPost(lib);
+        refreshListView({ refilter:true });
         modal.remove();
         const filename = `${lib.id}-${sanitizeFilename(lib.title)}.json`;
         const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
@@ -1653,7 +1960,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           const avatarWrapper = document.getElementById('avatarWrap');
           setAvatarImage(avatarEl, { src: result.url, wrapper: avatarWrapper, stage: 'remote' });
           addNotification('Avatar updated');
-          render(filter(search.value));
+          refreshListView({});
         }
       }catch(e){
         alert(e && e.message ? e.message : 'Avatar upload failed.');
@@ -1670,6 +1977,23 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const storedAvatar = localStorage.getItem('jjs_avatar_url');
         setAvatarImage(avatarEl, { src: storedAvatar || DEFAULT_AVATAR_URL, wrapper: avatarWrapper, stage: storedAvatar ? 'remote' : 'default' });
       }
+      const followSummaryEl = document.getElementById('sideFollowSummary');
+      if(followSummaryEl){
+        if(!u){
+          followSummaryEl.textContent = 'Sign in to follow creators';
+        }else{
+          followSummaryEl.textContent = 'Loading followers...';
+          const viewerName = u.username;
+          fetchSocial(viewerName).then(s=>{
+            const active = getCurrentUser();
+            if(!active || active.username !== viewerName) return;
+            const followerCount = Array.isArray(s.followers) ? s.followers.length : 0;
+            const followingCount = Array.isArray(s.following) ? s.following.length : 0;
+            const followerLabel = followerCount === 1 ? 'follower' : 'followers';
+            followSummaryEl.textContent = `${followerCount} ${followerLabel} • ${followingCount} following`;
+          }).catch(()=>{ followSummaryEl.textContent = 'Followers unavailable'; });
+        }
+      }
       // my libs
       const myLibsWrap = document.getElementById('myLibs'); myLibsWrap.innerHTML = '';
       const author = u ? u.username : null;
@@ -1678,6 +2002,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
       my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = censorBadWords(l.title || ''); myLibsWrap.appendChild(d); });
       renderFriendRequests(); renderNotifications(); renderDMList();
       updateStaffConsoleVisibility();
+      if(typeof window.__hydrateProfileEditor === 'function'){
+        window.__hydrateProfileEditor();
+      }
     }
 
     // Profile edit UI in sidebar
@@ -1693,6 +2020,19 @@ Get a code from the character builder in jjs, then paste it here. When you click
             <button id="saveAvatar" class="ghost">Save Avatar</button>
             <button id="refreshProfile" class="ghost">Refresh</button>
           </div>
+          <div style="margin-top:12px">
+            <div class="smallMuted">Profile links</div>
+            <div id="profileLinksList" class="profileLinksList smallMuted"></div>
+            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+              <input id="profileLinkLabel" placeholder="Label" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+              <input id="profileLinkUrl" placeholder="https://example.com" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+              <button id="addProfileLink" type="button" class="ghost">Add</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button id="saveProfileLinks" class="ghost" style="flex:1">Save Links</button>
+              <button id="clearProfileLinks" class="ghost" style="flex:1">Clear All</button>
+            </div>
+          </div>
           <div id="staffConsoleBlock" style="margin-top:10px;display:none">
             <div class="smallMuted">Staff Console (?mod user / ?unmod user)</div>
             <form id="staffConsoleForm" style="display:flex;gap:6px;margin-top:6px">
@@ -1703,14 +2043,101 @@ Get a code from the character builder in jjs, then paste it here. When you click
           </div>
         </div>`;
       wrap.appendChild(div);
+      const bioInput = document.getElementById('profileBio');
+      const linkListEl = document.getElementById('profileLinksList');
+      const linkLabelInput = document.getElementById('profileLinkLabel');
+      const linkUrlInput = document.getElementById('profileLinkUrl');
+      const addLinkBtn = document.getElementById('addProfileLink');
+      const saveLinksBtn = document.getElementById('saveProfileLinks');
+      const clearLinksBtn = document.getElementById('clearProfileLinks');
+      let pendingProfileLinks = [];
+
+      function renderProfileLinksEditor(){
+        if(!linkListEl) return;
+        if(!pendingProfileLinks.length){
+          linkListEl.innerHTML = '<div class="smallMuted">No links added yet</div>';
+          return;
+        }
+        linkListEl.innerHTML = '';
+        pendingProfileLinks.forEach((link, idx)=>{
+          const row = document.createElement('div');
+          row.className = 'profileLinkRow';
+          const anchor = document.createElement('a');
+          anchor.href = link.url;
+          anchor.target = '_blank';
+          anchor.rel = 'noopener noreferrer';
+          anchor.textContent = link.label;
+          anchor.className = 'link';
+          anchor.style.flex = '1';
+          row.appendChild(anchor);
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'ghost';
+          removeBtn.textContent = 'Remove';
+          removeBtn.addEventListener('click', ()=>{
+            pendingProfileLinks.splice(idx, 1);
+            renderProfileLinksEditor();
+          });
+          row.appendChild(removeBtn);
+          linkListEl.appendChild(row);
+        });
+      }
+
+      function setProfileLinks(list){
+        pendingProfileLinks = sanitizeProfileLinks(list || []);
+        renderProfileLinksEditor();
+      }
+
+      async function hydrateProfileEditor(){
+        const me = getCurrentUser();
+        if(!me){
+          if(bioInput) bioInput.value = '';
+          setProfileLinks([]);
+          return;
+        }
+        const social = await fetchSocial(me.username) || {};
+        if(bioInput) bioInput.value = social.bio || '';
+        setProfileLinks(Array.isArray(social.links) ? social.links : []);
+      }
+
+      if(addLinkBtn && linkLabelInput && linkUrlInput){
+        addLinkBtn.addEventListener('click', ()=>{
+          const raw = { label: linkLabelInput.value, url: linkUrlInput.value };
+          const normalized = normalizeProfileLinkEntry(raw);
+          if(!normalized) return alert('Enter a valid URL (example: https://example.com)');
+          pendingProfileLinks.push(normalized);
+          pendingProfileLinks = sanitizeProfileLinks(pendingProfileLinks);
+          renderProfileLinksEditor();
+          linkLabelInput.value = '';
+          linkUrlInput.value = '';
+        });
+      }
+
+      if(clearLinksBtn){
+        clearLinksBtn.addEventListener('click', ()=>{
+          pendingProfileLinks = [];
+          renderProfileLinksEditor();
+        });
+      }
+
+      if(saveLinksBtn){
+        saveLinksBtn.addEventListener('click', async ()=>{
+          const me = getCurrentUser(); if(!me) return alert('Sign in to edit profile');
+          const social = await fetchSocial(me.username) || {};
+          social.links = sanitizeProfileLinks(pendingProfileLinks);
+          await updateSocial(me.username, social);
+          addNotification('Profile links saved');
+        });
+      }
+
       document.getElementById('saveBio').addEventListener('click', async ()=>{
         const me = getCurrentUser(); if(!me) return alert('Sign in to edit profile');
-        const bio = document.getElementById('profileBio').value.trim();
+        const bio = (bioInput && bioInput.value ? bioInput.value : '').trim();
         const social = await fetchSocial(me.username) || {};
         social.bio = bio;
         await updateSocial(me.username, social);
         addNotification('Bio saved');
-        render(filter(search.value));
+        refreshListView({});
       });
       document.getElementById('saveAvatar').addEventListener('click', ()=>{
         const me = getCurrentUser(); if(!me) return alert('Sign in to edit profile');
@@ -1727,7 +2154,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
               const avatarWrapper = document.getElementById('avatarWrap');
               setAvatarImage(avatarEl, { src: result.url, wrapper: avatarWrapper, stage: 'remote' });
               addNotification('Avatar saved');
-              render(filter(search.value));
+              refreshListView({});
             }
           }catch(e){
             alert(e && e.message ? e.message : 'Failed to upload avatar');
@@ -1735,14 +2162,17 @@ Get a code from the character builder in jjs, then paste it here. When you click
         };
         picker.click();
       });
-      document.getElementById('refreshProfile').addEventListener('click', async ()=>{
-        const me = getCurrentUser(); if(!me) return alert('Sign in'); const s = await fetchSocial(me.username); document.getElementById('profileBio').value = s.bio || '';
+      document.getElementById('refreshProfile').addEventListener('click', ()=>{
+        const me = getCurrentUser(); if(!me) return alert('Sign in');
+        hydrateProfileEditor();
       });
       const staffForm = document.getElementById('staffConsoleForm');
       if(staffForm){
         staffForm.addEventListener('submit', handleStaffConsoleSubmit);
       }
       updateStaffConsoleVisibility();
+      window.__hydrateProfileEditor = hydrateProfileEditor;
+      hydrateProfileEditor();
     })();
 
     // --- Social helpers (friend requests, blocking, profiles) ---
@@ -1784,6 +2214,89 @@ Get a code from the character builder in jjs, then paste it here. When you click
         }catch(_err){}
       }
       return null;
+    }
+
+    function normalizeUserList(list){
+      if(!Array.isArray(list)) return [];
+      const seen = new Set();
+      const result = [];
+      list.forEach(name=>{
+        const trimmed = (name || '').toString().trim();
+        if(!trimmed) return;
+        const lower = trimmed.toLowerCase();
+        if(seen.has(lower)) return;
+        seen.add(lower);
+        result.push(trimmed);
+      });
+      return result;
+    }
+
+    function removeUserFromList(list, username){
+      if(!Array.isArray(list) || !username) return Array.isArray(list) ? list.slice() : [];
+      const lower = username.toLowerCase();
+      return list.filter(name => (name || '').toLowerCase() !== lower);
+    }
+
+    function userIsInList(list, username){
+      if(!Array.isArray(list) || !username) return false;
+      const lower = username.toLowerCase();
+      return list.some(name => (name || '').toLowerCase() === lower);
+    }
+
+    function getFollowerUsernames(username){
+      if(!username) return [];
+      const cached = socialCache.get(username);
+      if(cached && Array.isArray(cached.followers)){
+        return normalizeUserList(cached.followers);
+      }
+      try{
+        const stored = JSON.parse(localStorage.getItem('jjs_social_' + username) || '{}');
+        return normalizeUserList(Array.isArray(stored.followers) ? stored.followers : []);
+      }catch(_e){
+        return [];
+      }
+    }
+
+    async function toggleFollowUser(username){
+      const viewer = getCurrentUser();
+      if(!viewer) return alert('Sign in to follow users');
+      if(!username || viewer.username === username) return alert('You cannot follow yourself.');
+      const [mySocialRaw, targetSocialRaw] = await Promise.all([fetchSocial(viewer.username), fetchSocial(username)]);
+      const mySocial = mySocialRaw || {};
+      const targetSocial = targetSocialRaw || {};
+      if(userIsInList(targetSocial.blocked, viewer.username)) return alert('You cannot follow this user.');
+      if(userIsInList(mySocial.blocked, username)) return alert('Unblock this user first.');
+      const targetFollowers = normalizeUserList(targetSocial.followers || []);
+      const myFollowing = normalizeUserList(mySocial.following || []);
+      const isFollowing = userIsInList(targetFollowers, viewer.username);
+      if(isFollowing){
+        targetSocial.followers = removeUserFromList(targetFollowers, viewer.username);
+        mySocial.following = removeUserFromList(myFollowing, username);
+        await updateSocial(username, targetSocial);
+        await updateSocial(viewer.username, mySocial);
+        addNotification('Unfollowed ' + username);
+      }else{
+        targetSocial.followers = normalizeUserList([...targetFollowers, viewer.username]);
+        mySocial.following = normalizeUserList([...myFollowing, username]);
+        await updateSocial(username, targetSocial);
+        await updateSocial(viewer.username, mySocial);
+        addNotification('You are now following ' + username);
+      }
+      renderSidebar();
+      openProfile(username);
+    }
+
+    function notifyFollowersOfNewPost(lib){
+      if(!lib || !lib.author) return;
+      const followers = normalizeUserList(getFollowerUsernames(lib.author));
+      if(!followers.length) return;
+      const safeTitle = censorBadWords(lib.title || 'a new library');
+      const truncatedTitle = safeTitle.length > 80 ? safeTitle.slice(0,77) + '...' : safeTitle;
+      const message = `${lib.author} posted "${truncatedTitle}"`;
+      followers.forEach(follower=>{
+        if(!follower || follower.toLowerCase() === lib.author.toLowerCase()) return;
+        addNotification(message, { targetUser: follower });
+      });
     }
 
     async function sendFriendRequest(to){
@@ -1837,9 +2350,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
       mySocial.friends = (mySocial.friends||[]).filter(x=>x!==target);
       mySocial.outgoingRequests = (mySocial.outgoingRequests||[]).filter(x=>x!==target);
       mySocial.incomingRequests = (mySocial.incomingRequests||[]).filter(x=>x!==target);
+      mySocial.followers = removeUserFromList(mySocial.followers || [], target);
+      mySocial.following = removeUserFromList(mySocial.following || [], target);
       theirSocial.friends = (theirSocial.friends||[]).filter(x=>x!==meName);
       theirSocial.outgoingRequests = (theirSocial.outgoingRequests||[]).filter(x=>x!==meName);
       theirSocial.incomingRequests = (theirSocial.incomingRequests||[]).filter(x=>x!==meName);
+      theirSocial.followers = removeUserFromList(theirSocial.followers || [], meName);
+      theirSocial.following = removeUserFromList(theirSocial.following || [], meName);
       await updateSocial(meName, mySocial);
       await updateSocial(target, theirSocial);
       addNotification('Blocked ' + target);
@@ -1881,10 +2398,15 @@ Get a code from the character builder in jjs, then paste it here. When you click
       let modal = document.getElementById('profileModal'); if(!modal){ modal = document.createElement('div'); modal.id='profileModal'; modal.style.position='fixed'; modal.style.left='20px'; modal.style.top='20px'; modal.style.width='320px'; modal.style.maxHeight='80vh'; modal.style.background='var(--card)'; modal.style.padding='12px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
       const avatarUrl = resolveAvatarUrl(username, social) || DEFAULT_AVATAR_URL;
       const friends = (social.friends||[]).length || 0;
+      const followersCount = Array.isArray(social.followers) ? social.followers.length : 0;
+      const safeLinks = sanitizeProfileLinks(social && Array.isArray(social.links) ? social.links : []);
       const bio = social && social.bio ? escapeHtml(social.bio) : '';
       const avatarBlock = `<div class="profileAvatarWrap" style="width:66px;height:66px;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.03)"><img id="profileAvatar" src="${escapeHtml(avatarUrl)}" style="width:100%;height:100%;object-fit:cover"/></div>`;
       const bioBlock = bio ? `<div class="smallMuted" style="margin-top:4px">${bio}</div>` : '';
-      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} friends</div>${bioBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Recent libraries</strong><div id="profileLibs"></div></div>`;
+      const linksBlock = safeLinks.length ? `<div style="margin-top:10px"><div class="smallMuted" style="letter-spacing:0.12em;text-transform:uppercase;font-size:11px">Links</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">${safeLinks.map(link=>`<a class="link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px">${escapeHtml(link.label)}</a>`).join('')}</div></div>` : '';
+      const friendLabel = friends === 1 ? 'friend' : 'friends';
+      const followerLabel = followersCount === 1 ? 'follower' : 'followers';
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} ${friendLabel} • ${followersCount} ${followerLabel}</div>${bioBlock}${linksBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Recent libraries</strong><div id="profileLibs"></div></div>`;
       document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
       const profileAvatarImg = document.getElementById('profileAvatar');
       const profileAvatarWrap = modal.querySelector('.profileAvatarWrap');
@@ -1897,6 +2419,25 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const outgoing = (mySocial.outgoingRequests||[]).includes(username);
         const incoming = (mySocial.incomingRequests||[]).includes(username);
         const blocked = (mySocial.blocked||[]).includes(username);
+        const theyBlockedMe = Array.isArray(theirSocial.blocked) ? theirSocial.blocked.includes(me.username) : false;
+        const isFollowing = userIsInList(mySocial && mySocial.following, username);
+        if(theyBlockedMe){
+          const note = document.createElement('div');
+          note.className = 'smallMuted';
+          note.textContent = 'This user has blocked you.';
+          actions.appendChild(note);
+        }else{
+          const followBtn = document.createElement('button');
+          followBtn.className = 'ghost';
+          followBtn.textContent = isFollowing ? 'Following' : 'Follow';
+          if(blocked){
+            followBtn.disabled = true;
+            followBtn.textContent = 'Unblock to follow';
+          }else{
+            followBtn.addEventListener('click', ()=> toggleFollowUser(username));
+          }
+          actions.appendChild(followBtn);
+        }
         if(isFriend){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Friends'; actions.appendChild(b); }
         else if(outgoing){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Request sent'; actions.appendChild(b); }
         else if(incoming){ const a = document.createElement('button'); a.className='ghost'; a.textContent='Accept'; a.addEventListener('click', ()=>{ acceptFriendRequest(username); openProfile(username); }); actions.appendChild(a); }
@@ -1907,9 +2448,63 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const libWrap = document.getElementById('profileLibs'); libWrap.innerHTML=''; libs.filter(l=>l.author===username).slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; libWrap.appendChild(d); });
     }
 
-    // Notifications (stored in localStorage)
-    function addNotification(text){ try{ const key='jjs_notifications'; const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.unshift({t:Date.now(),text}); localStorage.setItem(key, JSON.stringify(arr.slice(0,50))); renderNotifications(); }catch(e){} }
-    function renderNotifications(){ const key='jjs_notifications'; const el = document.getElementById('notifications'); el.innerHTML=''; try{ const arr = JSON.parse(localStorage.getItem(key)||'[]'); arr.forEach(n=>{ const div = document.createElement('div'); div.textContent = new Date(n.t).toLocaleString() + ' — ' + n.text; el.appendChild(div); }); }catch(e){}
+    const NOTIFICATIONS_KEY = 'jjs_notifications';
+    const GLOBAL_NOTIFICATION_BUCKET = '__global__';
+
+    function readNotificationStore(){
+      try{
+        const raw = localStorage.getItem(NOTIFICATIONS_KEY);
+        if(!raw) return {};
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return { [GLOBAL_NOTIFICATION_BUCKET]: parsed };
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      }catch(_e){
+        return {};
+      }
+    }
+
+    function writeNotificationStore(store){
+      try{ localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(store)); }
+      catch(_e){}
+    }
+
+    function addNotification(text, opts = {}){
+      if(!text) return;
+      const store = readNotificationStore();
+      const current = getCurrentUser();
+      const targetUser = (opts.targetUser || (current && current.username) || GLOBAL_NOTIFICATION_BUCKET).toLowerCase();
+      const list = Array.isArray(store[targetUser]) ? store[targetUser] : [];
+      list.unshift({ t: Date.now(), text });
+      store[targetUser] = list.slice(0, 50);
+      writeNotificationStore(store);
+      if(!opts.silent && current && current.username.toLowerCase() === targetUser){
+        renderNotifications();
+      }
+    }
+
+    function renderNotifications(){
+      const el = document.getElementById('notifications'); if(!el) return;
+      const current = getCurrentUser();
+      if(!current){
+        el.innerHTML = '<div class="smallMuted">Sign in to view notifications</div>';
+        return;
+      }
+      const store = readNotificationStore();
+      let bucket = Array.isArray(store[current.username.toLowerCase()]) ? store[current.username.toLowerCase()] : [];
+      if(!bucket.length && Array.isArray(store[GLOBAL_NOTIFICATION_BUCKET])){
+        bucket = store[GLOBAL_NOTIFICATION_BUCKET];
+      }
+      if(!bucket.length){
+        el.innerHTML = '<div class="smallMuted">No notifications yet</div>';
+        return;
+      }
+      el.innerHTML = '';
+      bucket.forEach(n=>{
+        const div = document.createElement('div');
+        const stamp = new Date(n.t || Date.now()).toLocaleString();
+        div.textContent = stamp + ' — ' + n.text;
+        el.appendChild(div);
+      });
     }
 
     const DM_MESSAGE_MAX_LENGTH = 500;
@@ -2179,11 +2774,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const listResp = await fetch(api);
         if(!listResp.ok){
           if(diagnostics) diagnostics.textContent = `Failed to list remote libs: ${listResp.status} ${await listResp.text()}`;
-          render(libs);
+          refreshListView({ refilter:true });
           return;
         }
         const list = await listResp.json();
-        if(!Array.isArray(list)){ if(diagnostics) diagnostics.textContent = 'No remote files found.'; render(libs); return; }
+        if(!Array.isArray(list)){ if(diagnostics) diagnostics.textContent = 'No remote files found.'; refreshListView({ refilter:true }); return; }
         let added = 0;
         for(const item of list){
           if(item.type==='file' && item.name.endsWith('.json')){
@@ -2194,21 +2789,24 @@ Get a code from the character builder in jjs, then paste it here. When you click
                 // attach filename/path so client can edit/delete
                 j.__filename = item.name;
                 j.__path = item.path || (path + '/' + item.name);
-                if(j.id && !libs.some(l=>l.id===j.id)) { libs.push(j); added++; }
-                else if(!j.id){ j.id = Date.now().toString() + Math.random().toString(36).slice(2,6); libs.push(j); added++; }
+                let inserted = false;
+                if(j.id && !libs.some(l=>l.id===j.id)) { libs.push(j); added++; inserted = true; }
+                else if(!j.id){ j.id = Date.now().toString() + Math.random().toString(36).slice(2,6); libs.push(j); added++; inserted = true; }
+                if(inserted && remoteLibsInitialized){ notifyFollowersOfNewPost(j); }
               }
             }catch(e){ /* ignore load error */ }
           }
         }
         if(diagnostics) diagnostics.textContent = `Loaded ${added} remote libraries from ${owner}/${repo}/${path}.`;
-        render(filter(search.value));
+        refreshListView({ refilter:true });
+        remoteLibsInitialized = true;
       }catch(err){
         if(diagnostics) diagnostics.textContent = 'Error loading remote libs: ' + String(err);
-        render(libs);
+        refreshListView({ refilter:true });
       }
     }
 
-    render(libs);
+    refreshListView({ refilter:true, resetPage:true });
     loadRemoteLibs();
     refreshUserCount();
     refreshStaffDisplay();
@@ -2216,6 +2814,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
+
 
 
 
