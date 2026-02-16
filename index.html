@@ -354,7 +354,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
     const BAD_WORD_REPLACEMENT = '@#%!';
     const BAD_WORD_REGEX = new RegExp('\\b(' + BAD_WORDS.map(w=>w.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|') + ')\\b','gi');
     const VIDEO_DURATION_LIMIT_SECONDS = 60;
-    const VIDEO_MAX_SIZE_BYTES = 25 * 1024 * 1024;
+    const REMOTE_SAVE_MAX_BYTES = 4 * 1024 * 1024; // Vercel body limit ~4MB
+    const VIDEO_MAX_SIZE_BYTES = Math.min(25 * 1024 * 1024, Math.floor(REMOTE_SAVE_MAX_BYTES * 0.75));
     const ALLOWED_VIDEO_TYPES = ['video/mp4','video/webm','video/ogg'];
 
     function censorBadWords(text){
@@ -461,7 +462,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         throw new Error('Video must be MP4, WebM, or Ogg.');
       }
       if(file.size > VIDEO_MAX_SIZE_BYTES){
-        throw new Error(`Video must be under ${formatBytes(VIDEO_MAX_SIZE_BYTES)}.`);
+        throw new Error(`Video must be under ${formatBytes(VIDEO_MAX_SIZE_BYTES)} to stay within upload limits.`);
       }
       const duration = await readVideoDuration(file);
       if(duration > VIDEO_DURATION_LIMIT_SECONDS){
@@ -1861,7 +1862,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           <div style="margin-bottom:10px"><input id="libraryCredit" placeholder="Credit / original link (optional)" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333"></div>
           <div style="margin-bottom:10px"><textarea id="libraryCode" placeholder="Paste code here" style="width:100%;min-height:80px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea></div>
           <div style="margin-bottom:12px">
-            <label class="smallMuted" style="display:block;margin-bottom:4px">Attach a gameplay video (optional, max 60s)</label>
+            <label class="smallMuted" style="display:block;margin-bottom:4px">Attach a gameplay video (optional, max 60s, under ${formatBytes(VIDEO_MAX_SIZE_BYTES)})</label>
             <input id="libraryVideoInput" type="file" accept="video/mp4,video/webm,video/ogg" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333">
             <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
               <div class="smallMuted" id="libraryVideoStatus"></div>
@@ -2093,35 +2094,20 @@ Get a code from the character builder in jjs, then paste it here. When you click
           libs.push(lib);
           notifyFollowersOfNewPost(lib);
           refreshListView({ refilter:true });
-          const filename = `${lib.id}-${sanitizeFilename(lib.title)}.json`;
-          const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
-          lib.__filename = lib.__filename || filename;
-          lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
-          if(SERVERLESS_URL){
-            try{
-              const resp = await fetch(SERVERLESS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ lib, filename }) });
-              const j = await resp.json().catch(()=>null);
-              if(!resp.ok) throw new Error(JSON.stringify(j));
-              if(j && j.result && j.result.content){
-                const remotePath = j.result.content.path;
-                if(remotePath){
-                  lib.__path = remotePath;
-                  lib.__filename = remotePath.split('/').pop() || lib.__filename;
-                }
-              }
-              return;
-            }catch(_err){ }
-          }
-          if(GITHUB.token && GITHUB.owner && GITHUB.repo){
-            try{
-              await saveToGitHub(lib, filename);
-              alert('Saved to repository path: ' + (GITHUB.path?GITHUB.path + '/':'') + filename);
-            }catch(_err){
-              downloadJSON(lib, filename);
+          try{
+            const persistResult = await persistLibraryFile(lib, { downloadOnMissingConfig: true, downloadOnFailure: true });
+            if(persistResult && persistResult.method === 'github'){
+              alert('Saved to repository path: ' + (GITHUB.path ? GITHUB.path + '/' : '') + persistResult.filename);
+            }else if(persistResult && persistResult.method === 'download'){
+              const reason = persistResult.reason && persistResult.reason.message ? persistResult.reason.message : '';
+              const videoNote = lib.video ? '\nVideo attachments are large, so configure SERVERLESS_URL or GitHub to publish automatically.' : '';
+              alert('Remote save unavailable — downloaded JSON locally for manual upload.' + (reason ? `\nReason: ${reason}` : '') + videoNote);
             }
-          } else {
-            downloadJSON(lib, filename);
-            alert('No serverless URL or GitHub config set — downloaded JSON locally for manual upload.');
+          }catch(err){
+            console.error('persistLibraryFile failed', err);
+            const fallbackName = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title || 'library')}.json`;
+            downloadJSON(lib, fallbackName);
+            alert('Could not save remotely. Downloaded JSON locally for manual upload.');
           }
         }
       });
@@ -2955,21 +2941,32 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     async function persistLibraryFile(lib, opts = {}){
       if(!lib) throw new Error('Missing library data');
+      const { downloadOnMissingConfig = false, downloadOnFailure = false } = opts;
       const filename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title || 'library')}.json`;
-      const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
-      const payload = JSON.stringify({ lib, filename });
+      const localBasePath = (GITHUB.path || '').replace(/^\/+/g,'').replace(/\/+$/g,'');
+      const toDownloadResult = (reason)=>{
+        lib.__filename = filename;
+        lib.__path = lib.__path || filename;
+        downloadJSON(lib, filename);
+        return { filename: lib.__filename, downloaded: true, method: 'download', reason };
+      };
       if(SERVERLESS_URL){
-        const resp = await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: payload });
-        const data = await resp.json().catch(()=>null);
-        if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || 'Save failed');
-        if(data && data.result && data.result.content && data.result.content.path){
-          lib.__path = data.result.content.path;
-          lib.__filename = data.result.content.path.split('/').pop() || filename;
-        }else{
-          lib.__filename = filename;
-          lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
+        try{
+          const resp = await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) });
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || 'Save failed');
+          if(data && data.result && data.result.content && data.result.content.path){
+            lib.__path = data.result.content.path;
+            lib.__filename = data.result.content.path.split('/').pop() || filename;
+          }else{
+            lib.__filename = filename;
+            lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
+          }
+          return { filename: lib.__filename, method: 'serverless' };
+        }catch(err){
+          if(downloadOnFailure) return toDownloadResult(err);
+          throw err;
         }
-        return { filename: lib.__filename, method: 'serverless' };
       }
       if(GITHUB.token && GITHUB.owner && GITHUB.repo){
         await saveToGitHub(lib, filename);
@@ -2977,12 +2974,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
         return { filename: lib.__filename, method: 'github' };
       }
-      if(opts.downloadOnMissingConfig){
-        lib.__filename = filename;
-        lib.__path = lib.__path || filename;
-        downloadJSON(lib, filename);
-        return { filename: lib.__filename, downloaded: true, method: 'download' };
-      }
+      if(downloadOnMissingConfig) return toDownloadResult();
       return null;
     }
 
@@ -3088,8 +3080,4 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
-
-
-
-
 
