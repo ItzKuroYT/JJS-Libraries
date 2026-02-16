@@ -93,5 +93,12 @@
     "passwordHash": "dab9e231e843d7419d359a4be34dac53$1df0de23f67f17991c3f2b260bd4521d5adab0d35b7e1d423c9b938df4a529e33586849b60c4ff5e416e0738efdece1efb7e8e8ccc815c7d5184756dd2546f37",
     "createdAt": "2026-02-16T02:07:48.634Z",
     "role": "member"
+  },
+  {
+    "id": "1771210939754",
+    "username": "Jesterr",
+    "passwordHash": "07f9df3c7c5fa923bce3c01123a07e22$ee0de67f279a83bfc52e67d31252606c3f84b39dee15412d5b6cd86ef625e81fc1dd7a34680044a0b9fa79ecfec0f9a7067448b1f0027c732bd88d5a73370f40",
+    "createdAt": "2026-02-16T03:02:19.823Z",
+    "role": "member"
   }
 ]
