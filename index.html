@@ -296,8 +296,9 @@
     const libs = [
       {
         id: 'hollow-purple',
-        title: 'Create a post to share your library with the community! Include details like title, description, tags, and code. You can also link to an original credit if your library is inspired by or based on someone else\'s work.',
+        title: 'Create a post to share your library with the community!',
         author: 'ADMIN - Kuro',
+        description: 'Include details like title, description, tags, and code. You can also link to an original credit if your library is inspired by or based on someone else\'s work.'
         credit: 'https://www.youtube.com/@FFS-Productions',
         tags: ['help','guide','how-to'],
         // Put the long import code here (string). Keep it escaped as needed.
@@ -306,8 +307,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
 `
       }
     ];
-
-    const DEFAULT_AVATAR_URL = 'avatars/default.png';
+    const AVATAR_FOLDER = (window.AVATAR_FOLDER || 'avatars').toString().replace(/\\/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
+    const DEFAULT_AVATAR_URL = AVATAR_FOLDER ? `${AVATAR_FOLDER}/default.png` : 'default.png';
+    const FALLBACK_AVATAR_DATA_URI = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="26" fill="%231f2436"/><circle cx="40" cy="30" r="18" fill="%23495773"/><rect x="18" y="52" width="44" height="18" rx="9" fill="%23495773"/></svg>';
 
     const listEl = document.getElementById('list');
     const tpl = document.getElementById('cardTpl');
@@ -604,25 +606,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const node = tpl.content.cloneNode(true);
         const titleEl = node.querySelector('.title');
         const avatarImg = node.querySelector('.cardAvatar');
-        const avatarWrap = avatarImg ? avatarImg.parentElement : null;
-        if(avatarWrap){
-          avatarWrap.style.width = '50px';
-          avatarWrap.style.height = '50px';
-          avatarWrap.style.borderRadius = '50%';
-          avatarWrap.style.overflow = 'hidden';
-          avatarWrap.style.background = 'rgba(255,255,255,0.08)';
-          avatarWrap.style.display = 'inline-flex';
-          avatarWrap.style.alignItems = 'center';
-          avatarWrap.style.justifyContent = 'center';
-          avatarWrap.style.marginRight = '8px';
-        }
-        if(avatarImg){
-          avatarImg.style.width = '100%';
-          avatarImg.style.height = '100%';
-          avatarImg.style.objectFit = 'cover';
-          avatarImg.style.display = 'block';
-          avatarImg.src = DEFAULT_AVATAR_URL;
-        }
+        const avatarWrap = node.querySelector('.cardAvatarWrap');
+        setAvatarImage(avatarImg, { src: DEFAULT_AVATAR_URL, wrapper: avatarWrap, stage: 'default' });
         titleEl.textContent = censorBadWords(lib.title || '');
         // Show description if present
         if(lib.description){
@@ -650,14 +635,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
           try{
             const social = await fetchSocial(lib.author);
             const avatarUrl = resolveAvatarUrl(lib.author, social);
-            avatarImg.dataset.fallbackApplied = 'false';
-            avatarImg.src = avatarUrl || DEFAULT_AVATAR_URL;
-            avatarImg.onerror = ()=>{
-              if(avatarImg.dataset.fallbackApplied === 'true') return;
-              avatarImg.dataset.fallbackApplied = 'true';
-              avatarImg.src = DEFAULT_AVATAR_URL;
-            };
-            if(avatarWrap) avatarWrap.style.background = 'none';
+            const stage = avatarUrl && avatarUrl !== DEFAULT_AVATAR_URL ? 'remote' : 'default';
+            setAvatarImage(avatarImg, { src: avatarUrl || DEFAULT_AVATAR_URL, wrapper: avatarWrap, stage });
             if(social && social.bio){
               const meta = node.querySelector('.meta');
               const bioEl = document.createElement('div');
@@ -667,9 +646,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
               meta.appendChild(bioEl);
             }
           }catch(e){
-            avatarImg.dataset.fallbackApplied = 'true';
-            avatarImg.src = DEFAULT_AVATAR_URL;
-            if(avatarWrap) avatarWrap.style.background='rgba(255,255,255,0.08)';
+            setAvatarImage(avatarImg, { src: DEFAULT_AVATAR_URL, wrapper: avatarWrap, stage: 'default' });
           }
         })();
 
@@ -1352,15 +1329,48 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const owner = GITHUB.owner || 'ItzKuroYT';
       const repo = GITHUB.repo || 'JJS-Libraries';
       const branch = GITHUB.branch || 'main';
-      const cleanPath = (GITHUB.path || 'libs').replace(/^\/+/,'').replace(/\/+$/,'');
-      const base = cleanPath ? `${cleanPath}/avatars` : 'avatars';
-      return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${base}/${encodeURIComponent(safeUser)}.png`;
+      const avatarsPath = (GITHUB.avatarsPath || 'avatars').replace(/^\/+/,'').replace(/\/+$/,'');
+      const remotePath = avatarsPath ? `${avatarsPath}/${safeUser}.png` : `${safeUser}.png`;
+      return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePathForRaw(remotePath)}`;
     }
 
     function resolveAvatarUrl(username, social){
       if(social && social.avatar_url) return social.avatar_url;
       const candidate = buildAvatarUrl(username);
       return candidate || DEFAULT_AVATAR_URL;
+    }
+
+    function setAvatarImage(imgEl, opts = {}){
+      if(!imgEl) return;
+      const wrapper = opts.wrapper || null;
+      const requestedSrc = typeof opts.src === 'string' ? opts.src.trim() : '';
+      const resolvedSrc = requestedSrc || DEFAULT_AVATAR_URL;
+      const resolvedStage = opts.stage || ((requestedSrc && requestedSrc !== DEFAULT_AVATAR_URL && requestedSrc !== FALLBACK_AVATAR_DATA_URI) ? 'remote' : 'default');
+      const updateWrapper = (filled)=>{
+        if(!wrapper) return;
+        wrapper.style.background = filled ? 'none' : 'rgba(255,255,255,0.08)';
+      };
+      const applySource = (srcValue, stageValue)=>{
+        imgEl.dataset.avatarStage = stageValue;
+        imgEl.src = srcValue;
+      };
+      imgEl.onload = ()=> updateWrapper(true);
+      imgEl.onerror = ()=>{
+        const stage = imgEl.dataset.avatarStage || 'remote';
+        if(stage === 'remote'){
+          applySource(DEFAULT_AVATAR_URL, 'default');
+          updateWrapper(false);
+          return;
+        }
+        if(stage === 'default'){
+          applySource(FALLBACK_AVATAR_DATA_URI, 'inline');
+          updateWrapper(false);
+          return;
+        }
+        imgEl.onerror = null;
+      };
+      applySource(resolvedSrc, resolvedStage);
+      updateWrapper(resolvedStage === 'remote');
     }
 
     // --- Authentication helpers (client-side) ---
@@ -1639,7 +1649,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
       try{
         const result = await saveAvatarToServer(file);
         if(result && result.url){
-          document.getElementById('avatarImg').src = result.url;
+          const avatarEl = document.getElementById('avatarImg');
+          const avatarWrapper = document.getElementById('avatarWrap');
+          setAvatarImage(avatarEl, { src: result.url, wrapper: avatarWrapper, stage: 'remote' });
           addNotification('Avatar updated');
           render(filter(search.value));
         }
@@ -1653,15 +1665,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
     function renderSidebar(){
       const u = getCurrentUser(); document.getElementById('sideUsername').textContent = u ? u.username : 'Not signed in';
       const avatarEl = document.getElementById('avatarImg');
+      const avatarWrapper = document.getElementById('avatarWrap');
       if(avatarEl){
         const storedAvatar = localStorage.getItem('jjs_avatar_url');
-        avatarEl.dataset.fallbackApplied = 'false';
-        avatarEl.src = storedAvatar || DEFAULT_AVATAR_URL;
-        avatarEl.onerror = ()=>{
-          if(avatarEl.dataset.fallbackApplied === 'true') return;
-          avatarEl.dataset.fallbackApplied = 'true';
-          avatarEl.src = DEFAULT_AVATAR_URL;
-        };
+        setAvatarImage(avatarEl, { src: storedAvatar || DEFAULT_AVATAR_URL, wrapper: avatarWrapper, stage: storedAvatar ? 'remote' : 'default' });
       }
       // my libs
       const myLibsWrap = document.getElementById('myLibs'); myLibsWrap.innerHTML = '';
@@ -1716,7 +1723,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
           try{
             const result = await saveAvatarToServer(file);
             if(result && result.url){
-              document.getElementById('avatarImg').src = result.url;
+              const avatarEl = document.getElementById('avatarImg');
+              const avatarWrapper = document.getElementById('avatarWrap');
+              setAvatarImage(avatarEl, { src: result.url, wrapper: avatarWrapper, stage: 'remote' });
               addNotification('Avatar saved');
               render(filter(search.value));
             }
@@ -1873,19 +1882,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const avatarUrl = resolveAvatarUrl(username, social) || DEFAULT_AVATAR_URL;
       const friends = (social.friends||[]).length || 0;
       const bio = social && social.bio ? escapeHtml(social.bio) : '';
-      const avatarBlock = `<div style="width:66px;height:66px;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.03)"><img id="profileAvatar" src="${escapeHtml(avatarUrl)}" style="width:100%;height:100%;object-fit:cover"/></div>`;
+      const avatarBlock = `<div class="profileAvatarWrap" style="width:66px;height:66px;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.03)"><img id="profileAvatar" src="${escapeHtml(avatarUrl)}" style="width:100%;height:100%;object-fit:cover"/></div>`;
       const bioBlock = bio ? `<div class="smallMuted" style="margin-top:4px">${bio}</div>` : '';
       modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} friends</div>${bioBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Recent libraries</strong><div id="profileLibs"></div></div>`;
       document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
       const profileAvatarImg = document.getElementById('profileAvatar');
-      if(profileAvatarImg){
-        profileAvatarImg.dataset.fallbackApplied = 'false';
-        profileAvatarImg.addEventListener('error', ()=>{
-          if(profileAvatarImg.dataset.fallbackApplied === 'true') return;
-          profileAvatarImg.dataset.fallbackApplied = 'true';
-          profileAvatarImg.src = DEFAULT_AVATAR_URL;
-        }, { once: false });
-      }
+      const profileAvatarWrap = modal.querySelector('.profileAvatarWrap');
+      setAvatarImage(profileAvatarImg, { src: avatarUrl, wrapper: profileAvatarWrap, stage: avatarUrl && avatarUrl !== DEFAULT_AVATAR_URL ? 'remote' : 'default' });
       const me = getCurrentUser(); const actions = document.getElementById('profileActions'); actions.innerHTML='';
       if(me && me.username !== username){
         const mySocial = await fetchSocial(me.username);
@@ -2213,5 +2216,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
 
 
