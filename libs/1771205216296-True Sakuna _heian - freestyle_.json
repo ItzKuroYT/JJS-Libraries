@@ -11,7 +11,13 @@
     "JJK"
   ],
   "comments": [],
-  "ratings": [],
+  "ratings": [
+    {
+      "user": "Kuro",
+      "value": 5,
+      "t": 1771205394908
+    }
+  ],
   "__filename": "1771205216296-True Sakuna _heian - freestyle_.json",
   "__path": "libs/1771205216296-True Sakuna _heian - freestyle_.json"
 }
