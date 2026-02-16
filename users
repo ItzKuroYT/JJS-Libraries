@@ -107,5 +107,12 @@
     "passwordHash": "0efb0a31fb2c0098ca92782374fc1e3a$a46a12a3dfe9132474f5da4b24bcc2a0cd747520f63d0220ca62db55a098f426de9ed0f1677af9f4c4c362eae6c119dc40bb7dac01b501e68c87b78bae9b3c88",
     "createdAt": "2026-02-16T04:20:00.777Z",
     "role": "member"
+  },
+  {
+    "id": "1771266511193",
+    "username": "Samsonhitam",
+    "passwordHash": "bb68b22a06f8cea3efa04967aab24182$fc0d81e6f312600797f8eb487432381f08db504952611d30ec311bc35797f3d6621f97ab3ce402ae2bea00d107ea5c570048a543ce0f3fe09a69f790733d7f7e",
+    "createdAt": "2026-02-16T18:28:31.256Z",
+    "role": "member"
   }
 ]
