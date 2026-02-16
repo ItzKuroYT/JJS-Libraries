@@ -306,6 +306,9 @@
       <div class="codeWrap" style="display:none">
         <pre class="code" data-full=""></pre>
       </div>
+      <div class="cardVisibilityRow" style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button type="button" class="ghost visibilityToggle">Public</button>
+      </div>
     </div>
   </template>
 
@@ -319,12 +322,23 @@
         description: 'Include details like title, description, tags, and code. You can also link to an original credit if your library is inspired by or based on someone else\'s work.',
         credit: 'https://www.youtube.com/@FFS-Productions',
         tags: ['help','guide','how-to'],
+        visibility: 'public',
         // Put the long import code here (string). Keep it escaped as needed.
         code: `
 Get a code from the character builder in jjs, then paste it here. When you click "Copy", the full code will be copied to your clipboard for easy sharing or use in your own builds.
 `
       }
     ];
+    const VISIBILITY = Object.freeze({ PUBLIC: 'public', PRIVATE: 'private' });
+    function normalizeVisibility(value){
+      return value === VISIBILITY.PRIVATE ? VISIBILITY.PRIVATE : VISIBILITY.PUBLIC;
+    }
+    function isLibVisibleToUser(lib, user){
+      const state = normalizeVisibility(lib && lib.visibility);
+      if(state !== VISIBILITY.PRIVATE) return true;
+      if(!user || !user.username || !lib || !lib.author) return false;
+      return user.username.toLowerCase() === String(lib.author || '').toLowerCase();
+    }
     const PAGE_SIZE = 12;
     let currentPage = 1;
     let filteredResults = libs.slice();
@@ -355,6 +369,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(typeof lib.description === 'string') lib.description = censorBadWords(lib.description);
       if(typeof lib.author === 'string') lib.author = censorBadWords(lib.author);
       if(Array.isArray(lib.tags)) lib.tags = lib.tags.map(tag=>censorBadWords(tag || ''));
+      lib.visibility = normalizeVisibility(lib.visibility);
       return lib;
     }
 
@@ -841,6 +856,45 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const currentUser = getCurrentUser();
         const isAuthor = !!(currentUser && currentUser.username === lib.author);
         const canDelete = canDeleteLibrary(currentUser, lib);
+        const visibilityBtn = node.querySelector('.visibilityToggle');
+        const visibilityRow = node.querySelector('.cardVisibilityRow');
+        if(visibilityBtn){
+          const applyVisibilityState = ()=>{
+            const state = normalizeVisibility(lib.visibility);
+            visibilityBtn.dataset.state = state;
+            const isPrivate = state === VISIBILITY.PRIVATE;
+            visibilityBtn.textContent = isPrivate ? 'Private' : 'Public';
+            const hint = isPrivate ? 'Private — only you can view this post' : 'Public — everyone can view this post';
+            visibilityBtn.title = hint;
+            if(visibilityRow) visibilityRow.title = hint;
+          };
+          applyVisibilityState();
+          visibilityBtn.style.display = 'inline-flex';
+          if(isAuthor){
+            visibilityBtn.disabled = false;
+            visibilityBtn.addEventListener('click', async ()=>{
+              const currentState = visibilityBtn.dataset.state || VISIBILITY.PUBLIC;
+              const nextState = currentState === VISIBILITY.PRIVATE ? VISIBILITY.PUBLIC : VISIBILITY.PRIVATE;
+              const previousLabel = visibilityBtn.textContent;
+              visibilityBtn.textContent = 'Saving...';
+              visibilityBtn.disabled = true;
+              try{
+                await updateLibraryVisibility(lib, nextState);
+                applyVisibilityState();
+                addNotification(`Visibility set to ${nextState}`);
+                refreshListView({ refilter:true });
+              }catch(err){
+                alert(err && err.message ? err.message : 'Failed to update visibility');
+                visibilityBtn.textContent = previousLabel;
+              }finally{
+                visibilityBtn.disabled = false;
+              }
+            });
+          }else{
+            visibilityBtn.disabled = true;
+            visibilityBtn.title = 'Only the owner can change visibility';
+          }
+        }
         if(isAuthor && editBtn) editBtn.style.display = 'inline-block';
         if(canDelete && delBtn) delBtn.style.display = 'inline-block';
 
@@ -855,26 +909,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
             sanitizeLibraryContent(lib);
             // preserve tags — could implement edit tags UI later
             // save via serverless if available
-            const filename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title)}.json`;
-            const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
             try{
-              if(SERVERLESS_URL){
-                const resp = await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lib, filename }) });
-                const data = await resp.json().catch(()=>null);
-                if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || 'Save failed');
-                if(data && data.result && data.result.content && data.result.content.path){
-                  lib.__path = data.result.content.path;
-                  lib.__filename = data.result.content.path.split('/').pop() || filename;
-                }else{
-                  lib.__filename = filename;
-                  lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
-                }
-              }
-              else if(GITHUB.token && GITHUB.owner && GITHUB.repo){
-                await saveToGitHub(lib, filename);
-                lib.__filename = filename;
-                lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
-              }
+              await persistLibraryFile(lib);
             }catch(e){ /* ignore save errors silently */ }
             refreshListView({ refilter:true });
           });
@@ -1094,10 +1130,15 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     function filter(q){
-      q = q.trim().toLowerCase();
-      if(!q) return libs.slice();
-      return libs.filter(l=>{
-        return l.title.toLowerCase().includes(q) || (l.tags||[]).some(t=>t.includes(q)) || l.author.toLowerCase().includes(q);
+      const viewer = getCurrentUser();
+      const query = (q || '').trim().toLowerCase();
+      return libs.filter(lib=>{
+        if(!isLibVisibleToUser(lib, viewer)) return false;
+        if(!query) return true;
+        const titleMatch = (lib.title || '').toLowerCase().includes(query);
+        const tagMatch = (lib.tags || []).some(tag=> (tag || '').toLowerCase().includes(query));
+        const authorMatch = (lib.author || '').toLowerCase().includes(query);
+        return titleMatch || tagMatch || authorMatch;
       });
     }
 
@@ -1379,7 +1420,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
     function updateTotalLibrariesDisplay(){
       const label = document.getElementById('totalLibrariesValue');
       if(!label) return;
-      const total = Array.isArray(libs) ? libs.length : 0;
+      const viewer = getCurrentUser();
+      const total = Array.isArray(libs) ? libs.filter(lib=>isLibVisibleToUser(lib, viewer)).length : 0;
       label.textContent = total;
     }
 
@@ -1783,6 +1825,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
             <input id="newVideo" type="file" accept="video/mp4,video/webm,video/ogg" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333">
             <div class="smallMuted" id="newVideoStatus"></div>
           </div>
+          <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span class="smallMuted">Visibility</span>
+            <button type="button" id="newVisibilityToggle" class="ghost" data-visibility="public">Public</button>
+          </div>
           <div style="margin-bottom:10px"><span class="smallMuted">Tags: (select below before posting)</span></div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">${document.getElementById('tagPicker').outerHTML}</div>
           <button type="submit" class="ghost">Post</button>
@@ -1799,6 +1845,21 @@ Get a code from the character builder in jjs, then paste it here. When you click
       tagPicker.innerHTML = document.getElementById('tagPicker').innerHTML;
       const videoInput = modal.querySelector('#newVideo');
       const videoStatus = modal.querySelector('#newVideoStatus');
+      const visibilityToggleBtn = modal.querySelector('#newVisibilityToggle');
+      let draftVisibility = VISIBILITY.PUBLIC;
+      if(visibilityToggleBtn){
+        const applyVisibilityButtonState = ()=>{
+          const isPrivate = draftVisibility === VISIBILITY.PRIVATE;
+          visibilityToggleBtn.textContent = isPrivate ? 'Private' : 'Public';
+          visibilityToggleBtn.dataset.visibility = draftVisibility;
+          visibilityToggleBtn.title = isPrivate ? 'Only you can see this post' : 'Everyone can view this post';
+        };
+        applyVisibilityButtonState();
+        visibilityToggleBtn.addEventListener('click', ()=>{
+          draftVisibility = draftVisibility === VISIBILITY.PRIVATE ? VISIBILITY.PUBLIC : VISIBILITY.PRIVATE;
+          applyVisibilityButtonState();
+        });
+      }
       if(videoInput){
         videoInput.addEventListener('change', async ()=>{
           if(!videoInput.files || !videoInput.files[0]){
@@ -1851,6 +1912,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           credit,
           code,
           tags: safeTags,
+          visibility: draftVisibility,
           comments: []
         };
         if(videoPayload){
@@ -2288,6 +2350,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     function notifyFollowersOfNewPost(lib){
       if(!lib || !lib.author) return;
+      if(normalizeVisibility(lib.visibility) === VISIBILITY.PRIVATE) return;
       const followers = normalizeUserList(getFollowerUsernames(lib.author));
       if(!followers.length) return;
       const safeTitle = censorBadWords(lib.title || 'a new library');
@@ -2728,6 +2791,55 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return name.replace(/[^a-z0-9-_. ]/gi,'_').slice(0,60);
     }
 
+    async function persistLibraryFile(lib, opts = {}){
+      if(!lib) throw new Error('Missing library data');
+      const filename = lib.__filename || `${lib.id || Date.now()}-${sanitizeFilename(lib.title || 'library')}.json`;
+      const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
+      const payload = JSON.stringify({ lib, filename });
+      if(SERVERLESS_URL){
+        const resp = await fetch(SERVERLESS_URL + '?action=save', { method:'POST', headers:{'Content-Type':'application/json'}, body: payload });
+        const data = await resp.json().catch(()=>null);
+        if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || 'Save failed');
+        if(data && data.result && data.result.content && data.result.content.path){
+          lib.__path = data.result.content.path;
+          lib.__filename = data.result.content.path.split('/').pop() || filename;
+        }else{
+          lib.__filename = filename;
+          lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
+        }
+        return { filename: lib.__filename };
+      }
+      if(GITHUB.token && GITHUB.owner && GITHUB.repo){
+        await saveToGitHub(lib, filename);
+        lib.__filename = filename;
+        lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
+        return { filename: lib.__filename };
+      }
+      if(opts.downloadOnMissingConfig){
+        lib.__filename = filename;
+        lib.__path = lib.__path || filename;
+        downloadJSON(lib, filename);
+        return { filename: lib.__filename, downloaded: true };
+      }
+      return null;
+    }
+
+    async function updateLibraryVisibility(lib, nextVisibility){
+      if(!lib) throw new Error('Missing library');
+      const previousState = normalizeVisibility(lib.visibility);
+      const desiredState = normalizeVisibility(nextVisibility);
+      if(previousState === desiredState) return;
+      lib.visibility = desiredState;
+      sanitizeLibraryContent(lib);
+      try{
+        await persistLibraryFile(lib);
+      }catch(err){
+        lib.visibility = previousState;
+        sanitizeLibraryContent(lib);
+        throw err;
+      }
+    }
+
     // Save a library file into the configured GitHub repo (creates or updates file)
     async function saveToGitHub(obj, filename){
       const basePath = GITHUB.path ? GITHUB.path.replace(/^\/+|\/+$/g,'') + '/' : '';
@@ -2814,8 +2926,5 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
-
-
-
 
 
