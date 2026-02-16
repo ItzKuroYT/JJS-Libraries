@@ -7,7 +7,13 @@
   "code": "KLUv/WASAFUGAJILJiIwa6wDgNVU9fXarXIqrRZFtgHXEGUvER8IQbPp4KkOBoZhiijt3wOVg3C5PmpgNBqH6UTvAqhIJtCaBDDD6tD0hkyyCAH2/QZkfKsiQTQ9ixEsp3kr470bhDzawlLy2yncFuiUt74PTch738uAxTeU2PdkWLg39D1LVldkj1jOsRYP2vUJjcV8vl8Mv+t8WEBQ2CvFhxIBEwAvQq4AW8RgQtzRC3SWwwmmWnXQrZa5RdBdVixSwpKclStGACj7s5sCwgNlkww=\n",
   "tags": [],
   "comments": [],
-  "ratings": [],
+  "ratings": [
+    {
+      "user": "Kuro",
+      "value": 1,
+      "t": 1771203670508
+    }
+  ],
   "__filename": "1771192828739-Hitbox block without a attack type.json",
   "__path": "libs/1771192828739-Hitbox block without a attack type.json"
 }
