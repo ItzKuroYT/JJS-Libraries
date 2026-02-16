@@ -72,5 +72,12 @@
     "passwordHash": "034a3d150446a87536be6d16f02656f0$32c6e4f59a0245f350099934c4c23b9f24504f41f1bc76f78841d68bf14baef56fe2611bca8e911cc22b40bf486ec96ba493ced5ac98b0c6246b0deb7762c0d8",
     "createdAt": "2026-02-15T21:47:35.982Z",
     "role": "member"
+  },
+  {
+    "id": "1771205398229",
+    "username": "faiz",
+    "passwordHash": "bb967726c80c03bb916b85404d05aa30$fef6079115c614032ccaee8d6124c79f2d4855cfc8bac0c7014d31ad30c3aafcc29617e8af0b2e3622ea3427bdbd7173d87d80e9fbd55234f83a8d55c7d23ac3",
+    "createdAt": "2026-02-16T01:29:58.296Z",
+    "role": "member"
   }
 ]
