@@ -1829,6 +1829,218 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return checkboxes.filter(cb=>cb.checked).map(cb=>cb.value);
     }
 
+    function openLibraryModal(options = {}){
+      const { mode = 'create', lib = null, onSubmit } = options;
+      if(typeof onSubmit !== 'function') throw new Error('onSubmit callback required');
+      const isEdit = mode === 'edit';
+      const heading = isEdit ? 'Edit Library' : 'Create New Library';
+      const submitLabel = isEdit ? 'Save changes' : 'Post';
+      const savingLabel = isEdit ? 'Saving...' : 'Posting...';
+      const existing = document.getElementById('libraryModal');
+      if(existing) existing.remove();
+      const modal = document.createElement('div');
+      modal.id = 'libraryModal';
+      Object.assign(modal.style, {
+        position: 'fixed',
+        left: '0',
+        top: '0',
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0,0,0,0.55)',
+        zIndex: '9999',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      });
+      modal.innerHTML = `<div style="background:var(--card);padding:24px 18px 18px 18px;min-width:340px;max-width:98vw;max-height:90vh;overflow:auto;border-radius:12px;box-shadow:0 8px 32px #000a;position:relative;">
+        <button id="closeLibraryModal" style="position:absolute;top:10px;right:10px;" class="ghost" type="button">Close</button>
+        <h3 style="margin-top:0">${heading}</h3>
+        <form id="libraryForm">
+          <div style="margin-bottom:10px"><input id="libraryTitle" placeholder="Title" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333" maxlength="60" required></div>
+          <div style="margin-bottom:10px"><textarea id="libraryDesc" placeholder="Description (max 250 chars)" maxlength="250" style="width:100%;min-height:48px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea><div class="smallMuted" id="libraryDescCount"></div></div>
+          <div style="margin-bottom:10px"><input id="libraryCredit" placeholder="Credit / original link (optional)" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333"></div>
+          <div style="margin-bottom:10px"><textarea id="libraryCode" placeholder="Paste code here" style="width:100%;min-height:80px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea></div>
+          <div style="margin-bottom:12px">
+            <label class="smallMuted" style="display:block;margin-bottom:4px">Attach a gameplay video (optional, max 60s)</label>
+            <input id="libraryVideoInput" type="file" accept="video/mp4,video/webm,video/ogg" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333">
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+              <div class="smallMuted" id="libraryVideoStatus"></div>
+              <button type="button" class="ghost" id="libraryVideoRemove" style="display:none">Remove video</button>
+            </div>
+          </div>
+          <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span class="smallMuted">Visibility</span>
+            <button type="button" id="libraryVisibilityToggle" class="ghost" data-visibility="public">Public</button>
+          </div>
+          <div style="margin-bottom:10px"><span class="smallMuted">Tags: (select below before posting)</span></div>
+          <div id="libraryModalTagContainer" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap"></div>
+          <button type="submit" class="ghost" id="librarySubmitBtn">${submitLabel}</button>
+        </form>
+      </div>`;
+      document.body.appendChild(modal);
+      const closeBtn = modal.querySelector('#closeLibraryModal');
+      if(closeBtn) closeBtn.addEventListener('click', ()=>modal.remove());
+      const form = modal.querySelector('#libraryForm');
+      const titleInput = form.querySelector('#libraryTitle');
+      const descInput = form.querySelector('#libraryDesc');
+      const descCount = form.querySelector('#libraryDescCount');
+      const creditInput = form.querySelector('#libraryCredit');
+      const codeInput = form.querySelector('#libraryCode');
+      const submitBtn = form.querySelector('#librarySubmitBtn');
+      const visibilityToggleBtn = form.querySelector('#libraryVisibilityToggle');
+      const tagContainer = form.querySelector('#libraryModalTagContainer');
+      const initial = {
+        title: lib && typeof lib.title === 'string' ? lib.title : '',
+        description: lib && typeof lib.description === 'string' ? lib.description : '',
+        credit: lib && typeof lib.credit === 'string' ? lib.credit : '',
+        code: lib && typeof lib.code === 'string' ? lib.code : '',
+        tags: Array.isArray(lib && lib.tags) ? lib.tags.slice() : [],
+        visibility: normalizeVisibility(lib && lib.visibility)
+      };
+      titleInput.value = initial.title;
+      descInput.value = initial.description;
+      if(descCount) descCount.textContent = initial.description ? `${initial.description.length}/250` : '';
+      descInput.addEventListener('input', ()=>{
+        descCount.textContent = descInput.value.length ? descInput.value.length + '/250' : '';
+      });
+      creditInput.value = initial.credit;
+      codeInput.value = initial.code;
+      const modalTagPicker = cloneTagPickerElement();
+      if(tagContainer){
+        tagContainer.innerHTML = '';
+        tagContainer.appendChild(modalTagPicker);
+      }
+      applySelectedTagsToPicker(modalTagPicker, initial.tags);
+      let currentVisibility = initial.visibility;
+      const applyVisibilityState = ()=>{
+        const isPrivate = currentVisibility === VISIBILITY.PRIVATE;
+        visibilityToggleBtn.textContent = isPrivate ? 'Private' : 'Public';
+        visibilityToggleBtn.dataset.visibility = currentVisibility;
+        visibilityToggleBtn.title = isPrivate ? 'Private — only you can view this post' : 'Public — everyone can see this post';
+      };
+      visibilityToggleBtn.addEventListener('click', ()=>{
+        currentVisibility = currentVisibility === VISIBILITY.PRIVATE ? VISIBILITY.PUBLIC : VISIBILITY.PRIVATE;
+        applyVisibilityState();
+      });
+      applyVisibilityState();
+      const videoInput = form.querySelector('#libraryVideoInput');
+      const videoStatus = form.querySelector('#libraryVideoStatus');
+      const videoRemoveBtn = form.querySelector('#libraryVideoRemove');
+      const originalVideo = lib && lib.video ? lib.video : null;
+      let selectedVideo = null;
+      let videoRemoved = false;
+      const describeVideo = (video)=>{
+        if(!video) return '';
+        const parts = [];
+        if(Number.isFinite(video.duration)) parts.push(`Duration ${formatVideoDuration(video.duration)}`);
+        if(typeof video.size === 'number') parts.push(formatBytes(video.size));
+        if(video.name) parts.push(censorBadWords(video.name));
+        return parts.join(' • ');
+      };
+      const updateVideoStatus = ()=>{
+        if(!videoStatus) return;
+        if(videoRemoved){
+          videoStatus.textContent = 'Video will be removed when you save.';
+          if(videoRemoveBtn){
+            videoRemoveBtn.style.display = originalVideo ? 'inline-flex' : 'none';
+            videoRemoveBtn.textContent = 'Undo remove';
+          }
+          return;
+        }
+        if(selectedVideo){
+          videoStatus.textContent = describeVideo(selectedVideo) || 'Ready to attach.';
+          if(videoRemoveBtn){
+            videoRemoveBtn.style.display = 'inline-flex';
+            videoRemoveBtn.textContent = originalVideo ? 'Remove video' : 'Clear video';
+          }
+          return;
+        }
+        if(originalVideo){
+          videoStatus.textContent = describeVideo(originalVideo) || 'Current video attached.';
+          if(videoRemoveBtn){
+            videoRemoveBtn.style.display = 'inline-flex';
+            videoRemoveBtn.textContent = 'Remove video';
+          }
+          return;
+        }
+        videoStatus.textContent = 'No video attached.';
+        if(videoRemoveBtn){
+          videoRemoveBtn.style.display = 'none';
+        }
+      };
+      updateVideoStatus();
+      if(videoInput){
+        videoInput.addEventListener('change', async ()=>{
+          if(!videoInput.files || !videoInput.files[0]){
+            selectedVideo = null;
+            if(!originalVideo) videoRemoved = false;
+            updateVideoStatus();
+            return;
+          }
+          if(videoStatus) videoStatus.textContent = 'Processing video...';
+          try{
+            selectedVideo = await processVideoFile(videoInput.files[0]);
+            videoRemoved = false;
+            updateVideoStatus();
+          }catch(err){
+            alert(err && err.message ? err.message : 'Video processing failed');
+            videoInput.value = '';
+            selectedVideo = null;
+            if(!originalVideo) videoRemoved = false;
+            updateVideoStatus();
+          }
+        });
+      }
+      if(videoRemoveBtn){
+        videoRemoveBtn.addEventListener('click', ()=>{
+          if(videoRemoved){
+            videoRemoved = false;
+            updateVideoStatus();
+            return;
+          }
+          if(selectedVideo){
+            selectedVideo = null;
+            if(videoInput) videoInput.value = '';
+            if(!originalVideo) videoRemoved = false;
+            updateVideoStatus();
+            return;
+          }
+          if(originalVideo){
+            videoRemoved = true;
+            if(videoInput) videoInput.value = '';
+            updateVideoStatus();
+          }
+        });
+      }
+      form.addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const payload = {
+          title: titleInput.value.trim(),
+          description: descInput.value.trim(),
+          credit: creditInput.value.trim(),
+          code: codeInput.value,
+          tags: collectTagsFromPicker(modalTagPicker),
+          visibility: currentVisibility,
+          video: selectedVideo || (videoRemoved ? null : originalVideo),
+          videoRemoved: !!videoRemoved
+        };
+        if(submitBtn){
+          submitBtn.disabled = true;
+          submitBtn.textContent = savingLabel;
+        }
+        try{
+          await onSubmit(payload);
+          modal.remove();
+        }catch(err){
+          alert(err && err.message ? err.message : 'Failed to save post');
+          if(submitBtn){
+            submitBtn.disabled = false;
+            submitBtn.textContent = submitLabel;
+          }
+        }
+      });
+    }
+
     document.getElementById('addTagBtn').addEventListener('click', ()=>{
       const v = (document.getElementById('customTag').value||'').trim();
       if(!v) return; const wrap = document.getElementById('tagPicker');
@@ -1850,176 +2062,69 @@ Get a code from the character builder in jjs, then paste it here. When you click
       addModeratorBtnEl.addEventListener('click', handleAddModeratorClick);
     }
 
-    // Create entry: will attempt to save to GitHub repo when GITHUB.token is set.
-    document.getElementById('createEntry').addEventListener('click', async ()=>{
+    document.getElementById('createEntry').addEventListener('click', ()=>{
       const currentUser = getCurrentUser();
       if(!currentUser) return alert('You must be signed in to create a library.');
-      // Modal for new post
-      let modal = document.getElementById('createModal');
-      if(modal) modal.remove();
-      modal = document.createElement('div');
-      modal.id = 'createModal';
-      modal.style.position = 'fixed';
-      modal.style.left = '0';
-      modal.style.top = '0';
-      modal.style.width = '100vw';
-      modal.style.height = '100vh';
-      modal.style.background = 'rgba(0,0,0,0.55)';
-      modal.style.zIndex = '9999';
-      modal.style.display = 'flex';
-      modal.style.alignItems = 'center';
-      modal.style.justifyContent = 'center';
-      modal.innerHTML = `<div style="background:var(--card);padding:24px 18px 18px 18px;min-width:340px;max-width:98vw;max-height:90vh;overflow:auto;border-radius:12px;box-shadow:0 8px 32px #000a;position:relative;">
-        <button id="closeCreateModal" style="position:absolute;top:10px;right:10px;" class="ghost">Close</button>
-        <h3 style="margin-top:0">Create New Library</h3>
-        <form id="createForm">
-          <div style="margin-bottom:10px"><input id="newTitle" placeholder="Title" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333" maxlength="60" required></div>
-          <div style="margin-bottom:10px"><textarea id="newDesc" placeholder="Description (max 250 chars)" maxlength="250" style="width:100%;min-height:48px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea><div class="smallMuted" id="descCount"></div></div>
-          <div style="margin-bottom:10px"><input id="newCredit" placeholder="Credit / original link (optional)" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333"></div>
-          <div style="margin-bottom:10px"><textarea id="newCode" placeholder="Paste code here" style="width:100%;min-height:80px;padding:8px;border-radius:6px;border:1px solid #333" required></textarea></div>
-          <div style="margin-bottom:12px">
-            <label class="smallMuted" style="display:block;margin-bottom:4px">Attach a gameplay video (optional, max 60s)</label>
-            <input id="newVideo" type="file" accept="video/mp4,video/webm,video/ogg" style="width:100%;padding:8px;border-radius:6px;border:1px solid #333">
-            <div class="smallMuted" id="newVideoStatus"></div>
-          </div>
-          <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-            <span class="smallMuted">Visibility</span>
-            <button type="button" id="newVisibilityToggle" class="ghost" data-visibility="public">Public</button>
-          </div>
-          <div style="margin-bottom:10px"><span class="smallMuted">Tags: (select below before posting)</span></div>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">${document.getElementById('tagPicker').outerHTML}</div>
-          <button type="submit" class="ghost">Post</button>
-        </form>
-      </div>`;
-      document.body.appendChild(modal);
-      document.getElementById('closeCreateModal').onclick = ()=>modal.remove();
-      // Description char count
-      const desc = modal.querySelector('#newDesc');
-      const descCount = modal.querySelector('#descCount');
-      desc.addEventListener('input',()=>{ descCount.textContent = desc.value.length + '/250'; });
-      // Tag picker: sync with main
-      const tagPicker = modal.querySelector('#tagPicker');
-      tagPicker.innerHTML = document.getElementById('tagPicker').innerHTML;
-      const videoInput = modal.querySelector('#newVideo');
-      const videoStatus = modal.querySelector('#newVideoStatus');
-      const visibilityToggleBtn = modal.querySelector('#newVisibilityToggle');
-      let draftVisibility = VISIBILITY.PUBLIC;
-      if(visibilityToggleBtn){
-        const applyVisibilityButtonState = ()=>{
-          const isPrivate = draftVisibility === VISIBILITY.PRIVATE;
-          visibilityToggleBtn.textContent = isPrivate ? 'Private' : 'Public';
-          visibilityToggleBtn.dataset.visibility = draftVisibility;
-          visibilityToggleBtn.title = isPrivate ? 'Only you can see this post' : 'Everyone can view this post';
-        };
-        applyVisibilityButtonState();
-        visibilityToggleBtn.addEventListener('click', ()=>{
-          draftVisibility = draftVisibility === VISIBILITY.PRIVATE ? VISIBILITY.PUBLIC : VISIBILITY.PRIVATE;
-          applyVisibilityButtonState();
-        });
-      }
-      if(videoInput){
-        videoInput.addEventListener('change', async ()=>{
-          if(!videoInput.files || !videoInput.files[0]){
-            if(videoStatus) videoStatus.textContent = '';
-            return;
-          }
-          if(videoStatus) videoStatus.textContent = 'Checking video...';
-          try{
-            const info = await processVideoFile(videoInput.files[0], { skipEncoding: true });
-            if(videoStatus) videoStatus.textContent = `Ready: ${formatVideoDuration(info.duration)} • ${formatBytes(info.size)}`;
-          }catch(err){
-            if(videoStatus) videoStatus.textContent = '';
-            alert(err && err.message ? err.message : 'Video must be 60 seconds or shorter.');
-            videoInput.value = '';
-          }
-        });
-      }
-      // Form submit
-      modal.querySelector('#createForm').onsubmit = async (ev)=>{
-        ev.preventDefault();
-        const title = modal.querySelector('#newTitle').value.trim();
-        const description = modal.querySelector('#newDesc').value.trim();
-        const credit = modal.querySelector('#newCredit').value.trim();
-        const code = modal.querySelector('#newCode').value;
-        // Tags
-        const checks = Array.from(tagPicker.querySelectorAll('input[type="checkbox"]'));
-        const tags = checks.filter(i=>i.checked).map(i=>i.value);
-        const safeTags = tags.map(tag=>censorBadWords(tag));
-        let videoPayload = null;
-        if(videoInput && videoInput.files && videoInput.files[0]){
-          if(videoStatus) videoStatus.textContent = 'Encoding video...';
-          try{
-            videoPayload = await processVideoFile(videoInput.files[0]);
-          }catch(err){
-            if(videoStatus) videoStatus.textContent = '';
-            alert(err && err.message ? err.message : 'Video processing failed');
-            return;
-          }
-        }
-        if(!title) return alert('Title required');
-        if(!description) return alert('Description required');
-        if(description.length>250) return alert('Description too long');
-        if(!code) return alert('Code required');
-        const author = currentUser.username;
-        const safeLib = {
-          id: Date.now().toString(),
-          title: censorBadWords(title),
-          description: censorBadWords(description),
-          author: censorBadWords(author),
-          credit,
-          code,
-          tags: safeTags,
-          visibility: draftVisibility,
-          comments: []
-        };
-        if(videoPayload){
-          safeLib.video = {
-            dataUrl: videoPayload.dataUrl,
-            name: censorBadWords(videoPayload.name || 'video'),
-            type: videoPayload.type,
-            duration: videoPayload.duration,
-            size: videoPayload.size
+      openLibraryModal({
+        mode: 'create',
+        onSubmit: async (payload)=>{
+          const { title, description, credit, code, tags, visibility, video } = payload;
+          if(!title) throw new Error('Title required');
+          if(!description) throw new Error('Description required');
+          if(description.length > 250) throw new Error('Description too long');
+          if(!code) throw new Error('Code required');
+          const safeTags = (tags || []).map(tag=>censorBadWords(tag));
+          const safeLib = {
+            id: Date.now().toString(),
+            title: censorBadWords(title),
+            description: censorBadWords(description),
+            author: censorBadWords(currentUser.username),
+            credit,
+            code,
+            tags: safeTags,
+            visibility,
+            comments: []
           };
-          if(videoStatus) videoStatus.textContent = `Attached: ${formatVideoDuration(videoPayload.duration)} • ${formatBytes(videoPayload.size)}`;
-        }
-        const lib = sanitizeLibraryContent(safeLib);
-        libs.push(lib);
-        notifyFollowersOfNewPost(lib);
-        refreshListView({ refilter:true });
-        modal.remove();
-        const filename = `${lib.id}-${sanitizeFilename(lib.title)}.json`;
-        const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
-        lib.__filename = lib.__filename || filename;
-        lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
-        // Try serverless endpoint first (recommended)
-        if(SERVERLESS_URL){
-          try{
-            const resp = await fetch(SERVERLESS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ lib, filename }) });
-            const j = await resp.json().catch(()=>null);
-            if(!resp.ok) throw new Error(JSON.stringify(j));
-            if(j && j.result && j.result.content){
-              const remotePath = j.result.content.path;
-              if(remotePath){
-                lib.__path = remotePath;
-                lib.__filename = remotePath.split('/').pop() || lib.__filename;
-              }
-            }
-            return;
-          }catch(_err){ }
-        }
-        // If serverless not configured, try client-side GitHub commit (NOT RECOMMENDED)
-        if(GITHUB.token && GITHUB.owner && GITHUB.repo){
-          try{
-            await saveToGitHub(lib, filename);
-            alert('Saved to repository path: ' + (GITHUB.path?GITHUB.path + '/':'') + filename);
-          }catch(_err){
-            downloadJSON(lib, filename);
+          if(video){
+            const attachment = buildVideoAttachment(video);
+            if(attachment) safeLib.video = attachment;
           }
-        } else {
-          downloadJSON(lib, filename);
-          alert('No serverless URL or GitHub config set — downloaded JSON locally for manual upload.');
+          const lib = sanitizeLibraryContent(safeLib);
+          libs.push(lib);
+          notifyFollowersOfNewPost(lib);
+          refreshListView({ refilter:true });
+          const filename = `${lib.id}-${sanitizeFilename(lib.title)}.json`;
+          const localBasePath = (GITHUB.path || '').replace(/^\/+|\/+$/g,'');
+          lib.__filename = lib.__filename || filename;
+          lib.__path = lib.__path || (localBasePath ? `${localBasePath}/${filename}` : filename);
+          if(SERVERLESS_URL){
+            try{
+              const resp = await fetch(SERVERLESS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ lib, filename }) });
+              const j = await resp.json().catch(()=>null);
+              if(!resp.ok) throw new Error(JSON.stringify(j));
+              if(j && j.result && j.result.content){
+                const remotePath = j.result.content.path;
+                if(remotePath){
+                  lib.__path = remotePath;
+                  lib.__filename = remotePath.split('/').pop() || lib.__filename;
+                }
+              }
+              return;
+            }catch(_err){ }
+          }
+          if(GITHUB.token && GITHUB.owner && GITHUB.repo){
+            try{
+              await saveToGitHub(lib, filename);
+              alert('Saved to repository path: ' + (GITHUB.path?GITHUB.path + '/':'') + filename);
+            }catch(_err){
+              downloadJSON(lib, filename);
+            }
+          } else {
+            downloadJSON(lib, filename);
+            alert('No serverless URL or GitHub config set — downloaded JSON locally for manual upload.');
+          }
         }
-      };
+      });
     });
 
     // --- Sidebar / Profile / Notifications / DMs ---
@@ -2983,6 +3088,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
+
 
 
 
