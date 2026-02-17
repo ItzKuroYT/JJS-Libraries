@@ -11,7 +11,13 @@
     "OP"
   ],
   "comments": [],
-  "ratings": [],
+  "ratings": [
+    {
+      "user": "Kuro",
+      "value": 3,
+      "t": 1771369520456
+    }
+  ],
   "__filename": "1771208154523-Just some stuff.json",
   "__path": "libs/1771208154523-Just some stuff.json"
 }
