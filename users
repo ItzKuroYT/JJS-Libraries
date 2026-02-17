@@ -261,5 +261,13 @@
     "createdAt": "2026-02-17T10:33:51.886Z",
     "createdIp": "86.159.129.105",
     "role": "member"
+  },
+  {
+    "id": "1771352040594",
+    "username": "Lordaaron2014",
+    "passwordHash": "6ea9517edd049b4073b32e7176ff2e27$8a21bd71c6a176b2efd4781bfdd6d840685480f0091f55182e90b42767ffb1bd03bbc876f18c9665ef5dede2c9f30eab1d895691bf417cd4a92bd3029d4d88b4",
+    "createdAt": "2026-02-17T18:14:00.662Z",
+    "createdIp": "92.108.161.128",
+    "role": "member"
   }
 ]
