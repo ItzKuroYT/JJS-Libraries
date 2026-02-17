@@ -5,6 +5,8 @@ const projectRoot = path.resolve(__dirname, '..');
 const outputDir = path.join(projectRoot, 'public');
 const candidateEntries = [
   'index.html',
+  'Moveset.html',
+  'profile.html',
   'favicon.ico',
   'favicon.png',
   'favicon.svg',

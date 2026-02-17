@@ -82,6 +82,49 @@ const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'Kuro').toLowerCase();
 const USERNAME_MIN_LENGTH = 4;
 const USERNAME_MAX_LENGTH = 15;
 const MAX_ACCOUNTS_PER_IP = 2;
+const PRESENCE_TTL_MS = 60000;
+const presenceStore = new Map();
+
+function cleanupPresence(){
+  const now = Date.now();
+  for(const [key, entry] of presenceStore.entries()){
+    if(!entry || !entry.lastSeen || (now - entry.lastSeen) > PRESENCE_TTL_MS){
+      presenceStore.delete(key);
+    }
+  }
+}
+
+function safePresenceProfile(profile){
+  const src = profile && typeof profile === 'object' ? profile : {};
+  return {
+    avatarUrl: String(src.avatarUrl || '').slice(0, 500),
+    pronouns: String(src.pronouns || '').slice(0, 60),
+    bio: String(src.bio || '').slice(0, 220)
+  };
+}
+
+function buildPresenceList(){
+  cleanupPresence();
+  const grouped = new Map();
+  for(const entry of presenceStore.values()){
+    if(!entry || !entry.username) continue;
+    const key = String(entry.username || '').toLowerCase();
+    if(!key) continue;
+    const current = grouped.get(key);
+    if(!current || (entry.lastSeen || 0) > (current.lastSeen || 0)){
+      grouped.set(key, entry);
+    }
+  }
+  return Array.from(grouped.values())
+    .sort((a,b)=> String(a.username || '').localeCompare(String(b.username || '')))
+    .map(entry=>({
+      username: entry.username,
+      avatarUrl: entry.avatarUrl || '',
+      pronouns: entry.pronouns || '',
+      bio: entry.bio || '',
+      lastSeen: entry.lastSeen || 0
+    }));
+}
 
 function normalizeIpAddress(ip){
   const raw = String(ip || '').trim();
@@ -415,6 +458,13 @@ module.exports = async (req,res) => {
       const state = buildOwnerControlState(users, catalog || {});
       return res.status(200).json({ ok:true, state });
     }
+    if(action === 'presenceList'){
+      if(!jwtSecret) return res.status(500).json({ error:'Server not configured for presence. Set JWT_SECRET.' });
+      const auth = getAuthFromRequest(req, jwtSecret);
+      if(!auth || !auth.username) return res.status(401).json({ error:'Unauthorized' });
+      const users = buildPresenceList();
+      return res.status(200).json({ ok:true, users });
+    }
     return res.status(200).json({ ok:true, configured: !!(token && owner && repo && jwtSecret), owner: owner||null, repo: repo||null, usersPath });
   }
 
@@ -423,6 +473,39 @@ module.exports = async (req,res) => {
   const action = (query.get && query.get('action')) || (query.action) || 'health';
 
   const body = await readBody(req);
+
+  if(action === 'presencePing'){
+    if(!jwtSecret) return res.status(500).json({ error:'Server not configured for presence. Set JWT_SECRET.' });
+    const auth = getAuthFromRequest(req, jwtSecret);
+    if(!auth || !auth.username) return res.status(401).json({ error:'Unauthorized' });
+    const tabId = String(body.tabId || '').trim().slice(0, 80);
+    if(!tabId) return res.status(400).json({ error:'tabId required' });
+    const profile = safePresenceProfile(body.profile);
+    const key = `${String(auth.username).toLowerCase()}::${tabId}`;
+    presenceStore.set(key, {
+      username: String(auth.username),
+      tabId,
+      avatarUrl: profile.avatarUrl,
+      pronouns: profile.pronouns,
+      bio: profile.bio,
+      lastSeen: Date.now()
+    });
+    cleanupPresence();
+    return res.status(200).json({ ok:true });
+  }
+
+  if(action === 'presenceLeave'){
+    if(!jwtSecret) return res.status(500).json({ error:'Server not configured for presence. Set JWT_SECRET.' });
+    const auth = getAuthFromRequest(req, jwtSecret);
+    if(!auth || !auth.username) return res.status(401).json({ error:'Unauthorized' });
+    const tabId = String(body.tabId || '').trim().slice(0, 80);
+    if(tabId){
+      const key = `${String(auth.username).toLowerCase()}::${tabId}`;
+      presenceStore.delete(key);
+    }
+    cleanupPresence();
+    return res.status(200).json({ ok:true });
+  }
 
   if(action==='signup'){
     if(!token || !owner || !repo || !jwtSecret) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO/JWT_SECRET.' });
