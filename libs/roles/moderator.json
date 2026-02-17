@@ -1,0 +1,12 @@
+{
+  "id": "moderator",
+  "name": "Moderator",
+  "color": "#85c6ff",
+  "gradient": "",
+  "icon": "🛡",
+  "priority": 700,
+  "permissions": [
+    "moderation.access",
+    "moderation.tools"
+  ]
+}
