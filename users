@@ -3,123 +3,209 @@
     "id": "1771012701636",
     "username": "Kuro",
     "passwordHash": "711e937adce871f1ba2c9a0c01753942$2c74490dbacb9fd31bb0b8e6d7b22b48f1a2e7d796407ae6674eb7702b01e128f60e63575afb2f2db7f824c41f236284bcac6065340c4692a9b652fa10213c4d",
-    "createdAt": "2026-02-13T19:58:21.794Z"
+    "createdAt": "2026-02-13T19:58:21.794Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "owner"
   },
   {
     "id": "1771020165364",
     "username": "iEs",
     "passwordHash": "943e886bba467c97397917b3defced45$4c9680495471c83abd3eefe7a4ae363767c107e4660ed7954ac94ad032ec383739aa0f778d8cc94c50d20599bafce9d05b23dbf168b8e95a0411d90ddb3858f0",
-    "createdAt": "2026-02-13T22:02:45.483Z"
+    "createdAt": "2026-02-13T22:02:45.483Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771020923740",
     "username": "JJ_lovemuffins",
     "passwordHash": "4df6271910541ef1566de34c4762f0fe$393a43537f879501bf95dc948270e67056338889ac06433475fd35c7a270c69d8eaa08fd86ae923c23de6ca39a2fc0e2a56173dce656c1a1dc0e619665ec6b32",
-    "createdAt": "2026-02-13T22:15:23.869Z"
+    "createdAt": "2026-02-13T22:15:23.869Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771038240041",
     "username": "Aidenvstheworld",
     "passwordHash": "3be259a6b8d90455320dae7212f3e285$dbcb0a511543aaefb60905124a829fa4441196cc048b8c4a914aa578373ded582a94c5a9c2e5c5a5b62ade27fbc8a32f625490a3b89694932ca0549842a22f08",
-    "createdAt": "2026-02-14T03:04:00.219Z"
+    "createdAt": "2026-02-14T03:04:00.219Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771115845033",
     "username": "Test",
     "passwordHash": "c721401473a97786676ab9eef04d44c7$a36136ea25540419eb82abfe26215f922945088e87a42fee582b8cacae327360eb336b6144b6c94c51f265d5282bb08f3a8799ea9657104728c864bacaae8b6e",
-    "createdAt": "2026-02-15T00:37:25.151Z"
+    "createdAt": "2026-02-15T00:37:25.151Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771134163538",
     "username": "marii",
     "passwordHash": "d9b29d9529c65d9f36861f5af7245264$07265b3f8a60ecd0e145848a111711ef8d55a4804af5cf6e6164463da8294148effdbb24b997f4827b9c0eaa9771e1e5718f16eb05b9e56da8b86f62ba826dd5",
-    "createdAt": "2026-02-15T05:42:43.720Z"
+    "createdAt": "2026-02-15T05:42:43.720Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771134653002",
     "username": "thewheatrat",
     "passwordHash": "5ffacdbd9085ccd08f1100bd53273062$c89464655b0887170e806ca49aad2bdeed15453ee27b028d878833cfde1d3f31906bf420d984834ec49e25adcccc2584b209507360a5538a5cb5310739dd61f4",
-    "createdAt": "2026-02-15T05:50:53.056Z"
+    "createdAt": "2026-02-15T05:50:53.056Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771142166913",
     "username": "Test2",
     "passwordHash": "66a9c087900974f288acbdab761691c3$dda708972c6e32030e7ffad272df5c8fa0a4d846bf96b38233aba8e236b5b6436869abfd16ec286eec6a48535c74c34cabd84020e5dacb4127e4bf93c4b55b37",
-    "createdAt": "2026-02-15T07:56:07.030Z"
+    "createdAt": "2026-02-15T07:56:07.030Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771143076764",
     "username": "Test3",
     "passwordHash": "05a3746fd000ebe82951591c212aec62$3d1320219ae593c002b703402e7aba25a2ce5661fd0749cf0722b908a3712c2699ae934c67cb19352c686bb7d20a1485ff55e83657f3d02c3d9477d3260696c6",
-    "createdAt": "2026-02-15T08:11:16.879Z"
+    "createdAt": "2026-02-15T08:11:16.879Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771154552848",
     "username": "JamesTheLonely",
     "passwordHash": "f7e8cb3fab356eaf4f0b712c59719307$c92531250856b48d9d96c561fbc12ae7d8a5d82bd57d66cc7b25698c3e00c6068ea387ea93af1c541b94778422d97c51564ca5cf16757e790fd3077e2e02d459",
-    "createdAt": "2026-02-15T11:22:32.961Z"
+    "createdAt": "2026-02-15T11:22:32.961Z",
+    "roles": [
+      "member"
+    ],
+    "badges": [],
+    "role": "member"
   },
   {
     "id": "1771191569115",
     "username": "Shunoko",
     "passwordHash": "6f5785d4d43ed74bc94d0ad490af5bb7$ab0f55e58b141a17280c9e6c573a817f5efb22daae9c6fd848db1d1ddbb35d7ef50e6f83db120f1370689c3611aef249e9c7554025902c61e016792138cf07c9",
     "createdAt": "2026-02-15T21:39:29.182Z",
-    "role": "moderator"
+    "role": "moderator",
+    "roles": [
+      "moderator"
+    ],
+    "badges": []
   },
   {
     "id": "1771192055913",
     "username": "Ashura",
     "passwordHash": "034a3d150446a87536be6d16f02656f0$32c6e4f59a0245f350099934c4c23b9f24504f41f1bc76f78841d68bf14baef56fe2611bca8e911cc22b40bf486ec96ba493ced5ac98b0c6246b0deb7762c0d8",
     "createdAt": "2026-02-15T21:47:35.982Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   },
   {
     "id": "1771205398229",
     "username": "faiz",
     "passwordHash": "bb967726c80c03bb916b85404d05aa30$fef6079115c614032ccaee8d6124c79f2d4855cfc8bac0c7014d31ad30c3aafcc29617e8af0b2e3622ea3427bdbd7173d87d80e9fbd55234f83a8d55c7d23ac3",
     "createdAt": "2026-02-16T01:29:58.296Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   },
   {
     "id": "1771205420315",
     "username": "freddyjay7",
     "passwordHash": "c2a8bee20b84096a4b1d14bb4e70aabb$15c20b8582786e29f023302f3d1ec30928d4c7cb0ea7b7936c59273333e310c02991e14ad6b2babc2d54baca5c8f62376a99e85d6669d2f39d2042924ddc2d2b",
     "createdAt": "2026-02-16T01:30:20.381Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   },
   {
     "id": "1771207668567",
     "username": "Aksd11759284",
     "passwordHash": "dab9e231e843d7419d359a4be34dac53$1df0de23f67f17991c3f2b260bd4521d5adab0d35b7e1d423c9b938df4a529e33586849b60c4ff5e416e0738efdece1efb7e8e8ccc815c7d5184756dd2546f37",
     "createdAt": "2026-02-16T02:07:48.634Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   },
   {
     "id": "1771210939754",
     "username": "Jesterr",
     "passwordHash": "07f9df3c7c5fa923bce3c01123a07e22$ee0de67f279a83bfc52e67d31252606c3f84b39dee15412d5b6cd86ef625e81fc1dd7a34680044a0b9fa79ecfec0f9a7067448b1f0027c732bd88d5a73370f40",
     "createdAt": "2026-02-16T03:02:19.823Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   },
   {
     "id": "1771215600711",
     "username": "nick",
     "passwordHash": "0efb0a31fb2c0098ca92782374fc1e3a$a46a12a3dfe9132474f5da4b24bcc2a0cd747520f63d0220ca62db55a098f426de9ed0f1677af9f4c4c362eae6c119dc40bb7dac01b501e68c87b78bae9b3c88",
     "createdAt": "2026-02-16T04:20:00.777Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   },
   {
     "id": "1771266511193",
     "username": "Samsonhitam",
     "passwordHash": "bb68b22a06f8cea3efa04967aab24182$fc0d81e6f312600797f8eb487432381f08db504952611d30ec311bc35797f3d6621f97ab3ce402ae2bea00d107ea5c570048a543ce0f3fe09a69f790733d7f7e",
     "createdAt": "2026-02-16T18:28:31.256Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   },
   {
     "id": "1771283353702",
     "username": "E",
     "passwordHash": "cf3fecfa63682d623426fa9efb11315e$9c7d5e7debf3d24c1b94cac52fadc53e6d58cda49592e18a31c5fd56ea18e6f9b8c4078b2ed22f34c5aac30a1ec54826cb716b44c062ae9b301fa6d0361afefd",
     "createdAt": "2026-02-16T23:09:13.774Z",
-    "role": "member"
+    "role": "member",
+    "roles": [
+      "member"
+    ],
+    "badges": []
   }
 ]
