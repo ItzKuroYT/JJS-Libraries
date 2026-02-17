@@ -1,4 +1,4 @@
-<!doctype html>
+ew<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -13,6 +13,7 @@
       --aurora-right:#8a64ff;
       --surface:rgba(8,12,30,0.95);
       --surface-alt:rgba(12,18,42,0.92);
+      --card:rgba(10,16,38,0.98);
       --panel:rgba(7,12,28,0.92);
       --panel-soft:rgba(255,255,255,0.05);
       --border:rgba(255,255,255,0.08);
@@ -79,11 +80,11 @@
     #authBox{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,0.02);padding:10px 12px;border-radius:18px;border:1px solid rgba(255,255,255,0.05)}
     #authBox input{flex:1 1 140px;min-width:140px}
     #userLabel{min-width:130px;text-align:right;color:var(--muted)}
-    button{background:linear-gradient(115deg,var(--accent-strong),#1cc9ff);border:none;color:#050914;padding:10px 18px;border-radius:14px;cursor:pointer;font-weight:600;letter-spacing:0.01em;box-shadow:0 10px 24px rgba(12,8,35,0.5);transition:transform 0.2s ease,box-shadow 0.2s ease}
+    button{background:linear-gradient(115deg,var(--accent-strong),#1cc9ff);border:1px solid rgba(255,255,255,0.08);color:#050914;padding:10px 18px;border-radius:14px;cursor:pointer;font-weight:600;letter-spacing:0.01em;box-shadow:0 10px 24px rgba(12,8,35,0.5);transition:transform 0.2s ease,box-shadow 0.2s ease}
     button:hover{transform:translateY(-2px);box-shadow:0 16px 28px rgba(12,8,35,0.65)}
     button:active{transform:translateY(1px)}
-    button.ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.12);box-shadow:none}
-    button.ghost:hover{color:var(--accent);border-color:var(--accent)}
+    button.ghost{background:rgba(12,20,46,0.96);color:var(--text);border:1px solid rgba(255,255,255,0.16);box-shadow:0 6px 16px rgba(3,8,22,0.45)}
+    button.ghost:hover{color:var(--accent);border-color:var(--accent);background:rgba(16,28,62,0.98)}
     .tagBar{margin-top:16px;padding:18px;background:var(--panel);border-radius:22px;border:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;gap:12px}
     .tagPicker{display:flex;gap:10px;flex-wrap:wrap}
     .tagInput{display:flex;gap:10px;flex-wrap:wrap}
@@ -109,13 +110,31 @@
     .pageEllipsis{padding:6px 4px;color:var(--muted);font-size:13px}
     .card{position:relative;background:var(--surface-alt);padding:22px;border-radius:22px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 18px 44px rgba(6,8,27,0.55);backdrop-filter:blur(14px);transition:transform 0.25s ease,border-color 0.25s ease}
     .card::before{content:'';position:absolute;inset:0;border-radius:22px;border:1px solid rgba(126,249,194,0.08);opacity:0;pointer-events:none;transition:opacity 0.2s ease}
-    .card:hover{transform:translateY(-4px);border-color:rgba(126,249,194,0.35)}
+    .card:hover{transform:translateY(-6px) scale(1.012);border-color:rgba(126,249,194,0.35)}
     .card:hover::before{opacity:1}
     .card h3{margin:0;font-size:18px}
     .cardAvatarWrap{width:58px;height:58px;min-width:58px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,0.08);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(255,255,255,0.04)}
     .cardAvatar{width:100%;height:100%;object-fit:cover;display:block}
     .meta{font-size:13px;color:var(--muted);margin-top:6px;display:flex;gap:8px;align-items:center}
     .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+    .cardBadges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:220px}
+    .postBadge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:var(--text)}
+    .postBadge--private{border-color:rgba(255,196,196,0.45);background:rgba(255,89,89,0.12)}
+    .postBadge--public{border-color:rgba(126,249,194,0.45);background:rgba(126,249,194,0.13)}
+    .postBadge--pinned{border-color:rgba(255,223,133,0.5);background:rgba(255,194,77,0.16)}
+    .postBadge--top{border-color:rgba(255,225,102,0.52);background:rgba(255,224,102,0.16)}
+    .quickActions{position:absolute;top:12px;right:12px;display:flex;gap:6px;opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .2s ease,transform .2s ease}
+    .card:hover .quickActions{opacity:1;transform:translateY(0);pointer-events:auto}
+    .quickActionBtn{min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+    .tagChips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .tagChip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.14);font-size:11px;color:var(--muted);cursor:pointer;background:rgba(255,255,255,0.03)}
+    .tagChip:hover{color:var(--accent);border-color:var(--accent)}
+    .reactionRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .reactionBtn{padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.02);font-size:12px;color:var(--text);cursor:pointer}
+    .reactionBtn.active{border-color:var(--accent);background:rgba(126,249,194,0.16)}
+    .reactionBtn:disabled{opacity:.45;cursor:not-allowed}
+    .hoverLift{transition:transform .2s ease,box-shadow .2s ease}
+    .hoverLift:hover{transform:translateY(-2px)}
     .cardVideoWrap{margin-top:14px;border-radius:18px;overflow:hidden;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.05);box-shadow:0 14px 30px rgba(4,6,18,0.6)}
     .cardVideoWrap video{width:100%;display:block;max-height:320px;background:#000}
     .cardVideoMeta{padding:8px 12px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);background:rgba(0,0,0,0.35);border-top:1px solid rgba(255,255,255,0.04)}
@@ -238,7 +257,24 @@
             </div>
             <div class="controlRow controlRow--actions">
               <button id="createEntry" class="ghost">Create</button>
+              <button id="reviewReportsBtn" class="ghost" style="display:none">Reports</button>
               <button id="newEntry" class="ghost">Discord</button>
+            </div>
+            <div class="controlRow" id="discoveryControls" style="justify-content:space-between;gap:10px">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <select id="sortSelect" style="min-width:170px">
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="highestRated">Highest rated</option>
+                  <option value="mostViewed">Most viewed</option>
+                  <option value="mostCommented">Most commented</option>
+                  <option value="trending">Trending</option>
+                </select>
+                <select id="tagFilterSelect" style="min-width:170px">
+                  <option value="">All tags</option>
+                </select>
+              </div>
+              <div class="smallMuted" id="activeFilterLabel">Showing all posts</div>
             </div>
           </div>
 
@@ -283,6 +319,7 @@
 
   <template id="cardTpl">
     <div class="card">
+      <div class="quickActions"></div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -293,8 +330,9 @@
             </div>
           </div>
         </div>
-        <div class="small">tag: <span class="tags"></span></div>
+        <div class="cardBadges"></div>
       </div>
+      <div class="tagChips"></div>
       <div class="actions">
         <button class="toggle">Show code</button>
         <button class="copy">Copy</button>
@@ -302,6 +340,7 @@
         <button class="del ghost" style="display:none">Delete</button>
         <button class="ghost viewOrig">Open credit</button>
       </div>
+      <div class="reactionRow"></div>
       <div class="codeWrap" style="display:none">
         <pre class="code" data-full=""></pre>
       </div>
@@ -332,16 +371,70 @@ Get a code from the character builder in jjs, then paste it here. When you click
     function normalizeVisibility(value){
       return value === VISIBILITY.PRIVATE ? VISIBILITY.PRIVATE : VISIBILITY.PUBLIC;
     }
+    function normalizeUsername(value){
+      return (value || '').toString().trim().toLowerCase();
+    }
+    function normalizeWhitelistUsers(list, authorName){
+      if(!Array.isArray(list)) return [];
+      const seen = new Set();
+      const authorLower = normalizeUsername(authorName);
+      const cleaned = [];
+      list.forEach(item=>{
+        const raw = (item || '').toString().trim();
+        if(!raw) return;
+        const lower = normalizeUsername(raw);
+        if(!lower || seen.has(lower)) return;
+        if(authorLower && lower === authorLower) return;
+        seen.add(lower);
+        cleaned.push(raw);
+      });
+      return cleaned;
+    }
+    function getLibraryWhitelist(lib){
+      return normalizeWhitelistUsers(lib && lib.whitelist, lib && lib.author);
+    }
+    function isStaffUser(user){
+      if(!user) return false;
+      if(user.role === 'owner' || user.role === 'moderator') return true;
+      const inferred = inferRoleFromState(user.username);
+      return inferred === 'owner' || inferred === 'moderator';
+    }
+    function isLibraryAuthor(user, lib){
+      if(!user || !lib) return false;
+      return normalizeUsername(user.username) === normalizeUsername(lib.author);
+    }
+    function isUserWhitelistedForLibrary(lib, user){
+      if(!lib || !user || !user.username) return false;
+      const userLower = normalizeUsername(user.username);
+      return getLibraryWhitelist(lib).some(name=> normalizeUsername(name) === userLower);
+    }
     function isLibVisibleToUser(lib, user){
       const state = normalizeVisibility(lib && lib.visibility);
       if(state !== VISIBILITY.PRIVATE) return true;
       if(!user || !user.username || !lib || !lib.author) return false;
-      return user.username.toLowerCase() === String(lib.author || '').toLowerCase();
+      if(isStaffUser(user)) return true;
+      if(isLibraryAuthor(user, lib)) return true;
+      return isUserWhitelistedForLibrary(lib, user);
     }
     const PAGE_SIZE = 12;
     let currentPage = 1;
     let filteredResults = libs.slice();
     let remoteLibsInitialized = false;
+    const REACTION_OPTIONS = ['👍','❤️','😂','😮','🔥'];
+    const TOP_RATED_MIN_RATINGS = 3;
+    const TOP_RATED_MIN_AVG = 4.2;
+    const POST_COOLDOWN_MS = Number(window.POST_COOLDOWN_MS || 90 * 1000);
+    const SORT_OPTIONS = Object.freeze({
+      NEWEST: 'newest',
+      OLDEST: 'oldest',
+      HIGHEST_RATED: 'highestRated',
+      MOST_VIEWED: 'mostViewed',
+      MOST_COMMENTED: 'mostCommented',
+      TRENDING: 'trending'
+    });
+    const REPORTS_STORAGE_KEY = 'jjs_post_reports';
+    let activeSort = SORT_OPTIONS.NEWEST;
+    let activeTagFilter = '';
     const AVATAR_FOLDER = (window.AVATAR_FOLDER || 'avatars').toString().replace(/\\/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
     const DEFAULT_AVATAR_URL = AVATAR_FOLDER ? `${AVATAR_FOLDER}/default.png` : 'default.png';
     const FALLBACK_AVATAR_DATA_URI = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="26" fill="%231f2436"/><circle cx="40" cy="30" r="18" fill="%23495773"/><rect x="18" y="52" width="44" height="18" rx="9" fill="%23495773"/></svg>';
@@ -370,10 +463,348 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(typeof lib.author === 'string') lib.author = censorBadWords(lib.author);
       if(Array.isArray(lib.tags)) lib.tags = lib.tags.map(tag=>censorBadWords(tag || ''));
       lib.visibility = normalizeVisibility(lib.visibility);
+      lib.whitelist = getLibraryWhitelist(lib);
+      if(!Number.isFinite(Number(lib.createdAt))) lib.createdAt = Number(lib.id) || Date.now();
+      if(!Number.isFinite(Number(lib.views))) lib.views = 0;
+      lib.pinned = !!lib.pinned;
+      if(!lib.reactions || typeof lib.reactions !== 'object') lib.reactions = {};
       return lib;
     }
 
     libs.forEach(sanitizeLibraryContent);
+
+    function getUserJoinDate(username){
+      const normalized = normalizeUsername(username);
+      if(!normalized) return null;
+      const storeKey = 'jjs_join_dates';
+      let store = {};
+      try{ store = JSON.parse(localStorage.getItem(storeKey) || '{}') || {}; }catch(_e){ store = {}; }
+      if(!store[normalized]){
+        store[normalized] = Date.now();
+        try{ localStorage.setItem(storeKey, JSON.stringify(store)); }catch(_e){}
+      }
+      return Number(store[normalized]) || null;
+    }
+
+    function ensureCurrentUserJoinDate(){
+      const user = getCurrentUser();
+      if(!user || !user.username) return;
+      getUserJoinDate(user.username);
+    }
+
+    function getBookmarksKey(username){
+      return 'jjs_bookmarks_' + normalizeUsername(username);
+    }
+
+    function getBookmarkSet(username){
+      if(!username) return new Set();
+      try{
+        const raw = JSON.parse(localStorage.getItem(getBookmarksKey(username)) || '[]');
+        return new Set(Array.isArray(raw) ? raw.map(String) : []);
+      }catch(_e){
+        return new Set();
+      }
+    }
+
+    function saveBookmarkSet(username, setValue){
+      if(!username) return;
+      try{ localStorage.setItem(getBookmarksKey(username), JSON.stringify(Array.from(setValue || new Set()))); }catch(_e){}
+    }
+
+    function toggleBookmarkLib(lib){
+      const user = getCurrentUser();
+      if(!user) return { changed:false, bookmarked:false, reason:'Sign in to bookmark posts' };
+      const setValue = getBookmarkSet(user.username);
+      const key = String(lib && lib.id || '');
+      if(!key) return { changed:false, bookmarked:false, reason:'Invalid post id' };
+      let bookmarked;
+      if(setValue.has(key)){
+        setValue.delete(key);
+        bookmarked = false;
+      }else{
+        setValue.add(key);
+        bookmarked = true;
+      }
+      saveBookmarkSet(user.username, setValue);
+      return { changed:true, bookmarked };
+    }
+
+    function getCommentCount(lib){
+      const walk = (arr)=>{
+        if(!Array.isArray(arr) || !arr.length) return 0;
+        return arr.reduce((acc, item)=> acc + 1 + walk(item && item.replies), 0);
+      };
+      return walk(Array.isArray(lib && lib.comments) ? lib.comments : []);
+    }
+
+    function isTopRatedLibrary(lib){
+      const stats = getRatingStats(lib);
+      return stats.count >= TOP_RATED_MIN_RATINGS && stats.avg >= TOP_RATED_MIN_AVG;
+    }
+
+    function getTrendingScore(lib){
+      const stats = getRatingStats(lib);
+      const views = Number(lib && lib.views) || 0;
+      const comments = getCommentCount(lib);
+      const createdAt = Number(lib && lib.createdAt) || Date.now();
+      const ageHours = Math.max(1, (Date.now() - createdAt) / (1000 * 60 * 60));
+      const decay = 1 / Math.pow(ageHours / 24 + 1, 0.85);
+      const base = (views * 0.6) + (stats.avg * Math.max(1, stats.count) * 4) + (comments * 3);
+      return base * decay;
+    }
+
+    function getPinnedAndRegular(items){
+      const pinned = [];
+      const regular = [];
+      (items || []).forEach(item=>{
+        if(item && item.pinned) pinned.push(item);
+        else regular.push(item);
+      });
+      return { pinned, regular };
+    }
+
+    function sortLibraries(items, sortKey){
+      const list = (items || []).slice();
+      const compare = {
+        [SORT_OPTIONS.NEWEST]: (a,b)=> (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0),
+        [SORT_OPTIONS.OLDEST]: (a,b)=> (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0),
+        [SORT_OPTIONS.HIGHEST_RATED]: (a,b)=> getRatingStats(b).avg - getRatingStats(a).avg,
+        [SORT_OPTIONS.MOST_VIEWED]: (a,b)=> (Number(b.views) || 0) - (Number(a.views) || 0),
+        [SORT_OPTIONS.MOST_COMMENTED]: (a,b)=> getCommentCount(b) - getCommentCount(a),
+        [SORT_OPTIONS.TRENDING]: (a,b)=> getTrendingScore(b) - getTrendingScore(a)
+      };
+      const sorter = compare[sortKey] || compare[SORT_OPTIONS.NEWEST];
+      list.sort(sorter);
+      return list;
+    }
+
+    function getFilteredSortedLibs(queryText){
+      const viewer = getCurrentUser();
+      const query = (queryText || '').trim().toLowerCase();
+      const visible = libs.filter(lib=> isLibVisibleToUser(lib, viewer));
+      const matched = visible.filter(lib=>{
+        if(activeTagFilter){
+          const hasTag = (lib.tags || []).some(tag=> (tag || '').toLowerCase() === activeTagFilter);
+          if(!hasTag) return false;
+        }
+        if(!query) return true;
+        const titleMatch = (lib.title || '').toLowerCase().includes(query);
+        const tagMatch = (lib.tags || []).some(tag=> (tag || '').toLowerCase().includes(query));
+        const authorMatch = (lib.author || '').toLowerCase().includes(query);
+        return titleMatch || tagMatch || authorMatch;
+      });
+      const { pinned, regular } = getPinnedAndRegular(matched);
+      const sortedPinned = sortLibraries(pinned, activeSort);
+      const sortedRegular = sortLibraries(regular, activeSort);
+      return [...sortedPinned, ...sortedRegular];
+    }
+
+    function refreshTagFilterOptions(){
+      const select = document.getElementById('tagFilterSelect');
+      if(!select) return;
+      const viewer = getCurrentUser();
+      const tags = new Set();
+      libs.forEach(lib=>{
+        if(!isLibVisibleToUser(lib, viewer)) return;
+        (lib.tags || []).forEach(tag=>{
+          const clean = (tag || '').trim();
+          if(clean) tags.add(clean);
+        });
+      });
+      const sorted = Array.from(tags).sort((a,b)=>a.localeCompare(b));
+      const current = activeTagFilter;
+      select.innerHTML = '<option value="">All tags</option>';
+      sorted.forEach(tag=>{
+        const opt = document.createElement('option');
+        opt.value = tag.toLowerCase();
+        opt.textContent = tag;
+        select.appendChild(opt);
+      });
+      select.value = current;
+    }
+
+    function updateActiveFilterLabel(){
+      const label = document.getElementById('activeFilterLabel');
+      if(!label) return;
+      const parts = [];
+      if(activeTagFilter) parts.push(`Tag: ${activeTagFilter}`);
+      if(activeSort && activeSort !== SORT_OPTIONS.NEWEST) parts.push(`Sort: ${activeSort}`);
+      label.textContent = parts.length ? parts.join(' • ') : 'Showing all posts';
+    }
+
+    function getReactionStore(lib){
+      if(!lib || !lib.reactions || typeof lib.reactions !== 'object') lib.reactions = {};
+      REACTION_OPTIONS.forEach(key=>{
+        if(!Array.isArray(lib.reactions[key])) lib.reactions[key] = [];
+      });
+      return lib.reactions;
+    }
+
+    function getUserReaction(lib, username){
+      if(!lib || !username) return null;
+      const reactions = getReactionStore(lib);
+      const lower = normalizeUsername(username);
+      for(const emoji of REACTION_OPTIONS){
+        if((reactions[emoji] || []).some(name=> normalizeUsername(name) === lower)) return emoji;
+      }
+      return null;
+    }
+
+    function readReportsStore(){
+      try{
+        const parsed = JSON.parse(localStorage.getItem(REPORTS_STORAGE_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      }catch(_e){
+        return [];
+      }
+    }
+
+    function writeReportsStore(list){
+      try{ localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(list || [])); }catch(_e){}
+    }
+
+    function addPostReport(lib, reason){
+      const user = getCurrentUser();
+      if(!user) throw new Error('Sign in to report posts');
+      const entry = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        libId: lib && lib.id,
+        title: lib && lib.title,
+        author: lib && lib.author,
+        reporter: user.username,
+        reason,
+        t: Date.now()
+      };
+      const store = readReportsStore();
+      store.unshift(entry);
+      writeReportsStore(store.slice(0, 500));
+      return entry;
+    }
+
+    function getUserPostStats(username, viewer){
+      const visiblePosts = libs.filter(lib=> normalizeUsername(lib.author) === normalizeUsername(username) && isLibVisibleToUser(lib, viewer));
+      const ratingValues = visiblePosts
+        .map(lib=> getRatingStats(lib))
+        .filter(stats=> stats.count > 0);
+      const weightedCount = ratingValues.reduce((acc, stats)=> acc + stats.count, 0);
+      const weightedSum = ratingValues.reduce((acc, stats)=> acc + (stats.avg * stats.count), 0);
+      const avgPostRating = weightedCount ? (weightedSum / weightedCount) : 0;
+      return { visiblePosts, avgPostRating, ratingsCount: weightedCount };
+    }
+
+    function canEditLibrary(user, lib){
+      if(!user || !lib) return false;
+      return isLibraryAuthor(user, lib) || isStaffUser(user);
+    }
+
+    function canPinLibrary(user){
+      return isStaffUser(user);
+    }
+
+    function canReportLibrary(user, lib){
+      if(!user || !lib) return false;
+      return normalizeUsername(user.username) !== normalizeUsername(lib.author);
+    }
+
+    function getViewStoreKey(user, lib){
+      const userKey = normalizeUsername(user && user.username ? user.username : 'guest');
+      const libKey = lib && lib.id ? String(lib.id) : 'unknown';
+      return `jjs_view_${userKey}_${libKey}`;
+    }
+
+    function markPostViewed(lib){
+      if(!lib || !lib.id) return;
+      const user = getCurrentUser();
+      const key = getViewStoreKey(user, lib);
+      try{
+        if(sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, '1');
+      }catch(_e){}
+      lib.views = (Number(lib.views) || 0) + 1;
+    }
+
+    async function submitReaction(lib, emoji){
+      const user = getCurrentUser();
+      if(!user) throw new Error('Sign in to react');
+      if(!REACTION_OPTIONS.includes(emoji)) throw new Error('Invalid reaction');
+      const reactions = getReactionStore(lib);
+      const lower = normalizeUsername(user.username);
+      REACTION_OPTIONS.forEach(item=>{
+        reactions[item] = (reactions[item] || []).filter(name=> normalizeUsername(name) !== lower);
+      });
+      reactions[emoji].push(user.username);
+      await persistLibraryFile(lib);
+      return reactions;
+    }
+
+    function getReactionCount(lib, emoji){
+      const reactions = getReactionStore(lib);
+      return (reactions[emoji] || []).length;
+    }
+
+    async function togglePinLibrary(lib){
+      const user = getCurrentUser();
+      if(!canPinLibrary(user)) throw new Error('Only owner/moderators can pin posts');
+      lib.pinned = !lib.pinned;
+      await persistLibraryFile(lib);
+      return lib.pinned;
+    }
+
+    function getUserPostCooldownRemaining(user){
+      if(!user || !user.username || !POST_COOLDOWN_MS) return 0;
+      const key = 'jjs_post_cooldown_' + normalizeUsername(user.username);
+      const last = Number(localStorage.getItem(key) || 0);
+      const remaining = POST_COOLDOWN_MS - (Date.now() - last);
+      return Math.max(0, remaining);
+    }
+
+    function setUserPostCooldown(user){
+      if(!user || !user.username || !POST_COOLDOWN_MS) return;
+      const key = 'jjs_post_cooldown_' + normalizeUsername(user.username);
+      try{ localStorage.setItem(key, String(Date.now())); }catch(_e){}
+    }
+
+    function formatMs(ms){
+      const total = Math.ceil(ms / 1000);
+      const mins = Math.floor(total / 60);
+      const secs = total % 60;
+      return mins ? `${mins}m ${secs}s` : `${secs}s`;
+    }
+
+    function openReportPostModal(lib){
+      const user = getCurrentUser();
+      if(!canReportLibrary(user, lib)) return alert('You cannot report this post.');
+      const reasons = ['Spam', 'Harassment', 'Stolen content', 'NSFW / inappropriate', 'Other'];
+      let modal = document.getElementById('reportPostModal');
+      if(modal) modal.remove();
+      modal = document.createElement('div');
+      modal.id = 'reportPostModal';
+      modal.style.position = 'fixed';
+      modal.style.left = '0';
+      modal.style.top = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.55)';
+      modal.style.zIndex = '9999';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.innerHTML = `<div style="background:var(--card);padding:20px;min-width:320px;max-width:420px;width:92vw;border-radius:12px;box-shadow:0 8px 32px #000a;position:relative;">
+        <button id="closeReportModal" class="ghost" style="position:absolute;right:10px;top:10px" type="button">Close</button>
+        <h3 style="margin:0 0 10px 0">Report post</h3>
+        <div class="smallMuted" style="margin-bottom:10px">${escapeHtml(censorBadWords(lib.title || 'Untitled'))}</div>
+        <select id="reportReasonSelect" style="width:100%">${reasons.map(r=>`<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('')}</select>
+        <button id="submitReportBtn" class="ghost" style="margin-top:12px">Submit report</button>
+      </div>`;
+      document.body.appendChild(modal);
+      modal.querySelector('#closeReportModal').addEventListener('click', ()=> modal.remove());
+      modal.querySelector('#submitReportBtn').addEventListener('click', ()=>{
+        const reason = modal.querySelector('#reportReasonSelect').value || 'Other';
+        addPostReport(lib, reason);
+        addNotification(`Reported post: ${lib.title}`);
+        modal.remove();
+      });
+    }
 
     function normalizeProfileLinkEntry(entry){
       if(!entry) return null;
@@ -597,7 +1028,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
     function getRatingTone(percent){
       if(percent >= 70) return 'positive';
       if(percent >= 40) return 'neutral';
-      return 'negative';s
+      return 'negative';
     }
 
     function formatRatingSummary(stats){
@@ -775,6 +1206,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const titleEl = node.querySelector('.title');
         const avatarImg = node.querySelector('.cardAvatar');
         const avatarWrap = node.querySelector('.cardAvatarWrap');
+        markPostViewed(lib);
         setAvatarImage(avatarImg, { src: DEFAULT_AVATAR_URL, wrapper: avatarWrap, stage: 'default' });
         titleEl.textContent = censorBadWords(lib.title || '');
         // Show description if present
@@ -792,10 +1224,28 @@ Get a code from the character builder in jjs, then paste it here. When you click
         node.querySelector('.orig').href = lib.credit;
         node.querySelector('.orig').textContent = 'Credit';
         const safeTags = (lib.tags || []).map(tag=>censorBadWords(tag || ''));
-        node.querySelector('.tags').textContent = safeTags.join(', ');
+        const tagChipsWrap = node.querySelector('.tagChips');
+        if(tagChipsWrap){
+          tagChipsWrap.innerHTML = '';
+          safeTags.forEach(tag=>{
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'tagChip';
+            chip.textContent = '#' + tag;
+            chip.title = `Filter by ${tag}`;
+            chip.addEventListener('click', ()=>{
+              const select = document.getElementById('tagFilterSelect');
+              activeTagFilter = (tag || '').toLowerCase();
+              if(select) select.value = activeTagFilter;
+              refreshListView({ refilter:true, resetPage:true, animate:true });
+            });
+            tagChipsWrap.appendChild(chip);
+          });
+        }
         const pre = node.querySelector('.code');
         pre.textContent = lib.code;
         pre.setAttribute('data-full', lib.code);
+        const currentUser = getCurrentUser();
 
         // populate author avatar from social if available
         (async ()=>{
@@ -854,6 +1304,28 @@ Get a code from the character builder in jjs, then paste it here. When you click
         ensureLibRatings(lib);
         renderRatingRow(lib, ratingRow);
         if(actionsEl) card.insertBefore(ratingRow, actionsEl); else card.appendChild(ratingRow);
+        const reactionRow = node.querySelector('.reactionRow');
+        if(reactionRow){
+          reactionRow.innerHTML = '';
+          const viewerReaction = currentUser ? getUserReaction(lib, currentUser.username) : null;
+          REACTION_OPTIONS.forEach(emoji=>{
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'reactionBtn' + (viewerReaction === emoji ? ' active' : '');
+            btn.textContent = `${emoji} ${getReactionCount(lib, emoji)}`;
+            if(!currentUser) btn.disabled = true;
+            btn.addEventListener('click', async ()=>{
+              if(!currentUser) return alert('Sign in to react');
+              try{
+                await submitReaction(lib, emoji);
+                refreshListView({ refilter:true });
+              }catch(err){
+                alert(err && err.message ? err.message : 'Failed to save reaction');
+              }
+            });
+            reactionRow.appendChild(btn);
+          });
+        }
         const toggle = node.querySelector('.toggle');
         const copyBtn = node.querySelector('.copy');
         const viewOrig = node.querySelector('.viewOrig');
@@ -879,24 +1351,105 @@ Get a code from the character builder in jjs, then paste it here. When you click
         // show edit/delete if current user is author
         const editBtn = node.querySelector('.edit');
         const delBtn = node.querySelector('.del');
-        const currentUser = getCurrentUser();
-        const isAuthor = !!(currentUser && currentUser.username === lib.author);
+        const isAuthor = isLibraryAuthor(currentUser, lib);
+        const canEdit = canEditLibrary(currentUser, lib);
         const canDelete = canDeleteLibrary(currentUser, lib);
+        const canPin = canPinLibrary(currentUser);
+        const canReport = canReportLibrary(currentUser, lib);
+        const quickActionsWrap = node.querySelector('.quickActions');
+        const badgeWrap = node.querySelector('.cardBadges');
+
+        if(badgeWrap){
+          badgeWrap.innerHTML = '';
+          const visibilityBadge = document.createElement('span');
+          visibilityBadge.className = 'postBadge ' + (normalizeVisibility(lib.visibility) === VISIBILITY.PRIVATE ? 'postBadge--private' : 'postBadge--public');
+          visibilityBadge.textContent = normalizeVisibility(lib.visibility) === VISIBILITY.PRIVATE ? '🔒 Private' : '🌍 Public';
+          badgeWrap.appendChild(visibilityBadge);
+          if(lib.pinned){
+            const pinBadge = document.createElement('span');
+            pinBadge.className = 'postBadge postBadge--pinned';
+            pinBadge.textContent = '📌 Pinned';
+            badgeWrap.appendChild(pinBadge);
+          }
+          if(isTopRatedLibrary(lib)){
+            const topBadge = document.createElement('span');
+            topBadge.className = 'postBadge postBadge--top';
+            topBadge.textContent = '⭐ Top Rated';
+            badgeWrap.appendChild(topBadge);
+          }
+        }
+
+        if(quickActionsWrap){
+          quickActionsWrap.innerHTML = '';
+          const addQuickAction = (icon, title, handler)=>{
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ghost quickActionBtn';
+            btn.textContent = icon;
+            btn.title = title;
+            btn.addEventListener('click', handler);
+            quickActionsWrap.appendChild(btn);
+            return btn;
+          };
+          if(canEdit){
+            addQuickAction('✏️', 'Edit post', ()=> editBtn && editBtn.click());
+          }
+          if(canDelete){
+            addQuickAction('🗑️', 'Delete post', ()=> delBtn && delBtn.click());
+          }
+          addQuickAction('🔗', 'Share post', async ()=>{
+            const shareUrl = `${location.origin}${location.pathname}#post-${encodeURIComponent(lib.id || lib.title || '')}`;
+            try{
+              await navigator.clipboard.writeText(shareUrl);
+              addNotification('Share link copied');
+            }catch(_e){
+              alert('Failed to copy share link');
+            }
+          });
+          const bookmarkState = currentUser ? getBookmarkSet(currentUser.username).has(String(lib.id || '')) : false;
+          addQuickAction(bookmarkState ? '🔖' : '📑', bookmarkState ? 'Remove bookmark' : 'Save bookmark', ()=>{
+            const result = toggleBookmarkLib(lib);
+            if(!result.changed){
+              alert(result.reason || 'Could not bookmark post');
+              return;
+            }
+            addNotification(result.bookmarked ? `Saved ${lib.title}` : `Removed bookmark for ${lib.title}`);
+            refreshListView({ refilter:true });
+          });
+          if(canPin){
+            addQuickAction(lib.pinned ? '📌' : '📍', lib.pinned ? 'Unpin post' : 'Pin post', async ()=>{
+              try{
+                const nowPinned = await togglePinLibrary(lib);
+                addNotification(nowPinned ? `Pinned ${lib.title}` : `Unpinned ${lib.title}`);
+                refreshListView({ refilter:true });
+              }catch(err){
+                alert(err && err.message ? err.message : 'Failed to update pin');
+              }
+            });
+          }
+          if(canReport){
+            addQuickAction('🚩', 'Report post', ()=> openReportPostModal(lib));
+          }
+        }
         const visibilityBtn = node.querySelector('.visibilityToggle');
         const visibilityRow = node.querySelector('.cardVisibilityRow');
+        if(visibilityRow) visibilityRow.style.display = 'none';
         if(visibilityBtn){
           const applyVisibilityState = ()=>{
             const state = normalizeVisibility(lib.visibility);
+            const whitelistCount = getLibraryWhitelist(lib).length;
             visibilityBtn.dataset.state = state;
             const isPrivate = state === VISIBILITY.PRIVATE;
-            visibilityBtn.textContent = isPrivate ? 'Private' : 'Public';
-            const hint = isPrivate ? 'Private — only you can view this post' : 'Public — everyone can view this post';
+            visibilityBtn.textContent = isPrivate ? (whitelistCount ? 'Private • Shared' : 'Private') : 'Public';
+            const hint = isPrivate
+              ? (whitelistCount ? `Private — shared with ${whitelistCount} whitelisted user${whitelistCount===1?'':'s'}, plus staff` : 'Private — only you, whitelisted users, and staff can view this post')
+              : 'Public — everyone can view this post';
             visibilityBtn.title = hint;
             if(visibilityRow) visibilityRow.title = hint;
           };
-          applyVisibilityState();
-          visibilityBtn.style.display = 'inline-flex';
           if(isAuthor){
+            applyVisibilityState();
+            visibilityBtn.style.display = 'inline-flex';
             visibilityBtn.disabled = false;
             visibilityBtn.addEventListener('click', async ()=>{
               const currentState = visibilityBtn.dataset.state || VISIBILITY.PUBLIC;
@@ -917,12 +1470,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
               }
             });
           }else{
-            visibilityBtn.disabled = true;
-            visibilityBtn.title = 'Only the owner can change visibility';
+            visibilityBtn.remove();
           }
         }
-        if(isAuthor && editBtn) editBtn.style.display = 'inline-block';
-        if(canDelete && delBtn) delBtn.style.display = 'inline-block';
+        if(editBtn) editBtn.style.display = canEdit ? 'none' : 'none';
+        if(delBtn) delBtn.style.display = canDelete ? 'none' : 'none';
 
         if(editBtn){
           editBtn.addEventListener('click', ()=>{
@@ -930,7 +1482,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
               mode: 'edit',
               lib,
               onSubmit: async (payload)=>{
-                const { title, description, credit, code, tags, visibility, video, videoRemoved } = payload;
+                const { title, description, credit, code, tags, visibility, whitelist, video, videoRemoved } = payload;
                 if(!title) throw new Error('Title required');
                 if(!description) throw new Error('Description required');
                 if(description.length > 250) throw new Error('Description too long');
@@ -941,6 +1493,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
                 lib.code = code;
                 lib.tags = (tags || []).map(tag=>censorBadWords(tag));
                 lib.visibility = visibility;
+                lib.whitelist = normalizeVisibility(visibility) === VISIBILITY.PRIVATE ? normalizeWhitelistUsers(whitelist, lib.author) : [];
                 if(videoRemoved){
                   delete lib.video;
                 }else if(video){
@@ -1006,7 +1559,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
             const idx = libs.findIndex(x=>x.id===lib.id);
             if(idx>=0) libs.splice(idx,1);
             refreshListView({ refilter:true });
-            addNotification((isStaffAction ? 'Staff removed ' : 'Deleted ') + lib.title);
+            const staffDelete = !!(actingUser && isStaffUser(actingUser) && !isLibraryAuthor(actingUser, lib));
+            addNotification((staffDelete ? 'Staff removed ' : 'Deleted ') + lib.title);
           });
         }
 
@@ -1014,8 +1568,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const commentsBtn = document.createElement('button');
         commentsBtn.className = 'ghost';
         commentsBtn.textContent = 'Comments';
-        commentsBtn.style.marginTop = '12px';
-        card.appendChild(commentsBtn);
+        if(actionsEl) actionsEl.appendChild(commentsBtn);
+        else card.appendChild(commentsBtn);
+
+        if(isAuthor && visibilityBtn && visibilityBtn.isConnected){
+          if(actionsEl) actionsEl.appendChild(visibilityBtn);
+          else card.appendChild(visibilityBtn);
+        }
 
         commentsBtn.addEventListener('click', () => openCommentsModal(lib));
         // --- Comments Modal ---
@@ -1174,21 +1733,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     function filter(q){
-      const viewer = getCurrentUser();
-      const query = (q || '').trim().toLowerCase();
-      return libs.filter(lib=>{
-        if(!isLibVisibleToUser(lib, viewer)) return false;
-        if(!query) return true;
-        const titleMatch = (lib.title || '').toLowerCase().includes(query);
-        const tagMatch = (lib.tags || []).some(tag=> (tag || '').toLowerCase().includes(query));
-        const authorMatch = (lib.author || '').toLowerCase().includes(query);
-        return titleMatch || tagMatch || authorMatch;
-      });
+      return getFilteredSortedLibs(q);
     }
 
     function updateFilteredResults(){
+      refreshTagFilterOptions();
       const query = (search && typeof search.value === 'string') ? search.value : '';
       filteredResults = filter(query);
+      updateActiveFilterLabel();
     }
 
     function ensureValidPage(){
@@ -1296,6 +1848,66 @@ Get a code from the character builder in jjs, then paste it here. When you click
     search.addEventListener('input', ()=>{
       refreshListView({ refilter:true, resetPage:true, animate:true });
     });
+
+    const sortSelectEl = document.getElementById('sortSelect');
+    if(sortSelectEl){
+      sortSelectEl.value = activeSort;
+      sortSelectEl.addEventListener('change', ()=>{
+        activeSort = sortSelectEl.value || SORT_OPTIONS.NEWEST;
+        refreshListView({ refilter:true, resetPage:true, animate:true });
+      });
+    }
+
+    const tagFilterSelectEl = document.getElementById('tagFilterSelect');
+    if(tagFilterSelectEl){
+      tagFilterSelectEl.addEventListener('change', ()=>{
+        activeTagFilter = (tagFilterSelectEl.value || '').toLowerCase();
+        refreshListView({ refilter:true, resetPage:true, animate:true });
+      });
+    }
+
+    function openReportsReviewModal(){
+      const user = getCurrentUser();
+      if(!isStaffUser(user)) return alert('Only owner/moderators can view reports.');
+      let modal = document.getElementById('reportsReviewModal');
+      if(modal) modal.remove();
+      modal = document.createElement('div');
+      modal.id = 'reportsReviewModal';
+      modal.style.position = 'fixed';
+      modal.style.left = '0';
+      modal.style.top = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.55)';
+      modal.style.zIndex = '9999';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      const reports = readReportsStore();
+      modal.innerHTML = `<div style="background:var(--card);padding:20px;min-width:340px;max-width:800px;width:92vw;max-height:86vh;overflow:auto;border-radius:12px;box-shadow:0 8px 32px #000a;position:relative;">
+        <button id="closeReportsReview" class="ghost" style="position:absolute;right:10px;top:10px" type="button">Close</button>
+        <h3 style="margin:0 0 12px 0">Reported Posts (${reports.length})</h3>
+        <div id="reportsList"></div>
+      </div>`;
+      document.body.appendChild(modal);
+      document.getElementById('closeReportsReview').addEventListener('click', ()=> modal.remove());
+      const listEl = modal.querySelector('#reportsList');
+      if(!reports.length){
+        listEl.innerHTML = '<div class="smallMuted">No reports yet.</div>';
+        return;
+      }
+      reports.forEach(rep=>{
+        const row = document.createElement('div');
+        row.className = 'libItem';
+        row.innerHTML = `<div><strong>${escapeHtml(censorBadWords(rep.title || 'Untitled'))}</strong></div><div class="smallMuted">Reason: ${escapeHtml(censorBadWords(rep.reason || ''))}</div><div class="smallMuted">Reporter: ${escapeHtml(censorBadWords(rep.reporter || 'unknown'))} • ${new Date(rep.t || Date.now()).toLocaleString()}</div>`;
+        listEl.appendChild(row);
+      });
+    }
+
+    const reviewReportsBtn = document.getElementById('reviewReportsBtn');
+    if(reviewReportsBtn){
+      reviewReportsBtn.addEventListener('click', openReportsReviewModal);
+    }
 
     // Add button opens Discord invite (manual additions are done by editing the file)
     document.getElementById('newEntry').addEventListener('click', ()=>{
@@ -1657,6 +2269,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const user = getCurrentUser();
       const normalized = user && user.username ? user.username.toLowerCase() : '';
       const isOwner = !!(user && (user.role === 'owner' || (normalized && (normalized === OWNER_USERNAME_LOWER))));
+      const reportsBtn = document.getElementById('reviewReportsBtn');
+      if(reportsBtn){
+        reportsBtn.style.display = isStaffUser(user) ? 'inline-flex' : 'none';
+      }
       consoleBlock.style.display = isOwner ? 'block' : 'none';
       if(!isOwner){
         const statusEl = document.getElementById('staffConsoleStatus');
@@ -1789,6 +2405,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(tok) localStorage.setItem('jjs_token', tok);
         else localStorage.removeItem('jjs_token');
       }catch(e){}
+      ensureCurrentUserJoinDate();
       updateUserLabel();
       updateAddModeratorButton();
       updateStaffConsoleVisibility();
@@ -1806,8 +2423,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     function canDeleteLibrary(user, lib){
       if(!user || !lib) return false;
-      if(user.role === 'owner' || user.role === 'moderator') return true;
-      return user.username === lib.author;
+      if(isStaffUser(user)) return true;
+      return isLibraryAuthor(user, lib);
     }
     function updateUserLabel(){
       const lbl = document.getElementById('userLabel');
@@ -1945,9 +2562,21 @@ Get a code from the character builder in jjs, then paste it here. When you click
               <button type="button" class="ghost" id="libraryVideoRemove" style="display:none">Remove video</button>
             </div>
           </div>
-          <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px">
             <span class="smallMuted">Visibility</span>
-            <button type="button" id="libraryVisibilityToggle" class="ghost" data-visibility="public">Public</button>
+            <div id="libraryVisibilitySegment" style="display:inline-flex;border:1px solid rgba(255,255,255,0.18);border-radius:999px;padding:2px;gap:4px;background:rgba(255,255,255,0.03)">
+              <button type="button" id="libraryVisibilityPublic" class="ghost" data-visibility="public" style="padding:5px 10px;border-radius:999px;font-size:12px">🌍 Public</button>
+              <button type="button" id="libraryVisibilityPrivate" class="ghost" data-visibility="private" style="padding:5px 10px;border-radius:999px;font-size:12px">🔒 Private</button>
+            </div>
+          </div>
+          <div id="libraryWhitelistSection" style="margin-bottom:12px;max-height:0;opacity:0;overflow:hidden;transform:translateY(-6px);transition:max-height .24s ease,opacity .24s ease,transform .24s ease">
+            <label class="smallMuted" style="display:block;margin-bottom:6px">Whitelisted users (private only)</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+              <input id="libraryWhitelistInput" placeholder="username" style="flex:1;min-width:140px;padding:7px 8px;border-radius:6px;border:1px solid #333">
+              <button type="button" class="ghost" id="libraryWhitelistAdd">Add</button>
+            </div>
+            <div class="smallMuted" style="margin-bottom:6px">Only you, whitelisted users, and staff can view this post.</div>
+            <div id="libraryWhitelistList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
           </div>
           <div style="margin-bottom:10px"><span class="smallMuted">Tags: (select below before posting)</span></div>
           <div id="libraryModalTagContainer" style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap"></div>
@@ -1964,7 +2593,12 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const creditInput = form.querySelector('#libraryCredit');
       const codeInput = form.querySelector('#libraryCode');
       const submitBtn = form.querySelector('#librarySubmitBtn');
-      const visibilityToggleBtn = form.querySelector('#libraryVisibilityToggle');
+      const visibilityPublicBtn = form.querySelector('#libraryVisibilityPublic');
+      const visibilityPrivateBtn = form.querySelector('#libraryVisibilityPrivate');
+      const whitelistSection = form.querySelector('#libraryWhitelistSection');
+      const whitelistInput = form.querySelector('#libraryWhitelistInput');
+      const whitelistAddBtn = form.querySelector('#libraryWhitelistAdd');
+      const whitelistList = form.querySelector('#libraryWhitelistList');
       const tagContainer = form.querySelector('#libraryModalTagContainer');
       const initial = {
         title: lib && typeof lib.title === 'string' ? lib.title : '',
@@ -1972,7 +2606,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
         credit: lib && typeof lib.credit === 'string' ? lib.credit : '',
         code: lib && typeof lib.code === 'string' ? lib.code : '',
         tags: Array.isArray(lib && lib.tags) ? lib.tags.slice() : [],
-        visibility: normalizeVisibility(lib && lib.visibility)
+        visibility: normalizeVisibility(lib && lib.visibility),
+        whitelist: getLibraryWhitelist(lib)
       };
       titleInput.value = initial.title;
       descInput.value = initial.description;
@@ -1989,16 +2624,124 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
       applySelectedTagsToPicker(modalTagPicker, initial.tags);
       let currentVisibility = initial.visibility;
-      const applyVisibilityState = ()=>{
-        const isPrivate = currentVisibility === VISIBILITY.PRIVATE;
-        visibilityToggleBtn.textContent = isPrivate ? 'Private' : 'Public';
-        visibilityToggleBtn.dataset.visibility = currentVisibility;
-        visibilityToggleBtn.title = isPrivate ? 'Private — only you can view this post' : 'Public — everyone can see this post';
+      const modalUser = getCurrentUser();
+      const modalAuthor = (lib && lib.author) || (modalUser && modalUser.username) || '';
+      let currentWhitelist = normalizeWhitelistUsers(initial.whitelist, modalAuthor);
+
+      const renderWhitelistList = ()=>{
+        if(!whitelistList) return;
+        whitelistList.innerHTML = '';
+        if(!currentWhitelist.length){
+          const empty = document.createElement('span');
+          empty.className = 'smallMuted';
+          empty.textContent = 'No users added yet.';
+          whitelistList.appendChild(empty);
+          return;
+        }
+        currentWhitelist.forEach(name=>{
+          const chip = document.createElement('span');
+          chip.style.display = 'inline-flex';
+          chip.style.alignItems = 'center';
+          chip.style.gap = '6px';
+          chip.style.padding = '4px 8px';
+          chip.style.borderRadius = '999px';
+          chip.style.border = '1px solid rgba(255,255,255,0.18)';
+          chip.style.background = 'rgba(255,255,255,0.03)';
+          const label = document.createElement('span');
+          label.className = 'small';
+          label.textContent = name;
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'ghost';
+          removeBtn.style.padding = '0 6px';
+          removeBtn.style.lineHeight = '1.2';
+          removeBtn.textContent = '×';
+          removeBtn.title = `Remove ${name}`;
+          removeBtn.addEventListener('click', ()=>{
+            currentWhitelist = currentWhitelist.filter(item=> normalizeUsername(item) !== normalizeUsername(name));
+            renderWhitelistList();
+          });
+          chip.appendChild(label);
+          chip.appendChild(removeBtn);
+          whitelistList.appendChild(chip);
+        });
       };
-      visibilityToggleBtn.addEventListener('click', ()=>{
-        currentVisibility = currentVisibility === VISIBILITY.PRIVATE ? VISIBILITY.PUBLIC : VISIBILITY.PRIVATE;
-        applyVisibilityState();
-      });
+
+      const updateWhitelistVisibility = ()=>{
+        if(!whitelistSection) return;
+        const isPrivate = currentVisibility === VISIBILITY.PRIVATE;
+        whitelistSection.style.maxHeight = isPrivate ? '180px' : '0';
+        whitelistSection.style.opacity = isPrivate ? '1' : '0';
+        whitelistSection.style.transform = isPrivate ? 'translateY(0)' : 'translateY(-6px)';
+        if(whitelistInput) whitelistInput.disabled = !isPrivate;
+        if(whitelistAddBtn) whitelistAddBtn.disabled = !isPrivate;
+      };
+
+      const setSegmentActive = ()=>{
+        const isPrivate = currentVisibility === VISIBILITY.PRIVATE;
+        if(visibilityPublicBtn){
+          visibilityPublicBtn.dataset.active = isPrivate ? 'false' : 'true';
+          visibilityPublicBtn.style.background = isPrivate ? 'transparent' : 'rgba(126,249,194,0.2)';
+          visibilityPublicBtn.style.borderColor = isPrivate ? 'transparent' : 'rgba(126,249,194,0.35)';
+        }
+        if(visibilityPrivateBtn){
+          visibilityPrivateBtn.dataset.active = isPrivate ? 'true' : 'false';
+          visibilityPrivateBtn.style.background = isPrivate ? 'rgba(123,91,255,0.24)' : 'transparent';
+          visibilityPrivateBtn.style.borderColor = isPrivate ? 'rgba(123,91,255,0.4)' : 'transparent';
+        }
+      };
+
+      const applyVisibilityState = ()=>{
+        setSegmentActive();
+        updateWhitelistVisibility();
+      };
+
+      if(visibilityPublicBtn){
+        visibilityPublicBtn.addEventListener('click', ()=>{
+          currentVisibility = VISIBILITY.PUBLIC;
+          applyVisibilityState();
+        });
+      }
+      if(visibilityPrivateBtn){
+        visibilityPrivateBtn.addEventListener('click', ()=>{
+          currentVisibility = VISIBILITY.PRIVATE;
+          applyVisibilityState();
+        });
+      }
+
+      const addWhitelistUser = ()=>{
+        if(!whitelistInput) return;
+        const raw = whitelistInput.value.trim();
+        if(!raw) return;
+        const normalized = normalizeUsername(raw);
+        if(!normalized) return;
+        if(normalizeUsername(modalAuthor) === normalized){
+          whitelistInput.value = '';
+          return;
+        }
+        if(currentWhitelist.some(name=> normalizeUsername(name) === normalized)){
+          whitelistInput.value = '';
+          return;
+        }
+        currentWhitelist.push(raw);
+        currentWhitelist = normalizeWhitelistUsers(currentWhitelist, modalAuthor);
+        whitelistInput.value = '';
+        renderWhitelistList();
+      };
+
+      if(whitelistAddBtn){
+        whitelistAddBtn.addEventListener('click', addWhitelistUser);
+      }
+      if(whitelistInput){
+        whitelistInput.addEventListener('keydown', (ev)=>{
+          if(ev.key === 'Enter'){
+            ev.preventDefault();
+            addWhitelistUser();
+          }
+        });
+      }
+
+      renderWhitelistList();
       applyVisibilityState();
       const videoInput = form.querySelector('#libraryVideoInput');
       const videoStatus = form.querySelector('#libraryVideoStatus');
@@ -2098,6 +2841,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           code: codeInput.value,
           tags: collectTagsFromPicker(modalTagPicker),
           visibility: currentVisibility,
+          whitelist: currentVisibility === VISIBILITY.PRIVATE ? currentWhitelist.slice() : [],
           video: selectedVideo || (videoRemoved ? null : originalVideo),
           videoRemoved: !!videoRemoved
         };
@@ -2142,10 +2886,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
     document.getElementById('createEntry').addEventListener('click', ()=>{
       const currentUser = getCurrentUser();
       if(!currentUser) return alert('You must be signed in to create a library.');
+      const cooldownRemaining = getUserPostCooldownRemaining(currentUser);
+      if(cooldownRemaining > 0){
+        return alert(`Please wait ${formatMs(cooldownRemaining)} before creating another post.`);
+      }
       openLibraryModal({
         mode: 'create',
         onSubmit: async (payload)=>{
-          const { title, description, credit, code, tags, visibility, video } = payload;
+          const { title, description, credit, code, tags, visibility, whitelist, video } = payload;
           if(!title) throw new Error('Title required');
           if(!description) throw new Error('Description required');
           if(description.length > 250) throw new Error('Description too long');
@@ -2160,6 +2908,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
             code,
             tags: safeTags,
             visibility,
+            whitelist: normalizeVisibility(visibility) === VISIBILITY.PRIVATE ? normalizeWhitelistUsers(whitelist, currentUser.username) : [],
+            createdAt: Date.now(),
+            views: 0,
+            pinned: false,
+            reactions: {},
             comments: []
           };
           if(video){
@@ -2168,6 +2921,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
           }
           const lib = sanitizeLibraryContent(safeLib);
           libs.push(lib);
+          setUserPostCooldown(currentUser);
+          getUserJoinDate(currentUser.username);
           notifyFollowersOfNewPost(lib);
           refreshListView({ refilter:true });
           try{
@@ -2711,6 +3466,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
       let modal = document.getElementById('profileModal'); if(!modal){ modal = document.createElement('div'); modal.id='profileModal'; modal.style.position='fixed'; modal.style.left='20px'; modal.style.top='20px'; modal.style.width='320px'; modal.style.maxHeight='80vh'; modal.style.background='var(--card)'; modal.style.padding='12px'; modal.style.borderRadius='10px'; modal.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; document.body.appendChild(modal); }
       const avatarSource = getAvatarSourceBundle(username, social);
       const avatarUrl = avatarSource.src || DEFAULT_AVATAR_URL;
+      const viewer = getCurrentUser();
+      const profileStats = getUserPostStats(username, viewer);
+      const joinDate = getUserJoinDate(username);
+      const joinDateLabel = joinDate ? new Date(joinDate).toLocaleDateString() : 'Unknown';
       const friends = (social.friends||[]).length || 0;
       const followersCount = Array.isArray(social.followers) ? social.followers.length : 0;
       const safeLinks = sanitizeProfileLinks(social && Array.isArray(social.links) ? social.links : []);
@@ -2720,7 +3479,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const linksBlock = safeLinks.length ? `<div style="margin-top:10px"><div class="smallMuted" style="letter-spacing:0.12em;text-transform:uppercase;font-size:11px">Links</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">${safeLinks.map(link=>`<a class="link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px">${escapeHtml(link.label)}</a>`).join('')}</div></div>` : '';
       const friendLabel = friends === 1 ? 'friend' : 'friends';
       const followerLabel = followersCount === 1 ? 'follower' : 'followers';
-      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} ${friendLabel} • ${followersCount} ${followerLabel}</div>${bioBlock}${linksBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Recent libraries</strong><div id="profileLibs"></div></div>`;
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} ${friendLabel} • ${followersCount} ${followerLabel}</div><div class="smallMuted">Joined ${escapeHtml(joinDateLabel)} • Avg rating ${profileStats.avgPostRating.toFixed(2)} (${profileStats.ratingsCount} ratings)</div>${bioBlock}${linksBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Posts</strong><div id="profileLibs"></div><div id="profileLibPagination" style="display:flex;gap:6px;align-items:center;margin-top:8px"></div></div>`;
       document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
       const profileAvatarImg = document.getElementById('profileAvatar');
       const profileAvatarWrap = modal.querySelector('.profileAvatarWrap');
@@ -2764,7 +3523,48 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(blocked){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Unblock'; b.addEventListener('click', ()=>{ unblockUser(username); openProfile(username); }); actions.appendChild(b); }
         else { const b = document.createElement('button'); b.className='ghost'; b.textContent='Block'; b.addEventListener('click', ()=>{ if(confirm('Block user? This will remove friends and stop messages.')){ blockUser(username); openProfile(username); } }); actions.appendChild(b); }
       }
-      const libWrap = document.getElementById('profileLibs'); libWrap.innerHTML=''; libs.filter(l=>l.author===username).slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = l.title; libWrap.appendChild(d); });
+      const libWrap = document.getElementById('profileLibs');
+      const pager = document.getElementById('profileLibPagination');
+      const profilePageSize = 5;
+      let profilePage = 1;
+      const renderProfilePosts = ()=>{
+        libWrap.innerHTML = '';
+        const posts = profileStats.visiblePosts;
+        if(!posts.length){
+          libWrap.innerHTML = '<div class="smallMuted">No visible posts</div>';
+          if(pager) pager.innerHTML = '';
+          return;
+        }
+        const totalPages = Math.max(1, Math.ceil(posts.length / profilePageSize));
+        profilePage = Math.min(Math.max(profilePage, 1), totalPages);
+        const start = (profilePage - 1) * profilePageSize;
+        posts.slice(start, start + profilePageSize).forEach(l=>{
+          const d = document.createElement('div');
+          d.className = 'libItem';
+          const stats = getRatingStats(l);
+          d.innerHTML = `<div>${escapeHtml(censorBadWords(l.title || 'Untitled'))}</div><div class="smallMuted">${stats.count ? `${stats.avg.toFixed(2)}★` : 'No ratings'} • ${Number(l.views)||0} views</div>`;
+          libWrap.appendChild(d);
+        });
+        if(!pager) return;
+        pager.innerHTML = '';
+        const prev = document.createElement('button');
+        prev.className = 'ghost';
+        prev.textContent = 'Prev';
+        prev.disabled = profilePage <= 1;
+        prev.addEventListener('click', ()=>{ profilePage--; renderProfilePosts(); });
+        const next = document.createElement('button');
+        next.className = 'ghost';
+        next.textContent = 'Next';
+        next.disabled = profilePage >= totalPages;
+        next.addEventListener('click', ()=>{ profilePage++; renderProfilePosts(); });
+        const label = document.createElement('span');
+        label.className = 'smallMuted';
+        label.textContent = `Page ${profilePage}/${totalPages}`;
+        pager.appendChild(prev);
+        pager.appendChild(label);
+        pager.appendChild(next);
+      };
+      renderProfilePosts();
     }
 
     const NOTIFICATIONS_KEY = 'jjs_notifications';
@@ -3094,7 +3894,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       lib.visibility = desiredState;
       sanitizeLibraryContent(lib);
       try{
-        await persistLibraryFile(lib);
+        await persistLibraryFile(lib, { downloadOnMissingConfig: true, downloadOnFailure: true });
       }catch(err){
         lib.visibility = previousState;
         sanitizeLibraryContent(lib);
