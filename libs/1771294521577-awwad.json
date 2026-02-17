@@ -6,7 +6,7 @@
   "credit": "adadawd",
   "code": "awdawd",
   "tags": [],
-  "visibility": "public",
+  "visibility": "private",
   "whitelist": [],
   "createdAt": 1771294521578,
   "views": 1,
@@ -19,5 +19,7 @@
     "🔥": []
   },
   "comments": [],
-  "ratings": []
+  "ratings": [],
+  "__path": "libs/1771294521577-awwad.json",
+  "__filename": "1771294521577-awwad.json"
 }
