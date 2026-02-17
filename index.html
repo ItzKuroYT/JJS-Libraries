@@ -245,6 +245,7 @@
     let presencePingTimer = null;
     let onlineRefreshTimer = null;
     let onlineUsers = [];
+    let userDirectory = [];
     let ownerState = { roles: [], badges: [], userRoles: {}, userBadges: {}, loaded: false };
     let profileSyncUser = '';
     let profileSyncDone = false;
@@ -609,6 +610,67 @@
       return users;
     }
 
+    function isUsernameOnline(username){
+      const target = String(username || '').trim().toLowerCase();
+      if(!target) return false;
+      return onlineUsers.some(item => String(item && item.username || '').trim().toLowerCase() === target);
+    }
+
+    async function fetchAllUsersList(){
+      const endpoints = usersEndpointCandidates();
+      for(const endpoint of endpoints){
+        try{
+          const resp = await fetch(`${endpoint}?action=listUsers`, { cache: 'no-store' });
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || !data || !data.ok || !Array.isArray(data.users)) continue;
+          return data.users;
+        }catch(_e){}
+      }
+      const fallback = await fetchUsersFallback().catch(()=>null);
+      return Array.isArray(fallback) ? fallback : [];
+    }
+
+    async function refreshUserDirectory(){
+      const me = getUser();
+      if(!me){
+        userDirectory = [];
+        patchOnlineUsers();
+        return;
+      }
+
+      const rawUsers = await fetchAllUsersList();
+      const names = Array.from(new Set(
+        (Array.isArray(rawUsers) ? rawUsers : [])
+          .map(item => String((item && item.username) || '').trim())
+          .filter(Boolean)
+      ));
+      if(!names.some(name => name.toLowerCase() === me.username.toLowerCase())) names.push(me.username);
+
+      const resolved = await Promise.all(names.map(async (username)=>{
+        const remote = await fetchProfileFromServer(username).catch(()=>null);
+        const cached = getCachedUser(username) || {};
+        const avatarUrl = sanitizeUrl((remote && remote.avatarUrl) || cached.avatarUrl || '', { allowDataImage: true }) || FALLBACK_AVATAR;
+        const pronouns = String((remote && remote.pronouns) || cached.pronouns || '').trim();
+        const bio = String((remote && remote.bio) || cached.bio || '').trim();
+        setCachedUser(username, { username, avatarUrl, pronouns, bio });
+        return {
+          username,
+          avatarUrl,
+          pronouns,
+          bio,
+          online: isUsernameOnline(username)
+        };
+      }));
+
+      userDirectory = resolved
+        .sort((a,b)=>{
+          if(Boolean(b.online) !== Boolean(a.online)) return b.online ? 1 : -1;
+          return String(a.username || '').localeCompare(String(b.username || ''));
+        });
+
+      patchOnlineUsers();
+    }
+
     function stopPresence(){
       if(presencePingTimer) clearInterval(presencePingTimer);
       if(onlineRefreshTimer) clearInterval(onlineRefreshTimer);
@@ -621,6 +683,7 @@
       stopPresence();
       presencePing();
       refreshOnlineUsers();
+      refreshUserDirectory();
       presencePingTimer = setInterval(presencePing, 25000);
       onlineRefreshTimer = setInterval(refreshOnlineUsers, 8000);
     }
@@ -628,11 +691,17 @@
     async function refreshOnlineUsers(){
       if(!getUser()){
         onlineUsers = [];
+        userDirectory = [];
         patchOnlineUsers();
         return;
       }
       try { onlineUsers = await fetchOnlineUsers(); }
       catch(_e){ onlineUsers = []; }
+
+      if(userDirectory.length){
+        const onlineSet = new Set(onlineUsers.map(item => String(item && item.username || '').trim().toLowerCase()).filter(Boolean));
+        userDirectory = userDirectory.map(item => Object.assign({}, item, { online: onlineSet.has(String(item.username || '').toLowerCase()) }));
+      }
       patchOnlineUsers();
     }
 
@@ -721,24 +790,24 @@
 
     function renderOnlineUsers(users){
       if(!users.length){
-        return `<section class="panel"><h3 style="margin-top:0">Online Users</h3><p class="muted">No users online right now.</p></section>`;
+        return `<section class="panel"><h3 style="margin-top:0">Users</h3><p class="muted">No users found.</p></section>`;
       }
       return `
         <section class="panel">
-          <h3 style="margin-top:0">Online Users (${users.length})</h3>
+          <h3 style="margin-top:0">Users (${users.length})</h3>
           <div class="onlineList">
             ${users.map(item => {
-              const cached = getCachedUser(item.username) || {};
-              const avatar = sanitizeUrl(item.avatarUrl || cached.avatarUrl, { allowDataImage: true }) || FALLBACK_AVATAR;
+              const avatar = sanitizeUrl(item.avatarUrl || '', { allowDataImage: true }) || FALLBACK_AVATAR;
               const username = escapeHtml(item.username || '');
-              const pronouns = escapeHtml(item.pronouns || cached.pronouns || 'Pronouns not set');
-              const bio = escapeHtml(item.bio || cached.bio || 'No bio provided');
+              const pronouns = escapeHtml(item.pronouns || 'Pronouns not set');
+              const bio = escapeHtml(item.bio || 'No bio provided');
+              const onlineColor = item.online ? 'var(--online)' : 'var(--border)';
               return `
-                <article class="onlineItem">
+                <article class="onlineItem" data-open-profile="${username}" style="cursor:pointer">
                   <img class="avatar" style="width:34px;height:34px" src="${escapeHtml(avatar)}" alt="${username}" />
                   <div>${username}</div>
                   <button class="btn" data-open-dm="${username}" style="padding:4px 8px">DM</button>
-                  <span class="onlineDot"></span>
+                  <span class="onlineDot" style="background:${onlineColor}"></span>
                   <div class="tooltip">
                     <strong>${username}</strong>
                     <div class="muted">${pronouns}</div>
@@ -800,7 +869,7 @@
               </div>
             </div>
           </section>
-          <aside id="onlineSidebar">${renderOnlineUsers(onlineUsers)}</aside>
+          <aside id="onlineSidebar">${renderOnlineUsers(userDirectory)}</aside>
         </section>
       `;
     }
@@ -808,7 +877,7 @@
     function patchOnlineUsers(){
       const slot = document.getElementById('onlineSidebar');
       if(!slot || !getUser()) return;
-      slot.innerHTML = renderOnlineUsers(onlineUsers);
+      slot.innerHTML = renderOnlineUsers(userDirectory);
       wireOnlineUserActions();
     }
 
@@ -831,6 +900,36 @@
       `;
       document.getElementById('closeFullProfileBtn').addEventListener('click', closeModal);
       document.getElementById('fullProfileModalBg').addEventListener('click', (e)=>{ if(e.target.id==='fullProfileModalBg') closeModal(); });
+    }
+
+    async function openUserProfile(username){
+      const me = getUser();
+      const target = String(username || '').trim();
+      if(!me || !target) return;
+      const profile = (await fetchProfileFromServer(target).catch(()=>null)) || socialToProfile({}, target);
+      const modalUser = { username: target };
+
+      modalRoot.innerHTML = `
+        <div class="modalBg" id="publicProfileModalBg">
+          <div class="modalCard">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+              <h3 style="margin:0">Profile</h3>
+              <button class="btn" id="closePublicProfileBtn">Close</button>
+            </div>
+            ${renderFullProfileCard(profile, modalUser)}
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn" id="publicProfileDmBtn">DM ${escapeHtml(target)}</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('closePublicProfileBtn').addEventListener('click', closeModal);
+      document.getElementById('publicProfileModalBg').addEventListener('click', (e)=>{ if(e.target.id==='publicProfileModalBg') closeModal(); });
+      document.getElementById('publicProfileDmBtn').addEventListener('click', ()=>{
+        closeModal();
+        openDmsMenu(target);
+      });
     }
 
     function fileToDataUrl(file){
@@ -1268,6 +1367,15 @@
           const user = node.getAttribute('data-open-dm') || '';
           if(!user || !getUser()) return;
           openDmsMenu(user);
+        });
+      });
+
+      Array.from(document.querySelectorAll('[data-open-profile]')).forEach(node=>{
+        node.addEventListener('click', (event)=>{
+          event.preventDefault();
+          const username = node.getAttribute('data-open-profile') || '';
+          if(!username || !getUser()) return;
+          openUserProfile(username);
         });
       });
     }
@@ -1871,6 +1979,7 @@
 
       compactOpen.addEventListener('click', openProfileEditor);
       wireOnlineUserActions();
+      refreshUserDirectory();
       refreshCommunityStats();
     }
 

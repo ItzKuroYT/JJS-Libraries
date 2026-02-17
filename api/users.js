@@ -439,6 +439,15 @@ module.exports = async (req,res) => {
       const { users } = await getUsers(token, owner, repo, branch, usersPath);
       return res.status(200).json({ ok:true, count: users.length });
     }
+    if(action === 'listUsers'){
+      if(!token || !owner || !repo) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO.' });
+      const { users } = await getUsers(token, owner, repo, branch, usersPath);
+      users.forEach(ensureUserRole);
+      const list = users
+        .map(u=>({ id: u.id, username: u.username, role: u.role || 'member', createdAt: u.createdAt || null }))
+        .filter(u=>u && u.username);
+      return res.status(200).json({ ok:true, count: list.length, users: list });
+    }
     if(action === 'staff'){
       if(!token || !owner || !repo) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO.' });
       const { users } = await getUsers(token, owner, repo, branch, usersPath);

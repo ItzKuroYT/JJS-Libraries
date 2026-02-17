@@ -968,7 +968,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
     let activeGlobalType = 'all';
     let activeGlobalSearchSort = 'relevance';
     let searchDebounceTimer = null;
-    const AVATAR_FOLDER = (window.AVATAR_FOLDER || 'avatars').toString().replace(/\\/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
+    const AVATAR_FOLDER = (window.AVATAR_FOLDER || 'libs/avatars').toString().replace(/\\/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
     const DEFAULT_AVATAR_URL = AVATAR_FOLDER ? `${AVATAR_FOLDER}/default.png` : 'default.png';
     const FALLBACK_AVATAR_DATA_URI = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="26" fill="%231f2436"/><circle cx="40" cy="30" r="18" fill="%23495773"/><rect x="18" y="52" width="44" height="18" rx="9" fill="%23495773"/></svg>';
 
@@ -3635,6 +3635,32 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return (username || '').toString().trim().replace(/[^a-z0-9_-]/gi,'_');
     }
 
+    function getUsernameLookupVariants(username){
+      const raw = String(username || '').trim();
+      if(!raw) return [];
+      const base = [raw];
+      const dashParts = raw.split(/\s*-\s*/).map(part=>part.trim()).filter(Boolean);
+      if(dashParts.length > 1) base.push(dashParts[dashParts.length - 1]);
+      const wordParts = raw.split(/\s+/).map(part=>part.trim()).filter(Boolean);
+      if(wordParts.length > 1) base.push(wordParts[wordParts.length - 1]);
+
+      const out = [];
+      const seen = new Set();
+      base.forEach(item=>{
+        const normalized = normalizeUsernameForPath(item);
+        if(!normalized) return;
+        [normalized, normalized.toLowerCase(), normalized.toUpperCase()].forEach(value=>{
+          const key = String(value || '').trim();
+          if(!key) return;
+          const dedupeKey = key.toLowerCase();
+          if(seen.has(dedupeKey)) return;
+          seen.add(dedupeKey);
+          out.push(key);
+        });
+      });
+      return out;
+    }
+
     function normalizeUsernameKey(username){
       return normalizeUsernameForPath(username).toLowerCase();
     }
@@ -3666,17 +3692,25 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     function buildAvatarUrls(username){
-      const safeUser = normalizeUsernameForPath(username);
-      if(!safeUser) return [];
+      const safeUsers = getUsernameLookupVariants(username);
+      if(!safeUsers.length) return [];
       const owner = GITHUB.owner || 'ItzKuroYT';
       const repo = GITHUB.repo || 'JJS-Libraries';
       const branch = GITHUB.branch || 'main';
       const avatarBasePath = getAvatarBasePath();
       const exts = ['png','jpg','jpeg','webp','gif'];
-      return exts.map(ext=>{
-        const remotePath = avatarBasePath ? `${avatarBasePath}/${safeUser}.${ext}` : `${safeUser}.${ext}`;
-        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePathForRaw(remotePath)}`;
+      const urls = [];
+      const seen = new Set();
+      safeUsers.forEach(safeUser=>{
+        exts.forEach(ext=>{
+          const remotePath = avatarBasePath ? `${avatarBasePath}/${safeUser}.${ext}` : `${safeUser}.${ext}`;
+          const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodePathForRaw(remotePath)}`;
+          if(seen.has(url)) return;
+          seen.add(url);
+          urls.push(url);
+        });
       });
+      return urls;
     }
 
     function buildAvatarUrl(username){
@@ -4600,40 +4634,71 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     async function fetchSocial(username){
       if(!username) return {};
-      const normalizedUser = normalizeUsernameKey(username);
-      if(socialCache.has(normalizedUser)) return socialCache.get(normalizedUser);
-      if(socialCache.has(username)) return socialCache.get(username);
-      const key = getSocialStorageKey(username);
-      const legacyKey = 'jjs_social_' + username;
+      const candidates = getUsernameLookupVariants(username);
+      if(!candidates.length) return {};
+
+      function hasMeaningfulSocial(value){
+        if(!value || typeof value !== 'object') return false;
+        if(typeof value.avatar_url === 'string' && value.avatar_url.trim()) return true;
+        if(typeof value.bio === 'string' && value.bio.trim()) return true;
+        if(typeof value.pronouns === 'string' && value.pronouns.trim()) return true;
+        if(Array.isArray(value.links) && value.links.length) return true;
+        if(Array.isArray(value.socialLinks) && value.socialLinks.length) return true;
+        return Object.keys(value).length > 0;
+      }
+
+      for(const candidate of candidates){
+        const normalizedCandidate = normalizeUsernameKey(candidate);
+        if(socialCache.has(normalizedCandidate)){
+          const cached = socialCache.get(normalizedCandidate);
+          if(hasMeaningfulSocial(cached)) return cached;
+        }
+        if(socialCache.has(candidate)){
+          const cached = socialCache.get(candidate);
+          if(hasMeaningfulSocial(cached)) return cached;
+        }
+      }
+
       if(SERVERLESS_URL){
-        try{
-          const resp = await fetch(SERVERLESS_URL + '?action=getSocial&username=' + encodeURIComponent(username));
-          if(resp.ok){
-            const j = await resp.json();
-            if(j && j.social){
-              const mergedSocial = mergeHomepageProfileIntoSocial(username, j.social);
+        for(const candidate of candidates){
+          try{
+            const resp = await fetch(SERVERLESS_URL + '?action=getSocial&username=' + encodeURIComponent(candidate));
+            if(!resp.ok) continue;
+            const j = await resp.json().catch(()=>null);
+            if(!j || !j.social) continue;
+            const mergedSocial = mergeHomepageProfileIntoSocial(username, j.social);
+            if(!hasMeaningfulSocial(mergedSocial)) continue;
+            for(const keyName of candidates){
+              const key = getSocialStorageKey(keyName);
+              const legacyKey = 'jjs_social_' + keyName;
               try{
                 localStorage.setItem(key, JSON.stringify(mergedSocial));
                 if(legacyKey !== key) localStorage.setItem(legacyKey, JSON.stringify(mergedSocial));
               }catch(_e){}
-              syncSocialToHomepageProfile(username, mergedSocial);
-              socialCache.set(normalizedUser, mergedSocial);
-              socialCache.set(username, mergedSocial);
-              return mergedSocial;
+              socialCache.set(normalizeUsernameKey(keyName), mergedSocial);
+              socialCache.set(keyName, mergedSocial);
             }
-          }
-        }catch(_err){}
+            syncSocialToHomepageProfile(username, mergedSocial);
+            return mergedSocial;
+          }catch(_err){}
+        }
       }
-      try{
-        const cached = JSON.parse(localStorage.getItem(key) || localStorage.getItem(legacyKey) || '{}');
-        const mergedCached = mergeHomepageProfileIntoSocial(username, cached);
-        syncSocialToHomepageProfile(username, mergedCached);
-        socialCache.set(normalizedUser, mergedCached);
-        socialCache.set(username, mergedCached);
-        return mergedCached;
-      }catch(_e){
-        return {};
+
+      for(const candidate of candidates){
+        const key = getSocialStorageKey(candidate);
+        const legacyKey = 'jjs_social_' + candidate;
+        try{
+          const cached = JSON.parse(localStorage.getItem(key) || localStorage.getItem(legacyKey) || '{}');
+          const mergedCached = mergeHomepageProfileIntoSocial(username, cached);
+          if(!hasMeaningfulSocial(mergedCached)) continue;
+          socialCache.set(normalizeUsernameKey(candidate), mergedCached);
+          socialCache.set(candidate, mergedCached);
+          syncSocialToHomepageProfile(username, mergedCached);
+          return mergedCached;
+        }catch(_e){}
       }
+
+      return {};
     }
 
     async function updateSocial(username, social){
