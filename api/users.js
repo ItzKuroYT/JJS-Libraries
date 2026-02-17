@@ -79,6 +79,32 @@ async function putUsers(token, owner, repo, branch, usersPath, users, sha){
 }
 
 const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'Kuro').toLowerCase();
+const USERNAME_MIN_LENGTH = 4;
+const USERNAME_MAX_LENGTH = 15;
+const MAX_ACCOUNTS_PER_IP = 2;
+
+function normalizeIpAddress(ip){
+  const raw = String(ip || '').trim();
+  if(!raw) return '';
+  const noPort = raw.replace(/^\[|\]$/g, '').replace(/:\d+$/, '');
+  return noPort.replace(/^::ffff:/i, '').toLowerCase();
+}
+
+function getClientIp(req){
+  const xff = req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'];
+  if(typeof xff === 'string' && xff.trim()){
+    const first = xff.split(',')[0];
+    const normalized = normalizeIpAddress(first);
+    if(normalized) return normalized;
+  }
+  const xrip = req.headers['x-real-ip'] || req.headers['X-Real-IP'];
+  if(typeof xrip === 'string' && xrip.trim()){
+    const normalized = normalizeIpAddress(xrip);
+    if(normalized) return normalized;
+  }
+  const remote = req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : '';
+  return normalizeIpAddress(remote);
+}
 
 function ensureUserRole(user){
   if(!user) return 'member';
@@ -112,6 +138,144 @@ function getAuthFromRequest(req, secret){
   return payload;
 }
 
+function normalizeRoleId(value){
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+}
+
+function normalizeBadgeId(value){
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+}
+
+function normalizeGradientValue(value){
+  const text = String(value || '').trim();
+  if(!text) return '';
+  return /gradient\s*\(/i.test(text) ? text : '';
+}
+
+function normalizeRoleRecord(role){
+  if(!role) return null;
+  const id = normalizeRoleId(role.id || role.name);
+  if(!id) return null;
+  const rawColor = String(role.color || '#a9b9d3').trim() || '#a9b9d3';
+  const gradient = normalizeGradientValue(role.gradient || rawColor);
+  return {
+    id,
+    name: String(role.name || id).trim() || id,
+    color: gradient ? '#a9b9d3' : rawColor,
+    gradient,
+    icon: String(role.icon || '').trim(),
+    priority: Number.isFinite(Number(role.priority)) ? Number(role.priority) : 10,
+    permissions: Array.isArray(role.permissions) ? role.permissions.map(v=>String(v).trim()).filter(Boolean) : []
+  };
+}
+
+function normalizeBadgeRecord(badge){
+  if(!badge) return null;
+  const id = normalizeBadgeId(badge.id || badge.name);
+  if(!id) return null;
+  const rawColor = String(badge.color || '#a9b9d3').trim() || '#a9b9d3';
+  const gradient = normalizeGradientValue(badge.gradient || rawColor);
+  return {
+    id,
+    name: String(badge.name || id).trim() || id,
+    icon: String(badge.icon || '🏅').trim() || '🏅',
+    color: gradient ? '#a9b9d3' : rawColor,
+    gradient,
+    tooltip: String(badge.tooltip || '').trim(),
+    showInComments: badge.showInComments !== false
+  };
+}
+
+function normalizeUniqueList(list, normalizer){
+  const raw = Array.isArray(list) ? list : [];
+  const seen = new Set();
+  const out = [];
+  raw.forEach(item=>{
+    const v = normalizer(item);
+    if(!v || seen.has(v)) return;
+    seen.add(v);
+    out.push(v);
+  });
+  return out;
+}
+
+function defaultOwnerControlRoles(){
+  return [
+    { id:'owner', name:'Owner', color:'#f5c77d', gradient:'', icon:'👑', priority:1000, permissions:['owner.panel','moderation.access','moderation.tools','roles.manage','badges.manage','commands.run'] },
+    { id:'moderator', name:'Moderator', color:'#85c6ff', gradient:'', icon:'🛡', priority:700, permissions:['moderation.access','moderation.tools'] },
+    { id:'member', name:'Member', color:'#a9b9d3', gradient:'', icon:'', priority:10, permissions:[] }
+  ];
+}
+
+function normalizeOwnerControlMeta(meta){
+  const roles = Array.isArray(meta && meta.roles) ? meta.roles.map(normalizeRoleRecord).filter(Boolean) : [];
+  const badges = Array.isArray(meta && meta.badges) ? meta.badges.map(normalizeBadgeRecord).filter(Boolean) : [];
+  if(!roles.some(r=>r.id==='owner')) roles.push(defaultOwnerControlRoles()[0]);
+  if(!roles.some(r=>r.id==='moderator')) roles.push(defaultOwnerControlRoles()[1]);
+  if(!roles.some(r=>r.id==='member')) roles.push(defaultOwnerControlRoles()[2]);
+  roles.sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
+  return { roles, badges, updatedAt: Date.now() };
+}
+
+function userKey(username){
+  return String(username || '').trim().toLowerCase();
+}
+
+function buildOwnerControlState(users, meta){
+  const normalizedMeta = normalizeOwnerControlMeta(meta || {});
+  const userRoles = {};
+  const userBadges = {};
+  (Array.isArray(users) ? users : []).forEach(u=>{
+    if(!u || !u.username) return;
+    const key = userKey(u.username);
+    const roles = normalizeUniqueList(u.roles, normalizeRoleId);
+    const badges = normalizeUniqueList(u.badges, normalizeBadgeId);
+    const roleLower = String(u.role || '').toLowerCase();
+    if(roleLower === 'owner' && !roles.includes('owner')) roles.push('owner');
+    if(roleLower === 'moderator' && !roles.includes('moderator')) roles.push('moderator');
+    if(!roles.length) roles.push('member');
+    userRoles[key] = roles;
+    if(badges.length) userBadges[key] = badges;
+  });
+  return { roles: normalizedMeta.roles, badges: normalizedMeta.badges, userRoles, userBadges, updatedAt: Date.now() };
+}
+
+function applyOwnerControlStateToUsers(users, state){
+  const normalizedUsers = Array.isArray(users) ? users : [];
+  const roleMap = state && state.userRoles && typeof state.userRoles === 'object' ? state.userRoles : {};
+  const badgeMap = state && state.userBadges && typeof state.userBadges === 'object' ? state.userBadges : {};
+  normalizedUsers.forEach(u=>{
+    if(!u || !u.username) return;
+    const key = userKey(u.username);
+    const roles = normalizeUniqueList(roleMap[key], normalizeRoleId);
+    const badges = normalizeUniqueList(badgeMap[key], normalizeBadgeId);
+    u.roles = roles;
+    u.badges = badges;
+    if(key === OWNER_USERNAME || roles.includes('owner')) u.role = 'owner';
+    else if(roles.includes('moderator')) u.role = 'moderator';
+    else u.role = 'member';
+  });
+}
+
+async function getJsonAtPath(token, owner, repo, branch, path){
+  const api = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const resp = await fetchFn(`${api}?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+  if(resp.status === 404) return { data: null, sha: null };
+  if(resp.status !== 200){ const text = await resp.text(); throw new Error(`Read failed (${resp.status}): ${text}`); }
+  const body = await resp.json();
+  let data = null;
+  try{ data = JSON.parse(fromBase64(body.content || '')); }catch(_e){ data = null; }
+  return { data, sha: body.sha || null };
+}
+
+async function putJsonAtPath(token, owner, repo, branch, path, data, sha, message){
+  const api = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const content = toBase64(JSON.stringify(data, null, 2));
+  const body = { message: message || 'Update json', content, branch };
+  if(sha) body.sha = sha;
+  return await fetchFn(api, { method:'PUT', headers:{ Authorization:`token ${token}`, Accept:'application/vnd.github.v3+json', 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+}
+
 module.exports = async (req,res) => {
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
@@ -123,6 +287,7 @@ module.exports = async (req,res) => {
   const repo = process.env.GITHUB_REPO;
   const branch = process.env.GITHUB_BRANCH || 'main';
   const usersPath = (process.env.GITHUB_USERS_PATH || 'users/users.json').replace(/^\/+|\/+$/g,'');
+  const ownerControlMetaPath = (process.env.GITHUB_OWNER_CONTROL_META_PATH || 'users/owner-control-meta.json').replace(/^\/+|\/+$/g,'');
   const jwtSecret = process.env.JWT_SECRET || null;
   const query = req.query || new URL(req.url, 'http://localhost').searchParams;
   const getAction = (q)=>{
@@ -146,6 +311,13 @@ module.exports = async (req,res) => {
       const moderators = users.filter(u=>u.role==='moderator').map(u=>({ id:u.id, username:u.username, createdAt:u.createdAt }));
       return res.status(200).json({ ok:true, owner: ownerUser ? { id: ownerUser.id, username: ownerUser.username } : null, moderators });
     }
+    if(action === 'ownerControlGet'){
+      if(!token || !owner || !repo) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO.' });
+      const { users } = await getUsers(token, owner, repo, branch, usersPath);
+      const metaResp = await getJsonAtPath(token, owner, repo, branch, ownerControlMetaPath).catch(()=>({ data:null, sha:null }));
+      const state = buildOwnerControlState(users, metaResp && metaResp.data ? metaResp.data : {});
+      return res.status(200).json({ ok:true, state });
+    }
     return res.status(200).json({ ok:true, configured: !!(token && owner && repo && jwtSecret), owner: owner||null, repo: repo||null, usersPath });
   }
 
@@ -157,13 +329,25 @@ module.exports = async (req,res) => {
 
   if(action==='signup'){
     if(!token || !owner || !repo || !jwtSecret) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO/JWT_SECRET.' });
-    const { username, password } = body;
+    const rawUsername = body.username;
+    const username = String(rawUsername || '').trim();
+    const password = body.password;
     if(!username || !password) return res.status(400).json({ error:'username and password required' });
+    if(username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH){
+      return res.status(400).json({ error:`username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters` });
+    }
     const { users, sha } = await getUsers(token, owner, repo, branch, usersPath);
     if(users.some(u=>u.username.toLowerCase()===username.toLowerCase())) return res.status(409).json({ error:'Username taken' });
+    const clientIp = getClientIp(req);
+    if(clientIp){
+      const existingFromIp = users.filter(u=> normalizeIpAddress(u && u.createdIp) === clientIp).length;
+      if(existingFromIp >= MAX_ACCOUNTS_PER_IP){
+        return res.status(429).json({ error:`Only ${MAX_ACCOUNTS_PER_IP} accounts are allowed per IP` });
+      }
+    }
     const id = Date.now().toString();
     const passwordHash = hashPassword(password);
-    const user = { id, username, passwordHash, createdAt: new Date().toISOString(), role: username.toLowerCase()===OWNER_USERNAME ? 'owner' : 'member' };
+    const user = { id, username, passwordHash, createdAt: new Date().toISOString(), createdIp: clientIp || null, role: username.toLowerCase()===OWNER_USERNAME ? 'owner' : 'member' };
     users.push(user);
     const putResp = await putUsers(token, owner, repo, branch, usersPath, users, sha);
     if(!putResp.ok) { const txt = await putResp.text(); return res.status(500).json({ error:'Failed to save users', detail: txt }); }
@@ -226,6 +410,36 @@ module.exports = async (req,res) => {
     const putResp = await putUsers(token, owner, repo, branch, usersPath, users, sha);
     if(!putResp.ok){ const txt = await putResp.text(); return res.status(500).json({ error:'Failed to save users', detail: txt }); }
     return res.status(200).json({ ok:true, user: { id: target.id, username: target.username, role: target.role } });
+  }
+
+  if(action==='ownerControlSave'){
+    if(!token || !owner || !repo || !jwtSecret) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO/JWT_SECRET.' });
+    const auth = getAuthFromRequest(req, jwtSecret);
+    const isOwner = !!(auth && ((String(auth.role || '').toLowerCase() === 'owner') || (String(auth.username || '').toLowerCase() === OWNER_USERNAME)));
+    if(!isOwner) return res.status(403).json({ error:'Only owner can update owner panel data.' });
+
+    const incoming = body && body.state ? body.state : body;
+    const normalizedMeta = normalizeOwnerControlMeta(incoming || {});
+    const roleMap = incoming && incoming.userRoles && typeof incoming.userRoles === 'object' ? incoming.userRoles : {};
+    const badgeMap = incoming && incoming.userBadges && typeof incoming.userBadges === 'object' ? incoming.userBadges : {};
+
+    const { users, sha } = await getUsers(token, owner, repo, branch, usersPath);
+    const stateForUsers = {
+      roles: normalizedMeta.roles,
+      badges: normalizedMeta.badges,
+      userRoles: roleMap,
+      userBadges: badgeMap
+    };
+    applyOwnerControlStateToUsers(users, stateForUsers);
+    const putUsersResp = await putUsers(token, owner, repo, branch, usersPath, users, sha);
+    if(!putUsersResp.ok){ const txt = await putUsersResp.text(); return res.status(500).json({ error:'Failed to save users', detail: txt }); }
+
+    const existingMeta = await getJsonAtPath(token, owner, repo, branch, ownerControlMetaPath).catch(()=>({ data:null, sha:null }));
+    const putMetaResp = await putJsonAtPath(token, owner, repo, branch, ownerControlMetaPath, normalizedMeta, existingMeta.sha, 'Update owner control meta');
+    if(!putMetaResp.ok){ const txt = await putMetaResp.text(); return res.status(500).json({ error:'Failed to save owner control meta', detail: txt }); }
+
+    const nextState = buildOwnerControlState(users, normalizedMeta);
+    return res.status(200).json({ ok:true, state: nextState });
   }
 
   return res.status(400).json({ error:'Unknown action' });

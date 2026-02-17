@@ -617,7 +617,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(!force && age < 30000 && ownerControlState.loaded) return ownerControlState;
       ownerControlSyncState.fetchPromise = (async ()=>{
         try{
-          const resp = await fetch(OWNER_CONTROL_URL + '?action=get', { cache:'no-store' });
+          const resp = await fetch(OWNER_CONTROL_URL + '?action=ownerControlGet', { cache:'no-store' });
           const data = await resp.json().catch(()=>null);
           if(resp.ok && data && data.ok && data.state){
             applyOwnerControlStateFromPayload(data.state);
@@ -646,7 +646,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         userRoles: state.userRoles,
         userBadges: state.userBadges
       };
-      const resp = await fetch(OWNER_CONTROL_URL + '?action=save', {
+      const resp = await fetch(OWNER_CONTROL_URL + '?action=ownerControlSave', {
         method:'POST',
         headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
         body: JSON.stringify({ state: payload })
@@ -2735,7 +2735,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     // Users endpoint derived from serverless base
     const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
-    const OWNER_CONTROL_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/owner-control');
+    const OWNER_CONTROL_URL = USERS_URL;
     const OWNER_USERNAME = 'Kuro';
     const OWNER_USERNAME_LOWER = OWNER_USERNAME.toLowerCase();
     const socialCache = new Map();
@@ -3795,24 +3795,30 @@ Get a code from the character builder in jjs, then paste it here. When you click
       try{
         const resp = await fetch(USERS_URL + '?action=signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
         const j = await resp.json().catch(()=>null);
-        if(!resp.ok) throw new Error(JSON.stringify(j));
+        if(!resp.ok) throw new Error((j && j.error) || 'Signup failed');
         if(j && j.token) setToken(j.token);
         try{ await Promise.all([refreshUserCount(), refreshStaffDisplay(), refreshOwnerControlFromServer(true)]); }catch(_err){}
         refreshGlobalRoleBadgeUI();
         return j;
-      }catch(err){ return null; }
+      }catch(err){
+        alert(err && err.message ? err.message : 'Signup failed');
+        return null;
+      }
     }
 
     async function authLogin(username,password){
       try{
         const resp = await fetch(USERS_URL + '?action=login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
         const j = await resp.json().catch(()=>null);
-        if(!resp.ok) throw new Error(JSON.stringify(j));
+        if(!resp.ok) throw new Error((j && j.error) || 'Login failed');
         if(j && j.token) setToken(j.token);
         try{ await Promise.all([refreshStaffDisplay(), refreshOwnerControlFromServer(true)]); }catch(_err){}
         refreshGlobalRoleBadgeUI();
         return j;
-      }catch(err){ return null; }
+      }catch(err){
+        alert(err && err.message ? err.message : 'Login failed');
+        return null;
+      }
     }
 
     // attach auth button handlers
@@ -3820,6 +3826,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const u = document.getElementById('authUser').value.trim();
       const p = document.getElementById('authPass').value;
       if(!u||!p) return alert('username and password required');
+      if(u.length < 4 || u.length > 15) return alert('Username must be 4-15 characters.');
       authSignup(u,p);
     });
     document.getElementById('loginBtn').addEventListener('click', ()=>{
@@ -3830,6 +3837,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
     });
     updateUserLabel();
     updateStaffConsoleVisibility();
+    const authUserInput = document.getElementById('authUser');
+    if(authUserInput){
+      authUserInput.minLength = 4;
+      authUserInput.maxLength = 15;
+    }
 
     // --- Tag picker ---
     const PRESET_TAGS = ['Beginner moveset','Intermediate moveset','Advanced moveset','Custom','JJK','Dragonball','Sololeveling','Video-game','OP'];
