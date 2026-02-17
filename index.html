@@ -1,4 +1,4 @@
-ew<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -135,6 +135,43 @@ ew<!doctype html>
     .reactionBtn:disabled{opacity:.45;cursor:not-allowed}
     .hoverLift{transition:transform .2s ease,box-shadow .2s ease}
     .hoverLift:hover{transform:translateY(-2px)}
+    .roleBadges{display:inline-flex;align-items:center;gap:4px;margin-left:6px;vertical-align:middle}
+    .roleBadge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);font-size:10px;line-height:1;color:var(--text);background:rgba(255,255,255,0.06)}
+    .roleBadge--owner{border-color:rgba(255,196,107,0.5);background:rgba(255,196,107,0.2)}
+    .roleBadge--moderator{border-color:rgba(133,198,255,0.5);background:rgba(133,198,255,0.18)}
+    .roleBadge--verified{border-color:rgba(126,249,194,0.5);background:rgba(126,249,194,0.18)}
+    .roleBadge--og{border-color:rgba(208,167,255,0.5);background:rgba(208,167,255,0.18)}
+    .roleBadge--custom{border-color:var(--badge-color, rgba(255,255,255,0.35));background:color-mix(in srgb, var(--badge-color, #ffffff) 25%, transparent);color:var(--text)}
+    .ownerPanelOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.58);z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px}
+    .ownerPanelCard{width:min(1100px,96vw);max-height:90vh;overflow:hidden;background:var(--card);border:1px solid rgba(255,255,255,0.09);border-radius:18px;box-shadow:0 28px 60px rgba(5,8,25,0.72);display:grid;grid-template-columns:220px minmax(0,1fr)}
+    .ownerPanelSide{padding:14px;border-right:1px solid rgba(255,255,255,0.08);background:rgba(8,15,34,0.95);display:flex;flex-direction:column;gap:8px}
+    .ownerPanelTab{width:100%;text-align:left;border-radius:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);color:var(--text);font-size:13px}
+    .ownerPanelTab.active{border-color:var(--accent);color:var(--accent);background:rgba(126,249,194,0.12)}
+    .ownerPanelBody{padding:16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+    .ownerGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+    .ownerCard{padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)}
+    .ownerRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .ownerRow input,.ownerRow select{flex:1 1 140px;min-width:120px}
+    .ownerList{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .ownerListItem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02)}
+    .ownerListMeta{display:flex;align-items:center;gap:8px;min-width:0}
+    .ownerListMeta b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+    .ownerDot{width:10px;height:10px;border-radius:999px;flex:none;background:var(--dot-color,#fff)}
+    .ownerStatus{font-size:12px;color:var(--muted)}
+    .ownerCommands{padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);font-size:12px;line-height:1.5}
+    .ownerSearchResults{max-height:210px;overflow:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.07);padding:8px;background:rgba(5,12,30,0.7)}
+    .ownerSearchResult{padding:7px 8px;border:1px solid rgba(255,255,255,0.06);border-radius:9px;cursor:pointer;background:rgba(255,255,255,0.03)}
+    .ownerSearchResult + .ownerSearchResult{margin-top:6px}
+    .ownerSearchResult:hover{border-color:var(--accent)}
+    @media(max-width:900px){
+      .ownerPanelCard{grid-template-columns:1fr}
+      .ownerPanelSide{border-right:none;border-bottom:1px solid rgba(255,255,255,0.08)}
+    }
+    .globalSearchPanel{margin-top:10px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(5,12,30,0.82);max-height:280px;overflow:auto}
+    .globalSearchPanel mark{background:rgba(255,224,102,0.35);color:var(--text);padding:0 2px;border-radius:3px}
+    .globalSearchGroup{margin-bottom:12px}
+    .globalSearchItem{padding:7px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.03);margin-top:6px;cursor:pointer}
+    .globalSearchItem:hover{border-color:var(--accent)}
     .cardVideoWrap{margin-top:14px;border-radius:18px;overflow:hidden;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.05);box-shadow:0 14px 30px rgba(4,6,18,0.6)}
     .cardVideoWrap video{width:100%;display:block;max-height:320px;background:#000}
     .cardVideoMeta{padding:8px 12px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);background:rgba(0,0,0,0.35);border-top:1px solid rgba(255,255,255,0.04)}
@@ -186,6 +223,7 @@ ew<!doctype html>
       .profileLinksList{display:flex;flex-direction:column;gap:6px;margin-top:6px}
       .profileLinkRow{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);font-size:12px}
       .profileLinkRow button{margin-left:8px}
+      .ownerPanelShortcut{margin-top:10px}
       .libItem{padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:8px;background:rgba(255,255,255,0.02)}
       .notifications,.dmList{max-height:190px;overflow:auto;margin-top:12px;padding-right:6px}
       .postsCard{width:100%;padding:48px;background:var(--panel);border-radius:34px;border:1px solid rgba(255,255,255,0.06);box-shadow:0 30px 64px rgba(7,10,30,0.72);color:inherit;backdrop-filter:blur(20px)}
@@ -262,6 +300,20 @@ ew<!doctype html>
             </div>
             <div class="controlRow" id="discoveryControls" style="justify-content:space-between;gap:10px">
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <select id="globalTypeSelect" style="min-width:140px">
+                  <option value="all">All</option>
+                  <option value="posts">Posts</option>
+                  <option value="users">Users</option>
+                  <option value="tags">Tags</option>
+                </select>
+                <select id="globalSearchSort" style="min-width:140px">
+                  <option value="relevance">Search: Relevance</option>
+                  <option value="newest">Search: Newest</option>
+                </select>
+                <select id="feedModeSelect" style="min-width:140px">
+                  <option value="all">Feed: All</option>
+                  <option value="following">Feed: Following</option>
+                </select>
                 <select id="sortSelect" style="min-width:170px">
                   <option value="newest">Newest</option>
                   <option value="oldest">Oldest</option>
@@ -276,6 +328,7 @@ ew<!doctype html>
               </div>
               <div class="smallMuted" id="activeFilterLabel">Showing all posts</div>
             </div>
+            <div id="globalSearchResults" class="globalSearchPanel" style="display:none"></div>
           </div>
 
           <div class="tagBar">
@@ -394,10 +447,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return normalizeWhitelistUsers(lib && lib.whitelist, lib && lib.author);
     }
     function isStaffUser(user){
-      if(!user) return false;
-      if(user.role === 'owner' || user.role === 'moderator') return true;
-      const inferred = inferRoleFromState(user.username);
-      return inferred === 'owner' || inferred === 'moderator';
+      return permissionGuard.hasPermission(user, OWNER_PERMISSIONS.MODERATION_ACCESS);
     }
     function isLibraryAuthor(user, lib){
       if(!user || !lib) return false;
@@ -416,6 +466,366 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(isLibraryAuthor(user, lib)) return true;
       return isUserWhitelistedForLibrary(lib, user);
     }
+
+    function normalizeRoleId(value){
+      return (value || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    }
+
+    function normalizeRoleRecord(role){
+      if(!role) return null;
+      const id = normalizeRoleId(role.id || role.name);
+      if(!id) return null;
+      return {
+        id,
+        name: String(role.name || id).trim() || id,
+        color: String(role.color || '#a9b9d3').trim() || '#a9b9d3',
+        icon: String(role.icon || '').trim(),
+        priority: Number.isFinite(Number(role.priority)) ? Number(role.priority) : 10,
+        permissions: Array.isArray(role.permissions) ? role.permissions.filter(Boolean).map(String) : []
+      };
+    }
+
+    function normalizeBadgeId(value){
+      return (value || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    }
+
+    function normalizeBadgeRecord(badge){
+      if(!badge) return null;
+      const id = normalizeBadgeId(badge.id || badge.name);
+      if(!id) return null;
+      return {
+        id,
+        name: String(badge.name || id).trim() || id,
+        icon: String(badge.icon || '🏅').trim() || '🏅',
+        color: String(badge.color || '#a9b9d3').trim() || '#a9b9d3',
+        tooltip: String(badge.tooltip || '').trim(),
+        showInComments: badge.showInComments !== false
+      };
+    }
+
+    function dedupeStringList(list){
+      if(!Array.isArray(list)) return [];
+      const seen = new Set();
+      const out = [];
+      list.forEach(item=>{
+        const v = String(item || '').trim();
+        if(!v) return;
+        const lower = v.toLowerCase();
+        if(seen.has(lower)) return;
+        seen.add(lower);
+        out.push(v);
+      });
+      return out;
+    }
+
+    function inferRoleFromStateBase(username){
+      const normalized = (username || '').toLowerCase();
+      if(!normalized) return 'member';
+      if(staffState.owner && staffState.owner.username && staffState.owner.username.toLowerCase() === normalized) return 'owner';
+      if(staffState.moderators.some(mod=> (mod.username || '').toLowerCase() === normalized)) return 'moderator';
+      if(OWNER_USERNAME_LOWER && normalized === OWNER_USERNAME_LOWER) return 'owner';
+      return 'member';
+    }
+
+    function canReadOwnerControlData(){
+      const payload = decodeToken(getToken()) || {};
+      const user = normalizeUsername(payload.username || '');
+      const ownerName = normalizeUsername((staffState.owner && staffState.owner.username) || OWNER_USERNAME || '');
+      if(payload.role && String(payload.role).toLowerCase() === 'owner') return true;
+      return !!(user && (user === ownerName || user === OWNER_USERNAME_LOWER));
+    }
+
+    function loadOwnerControlState(force = false){
+      if(!force && !canReadOwnerControlData()){
+        ownerControlState.roles = DEFAULT_OWNER_ROLES.slice();
+        ownerControlState.badges = [];
+        ownerControlState.userRoles = {};
+        ownerControlState.userBadges = {};
+        ownerControlState.loaded = false;
+        return ownerControlState;
+      }
+      if(ownerControlState.loaded && !force) return ownerControlState;
+      let roles = DEFAULT_OWNER_ROLES.slice();
+      let badges = [];
+      let userRoles = {};
+      let userBadges = {};
+      try{
+        const parsed = JSON.parse(localStorage.getItem(OWNER_ROLES_STORAGE_KEY) || '[]');
+        if(Array.isArray(parsed) && parsed.length) roles = parsed;
+      }catch(_e){}
+      try{
+        const parsed = JSON.parse(localStorage.getItem(OWNER_BADGES_STORAGE_KEY) || '[]');
+        if(Array.isArray(parsed)) badges = parsed;
+      }catch(_e){}
+      try{
+        const parsed = JSON.parse(localStorage.getItem(OWNER_USER_ROLES_STORAGE_KEY) || '{}');
+        if(parsed && typeof parsed === 'object') userRoles = parsed;
+      }catch(_e){}
+      try{
+        const parsed = JSON.parse(localStorage.getItem(OWNER_USER_BADGES_STORAGE_KEY) || '{}');
+        if(parsed && typeof parsed === 'object') userBadges = parsed;
+      }catch(_e){}
+      const normalizedRoles = roles.map(normalizeRoleRecord).filter(Boolean);
+      if(!normalizedRoles.some(r=>r.id === 'owner')) normalizedRoles.push(DEFAULT_OWNER_ROLES[0]);
+      if(!normalizedRoles.some(r=>r.id === 'moderator')) normalizedRoles.push(DEFAULT_OWNER_ROLES[1]);
+      if(!normalizedRoles.some(r=>r.id === 'member')) normalizedRoles.push(DEFAULT_OWNER_ROLES[2]);
+      ownerControlState.roles = normalizedRoles.sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
+      ownerControlState.badges = badges.map(normalizeBadgeRecord).filter(Boolean);
+      ownerControlState.userRoles = userRoles;
+      ownerControlState.userBadges = userBadges;
+      ownerControlState.loaded = true;
+      ownerControlState.lastLoadedAt = Date.now();
+      return ownerControlState;
+    }
+
+    function persistOwnerControlState(){
+      loadOwnerControlState();
+      try{ localStorage.setItem(OWNER_ROLES_STORAGE_KEY, JSON.stringify(ownerControlState.roles)); }catch(_e){}
+      try{ localStorage.setItem(OWNER_BADGES_STORAGE_KEY, JSON.stringify(ownerControlState.badges)); }catch(_e){}
+      try{ localStorage.setItem(OWNER_USER_ROLES_STORAGE_KEY, JSON.stringify(ownerControlState.userRoles)); }catch(_e){}
+      try{ localStorage.setItem(OWNER_USER_BADGES_STORAGE_KEY, JSON.stringify(ownerControlState.userBadges)); }catch(_e){}
+    }
+
+    function logOwnerAction(action, details){
+      const user = getCurrentUser();
+      const entry = {
+        t: Date.now(),
+        by: user && user.username ? user.username : 'unknown',
+        action: String(action || '').trim() || 'action',
+        details: String(details || '').trim()
+      };
+      try{
+        const raw = JSON.parse(localStorage.getItem(OWNER_ACTIVITY_LOG_KEY) || '[]');
+        const list = Array.isArray(raw) ? raw : [];
+        list.unshift(entry);
+        localStorage.setItem(OWNER_ACTIVITY_LOG_KEY, JSON.stringify(list.slice(0, 250)));
+      }catch(_e){}
+    }
+
+    function getKnownUsersList(){
+      const setValue = new Set();
+      libs.forEach(lib=>{
+        if(lib && lib.author) setValue.add(String(lib.author));
+        const comments = Array.isArray(lib && lib.comments) ? lib.comments : [];
+        const walk = (arr)=>{
+          (arr || []).forEach(c=>{
+            if(c && c.author) setValue.add(String(c.author));
+            if(Array.isArray(c && c.replies)) walk(c.replies);
+          });
+        };
+        walk(comments);
+      });
+      if(staffState.owner && staffState.owner.username) setValue.add(staffState.owner.username);
+      (staffState.moderators || []).forEach(mod=>{ if(mod && mod.username) setValue.add(mod.username); });
+      const me = getCurrentUser();
+      if(me && me.username) setValue.add(me.username);
+      return Array.from(setValue)
+        .map(name=> String(name || '').trim())
+        .filter(Boolean)
+        .sort((a,b)=> a.localeCompare(b, undefined, { sensitivity:'base' }));
+    }
+
+    function searchKnownUsers(query){
+      const text = String(query || '').trim().toLowerCase();
+      const users = getKnownUsersList();
+      if(!text) return users.slice(0, 40);
+      return users.filter(name=> name.toLowerCase().includes(text)).slice(0, 60);
+    }
+
+    const roleService = {
+      getAll(){
+        return loadOwnerControlState().roles.slice().sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
+      },
+      getById(roleId){
+        const key = normalizeRoleId(roleId);
+        return this.getAll().find(role=> role.id === key) || null;
+      },
+      create(input){
+        const state = loadOwnerControlState();
+        const record = normalizeRoleRecord(input);
+        if(!record) throw new Error('Invalid role');
+        if(state.roles.some(role=> role.id === record.id)) throw new Error('Role already exists');
+        state.roles.push(record);
+        state.roles.sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
+        persistOwnerControlState();
+        logOwnerAction('role.create', `${record.name}`);
+        return record;
+      },
+      update(roleId, changes){
+        const state = loadOwnerControlState();
+        const key = normalizeRoleId(roleId);
+        const idx = state.roles.findIndex(role=> role.id === key);
+        if(idx < 0) throw new Error('Role not found');
+        const next = normalizeRoleRecord({ ...state.roles[idx], ...changes, id: state.roles[idx].id });
+        if(!next) throw new Error('Invalid role update');
+        state.roles[idx] = next;
+        state.roles.sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
+        persistOwnerControlState();
+        logOwnerAction('role.update', `${next.name}`);
+        return next;
+      },
+      delete(roleId){
+        const state = loadOwnerControlState();
+        const key = normalizeRoleId(roleId);
+        if(key === 'owner') throw new Error('Owner role cannot be deleted');
+        const role = state.roles.find(item=> item.id === key);
+        if(!role) throw new Error('Role not found');
+        state.roles = state.roles.filter(item=> item.id !== key);
+        Object.keys(state.userRoles).forEach(userKey=>{
+          state.userRoles[userKey] = dedupeStringList((state.userRoles[userKey] || []).filter(item=> normalizeRoleId(item) !== key));
+          if(!state.userRoles[userKey].length) delete state.userRoles[userKey];
+        });
+        persistOwnerControlState();
+        logOwnerAction('role.delete', `${role.name}`);
+      },
+      getUserRoles(username){
+        const state = loadOwnerControlState();
+        const normalized = normalizeUsername(username);
+        if(!normalized) return [];
+        const explicit = dedupeStringList(state.userRoles[normalized] || []).map(normalizeRoleId).filter(Boolean);
+        const inferred = inferRoleFromStateBase(username);
+        const list = explicit.slice();
+        if(inferred === 'owner' && !list.includes('owner')) list.push('owner');
+        if(inferred === 'moderator' && !list.includes('moderator')) list.push('moderator');
+        if(!list.length) list.push('member');
+        return dedupeStringList(list);
+      },
+      assignRole(username, roleId){
+        const state = loadOwnerControlState();
+        const userKey = normalizeUsername(username);
+        if(!userKey) throw new Error('Username required');
+        const key = normalizeRoleId(roleId);
+        if(!this.getById(key)) throw new Error('Role does not exist');
+        const current = dedupeStringList(state.userRoles[userKey] || []).map(normalizeRoleId);
+        if(!current.includes(key)) current.push(key);
+        state.userRoles[userKey] = dedupeStringList(current);
+        persistOwnerControlState();
+        logOwnerAction('role.assign', `${username} -> ${key}`);
+      },
+      removeRole(username, roleId){
+        const state = loadOwnerControlState();
+        const userKey = normalizeUsername(username);
+        if(!userKey) throw new Error('Username required');
+        const key = normalizeRoleId(roleId);
+        if(key === 'owner' && normalizeUsername(username) === normalizeUsername(staffState.owner && staffState.owner.username || OWNER_USERNAME)){
+          throw new Error('Cannot remove owner role from platform owner');
+        }
+        const next = dedupeStringList((state.userRoles[userKey] || []).map(normalizeRoleId).filter(item=> item !== key));
+        if(next.length) state.userRoles[userKey] = next;
+        else delete state.userRoles[userKey];
+        persistOwnerControlState();
+        logOwnerAction('role.remove', `${username} -/-> ${key}`);
+      }
+    };
+
+    const badgeService = {
+      getAll(){ return loadOwnerControlState().badges.slice(); },
+      getById(badgeId){
+        const key = normalizeBadgeId(badgeId);
+        return this.getAll().find(badge=> badge.id === key) || null;
+      },
+      create(input){
+        const state = loadOwnerControlState();
+        const record = normalizeBadgeRecord(input);
+        if(!record) throw new Error('Invalid badge');
+        if(state.badges.some(badge=> badge.id === record.id)) throw new Error('Badge already exists');
+        state.badges.push(record);
+        persistOwnerControlState();
+        logOwnerAction('badge.create', `${record.name}`);
+        return record;
+      },
+      update(badgeId, changes){
+        const state = loadOwnerControlState();
+        const key = normalizeBadgeId(badgeId);
+        const idx = state.badges.findIndex(badge=> badge.id === key);
+        if(idx < 0) throw new Error('Badge not found');
+        const next = normalizeBadgeRecord({ ...state.badges[idx], ...changes, id: state.badges[idx].id });
+        if(!next) throw new Error('Invalid badge update');
+        state.badges[idx] = next;
+        persistOwnerControlState();
+        logOwnerAction('badge.update', `${next.name}`);
+        return next;
+      },
+      delete(badgeId){
+        const state = loadOwnerControlState();
+        const key = normalizeBadgeId(badgeId);
+        const badge = state.badges.find(item=> item.id === key);
+        if(!badge) throw new Error('Badge not found');
+        state.badges = state.badges.filter(item=> item.id !== key);
+        Object.keys(state.userBadges).forEach(userKey=>{
+          state.userBadges[userKey] = dedupeStringList((state.userBadges[userKey] || []).filter(item=> normalizeBadgeId(item) !== key));
+          if(!state.userBadges[userKey].length) delete state.userBadges[userKey];
+        });
+        persistOwnerControlState();
+        logOwnerAction('badge.delete', `${badge.name}`);
+      },
+      getUserBadges(username){
+        const state = loadOwnerControlState();
+        const key = normalizeUsername(username);
+        if(!key) return [];
+        return dedupeStringList(state.userBadges[key] || []).map(normalizeBadgeId).filter(Boolean);
+      },
+      assignBadge(username, badgeId){
+        const state = loadOwnerControlState();
+        const userKey = normalizeUsername(username);
+        if(!userKey) throw new Error('Username required');
+        const key = normalizeBadgeId(badgeId);
+        if(!this.getById(key)) throw new Error('Badge does not exist');
+        const next = dedupeStringList([...(state.userBadges[userKey] || []), key]);
+        state.userBadges[userKey] = next;
+        persistOwnerControlState();
+        logOwnerAction('badge.assign', `${username} -> ${key}`);
+      },
+      removeBadge(username, badgeId){
+        const state = loadOwnerControlState();
+        const userKey = normalizeUsername(username);
+        if(!userKey) throw new Error('Username required');
+        const key = normalizeBadgeId(badgeId);
+        const next = dedupeStringList((state.userBadges[userKey] || []).filter(item=> normalizeBadgeId(item) !== key));
+        if(next.length) state.userBadges[userKey] = next;
+        else delete state.userBadges[userKey];
+        persistOwnerControlState();
+        logOwnerAction('badge.remove', `${username} -/-> ${key}`);
+      }
+    };
+
+    function inferRoleFromState(username){
+      const roles = roleService.getUserRoles(username);
+      const catalog = roleService.getAll();
+      const role = roles
+        .map(roleId=> catalog.find(item=> item.id === normalizeRoleId(roleId)))
+        .filter(Boolean)
+        .sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0))[0];
+      return role ? role.id : inferRoleFromStateBase(username);
+    }
+
+    const permissionGuard = {
+      getRolesForUser(user){
+        if(!user || !user.username) return ['member'];
+        return roleService.getUserRoles(user.username);
+      },
+      hasPermission(user, permission){
+        if(!user || !permission) return false;
+        const roleIds = this.getRolesForUser(user);
+        if(roleIds.includes('owner')) return true;
+        const roleCatalog = roleService.getAll();
+        return roleIds.some(roleId=>{
+          const role = roleCatalog.find(item=> item.id === normalizeRoleId(roleId));
+          return !!(role && Array.isArray(role.permissions) && role.permissions.includes(permission));
+        });
+      },
+      requireOwner(user){
+        if(!this.hasPermission(user, OWNER_PERMISSIONS.OWNER_PANEL)) throw new Error('Owner access required');
+      },
+      getModerationPriority(user){
+        if(!user || !user.username) return 0;
+        const roleCatalog = roleService.getAll();
+        return this.getRolesForUser(user)
+          .map(roleId=> roleCatalog.find(item=> item.id === normalizeRoleId(roleId)))
+          .filter(Boolean)
+          .reduce((acc, role)=> Math.max(acc, Number(role.priority || 0)), 0);
+      }
+    };
     const PAGE_SIZE = 12;
     let currentPage = 1;
     let filteredResults = libs.slice();
@@ -433,8 +843,38 @@ Get a code from the character builder in jjs, then paste it here. When you click
       TRENDING: 'trending'
     });
     const REPORTS_STORAGE_KEY = 'jjs_post_reports';
+    const OWNER_ROLES_STORAGE_KEY = 'jjs_owner_roles';
+    const OWNER_BADGES_STORAGE_KEY = 'jjs_owner_badges';
+    const OWNER_USER_ROLES_STORAGE_KEY = 'jjs_owner_user_roles';
+    const OWNER_USER_BADGES_STORAGE_KEY = 'jjs_owner_user_badges';
+    const OWNER_ACTIVITY_LOG_KEY = 'jjs_owner_activity_log';
+    const OWNER_PERMISSIONS = Object.freeze({
+      OWNER_PANEL: 'owner.panel',
+      MODERATION_ACCESS: 'moderation.access',
+      MODERATION_TOOLS: 'moderation.tools',
+      ROLES_MANAGE: 'roles.manage',
+      BADGES_MANAGE: 'badges.manage',
+      COMMANDS_RUN: 'commands.run'
+    });
+    const DEFAULT_OWNER_ROLES = [
+      { id:'owner', name:'Owner', color:'#f5c77d', icon:'👑', priority:1000, permissions:Object.values(OWNER_PERMISSIONS) },
+      { id:'moderator', name:'Moderator', color:'#85c6ff', icon:'🛡', priority:700, permissions:[OWNER_PERMISSIONS.MODERATION_ACCESS, OWNER_PERMISSIONS.MODERATION_TOOLS] },
+      { id:'member', name:'Member', color:'#a9b9d3', icon:'', priority:10, permissions:[] }
+    ];
+    const ownerControlState = {
+      loaded: false,
+      roles: [],
+      badges: [],
+      userRoles: {},
+      userBadges: {},
+      lastLoadedAt: 0
+    };
     let activeSort = SORT_OPTIONS.NEWEST;
     let activeTagFilter = '';
+    let activeFeedMode = 'all';
+    let activeGlobalType = 'all';
+    let activeGlobalSearchSort = 'relevance';
+    let searchDebounceTimer = null;
     const AVATAR_FOLDER = (window.AVATAR_FOLDER || 'avatars').toString().replace(/\\/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
     const DEFAULT_AVATAR_URL = AVATAR_FOLDER ? `${AVATAR_FOLDER}/default.png` : 'default.png';
     const FALLBACK_AVATAR_DATA_URI = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="26" fill="%231f2436"/><circle cx="40" cy="30" r="18" fill="%23495773"/><rect x="18" y="52" width="44" height="18" rx="9" fill="%23495773"/></svg>';
@@ -582,7 +1022,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const viewer = getCurrentUser();
       const query = (queryText || '').trim().toLowerCase();
       const visible = libs.filter(lib=> isLibVisibleToUser(lib, viewer));
-      const matched = visible.filter(lib=>{
+      const followingSet = getFollowingSetForCurrentUser();
+      const feedFiltered = visible.filter(lib=>{
+        if(activeFeedMode !== 'following') return true;
+        if(!viewer || !viewer.username) return false;
+        if(normalizeUsername(lib.author) === normalizeUsername(viewer.username)) return true;
+        return followingSet.has(normalizeUsername(lib.author));
+      });
+      const matched = feedFiltered.filter(lib=>{
         if(activeTagFilter){
           const hasTag = (lib.tags || []).some(tag=> (tag || '').toLowerCase() === activeTagFilter);
           if(!hasTag) return false;
@@ -597,6 +1044,213 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const sortedPinned = sortLibraries(pinned, activeSort);
       const sortedRegular = sortLibraries(regular, activeSort);
       return [...sortedPinned, ...sortedRegular];
+    }
+
+    function getFollowingSetForCurrentUser(){
+      const user = getCurrentUser();
+      if(!user || !user.username) return new Set();
+      const key = getSocialStorageKey(user.username);
+      const legacyKey = 'jjs_social_' + user.username;
+      let following = [];
+      const cached = socialCache.get(normalizeUsernameKey(user.username)) || socialCache.get(user.username);
+      if(cached && Array.isArray(cached.following)) following = cached.following;
+      if(!following.length){
+        try{
+          const social = JSON.parse(localStorage.getItem(key) || localStorage.getItem(legacyKey) || '{}');
+          following = Array.isArray(social.following) ? social.following : [];
+        }catch(_e){ following = []; }
+      }
+      return new Set(normalizeUserList(following).map(normalizeUsername));
+    }
+
+    function getCachedSocialSnapshot(username){
+      if(!username) return {};
+      const normalizedUser = normalizeUsernameKey(username);
+      const cached = socialCache.get(normalizedUser) || socialCache.get(username);
+      if(cached) return cached;
+      try{
+        return JSON.parse(localStorage.getItem(getSocialStorageKey(username)) || localStorage.getItem('jjs_social_' + username) || '{}') || {};
+      }catch(_e){
+        return {};
+      }
+    }
+
+    function getRoleBadgeEntries(username, social, opts = {}){
+      const context = opts.context || 'default';
+      const badges = [];
+      const roleCatalog = roleService.getAll();
+      const roleIds = roleService.getUserRoles(username);
+      roleIds
+        .map(roleId=> roleCatalog.find(role=> role.id === normalizeRoleId(roleId)))
+        .filter(Boolean)
+        .sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0))
+        .forEach(role=>{
+          if(role.id === 'member') return;
+          const short = (role.icon || role.name || role.id || 'R').slice(0, 3).toUpperCase();
+          const cls = role.id === 'owner' ? 'roleBadge--owner' : (role.id === 'moderator' ? 'roleBadge--moderator' : 'roleBadge--custom');
+          badges.push({ label: role.name, short, cls, color: role.color });
+        });
+
+      const assignedBadges = badgeService.getUserBadges(username)
+        .map(badgeId=> badgeService.getById(badgeId))
+        .filter(Boolean)
+        .filter(badge=> context !== 'comment' || badge.showInComments !== false)
+        .map(badge=>({ label: badge.tooltip || badge.name, short: (badge.icon || badge.name || '🏅').slice(0, 3), cls:'roleBadge--custom', color: badge.color }));
+      badges.push(...assignedBadges);
+
+      const socialData = social || getCachedSocialSnapshot(username);
+      if(socialData && socialData.verifiedCreator) badges.push({ label:'Verified Creator', short:'✓', cls:'roleBadge--verified' });
+      if(socialData && socialData.ogUser) badges.push({ label:'OG User', short:'OG', cls:'roleBadge--og' });
+      return badges;
+    }
+
+    function renderRoleBadgesInline(container, username, social, opts = {}){
+      if(!container) return;
+      const badges = getRoleBadgeEntries(username, social, opts);
+      const existing = container.querySelector('.roleBadges');
+      if(existing) existing.remove();
+      if(!badges.length) return;
+      const wrap = document.createElement('span');
+      wrap.className = 'roleBadges';
+      badges.forEach(badge=>{
+        const item = document.createElement('span');
+        item.className = `roleBadge ${badge.cls}`;
+        item.textContent = badge.short;
+        item.title = badge.label;
+        if(badge.color) item.style.setProperty('--badge-color', badge.color);
+        wrap.appendChild(item);
+      });
+      container.appendChild(wrap);
+    }
+
+    function escapeRegExp(value){
+      return (value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function highlightMatch(text, query){
+      const safeText = escapeHtml(String(text || ''));
+      const q = (query || '').trim();
+      if(!q) return safeText;
+      const regex = new RegExp(`(${escapeRegExp(q)})`, 'ig');
+      return safeText.replace(regex, '<mark>$1</mark>');
+    }
+
+    function buildGlobalSearchResults(query){
+      const text = (query || '').trim();
+      if(!text) return { posts: [], users: [], tags: [] };
+      const q = text.toLowerCase();
+      const viewer = getCurrentUser();
+      const visiblePosts = libs.filter(lib=> isLibVisibleToUser(lib, viewer));
+
+      const posts = visiblePosts
+        .map(lib=>{
+          const title = String(lib.title || '');
+          const author = String(lib.author || '');
+          const tags = (lib.tags || []).join(' ');
+          const hay = `${title} ${author} ${tags}`.toLowerCase();
+          const score = (hay.includes(q) ? 1 : 0) + (title.toLowerCase().includes(q) ? 2 : 0);
+          if(!score) return null;
+          return { id: lib.id, title, author, createdAt: Number(lib.createdAt) || 0, score };
+        })
+        .filter(Boolean)
+        .sort((a,b)=> activeGlobalSearchSort === 'newest' ? b.createdAt - a.createdAt : b.score - a.score);
+
+      const userMap = new Map();
+      visiblePosts.forEach(lib=>{
+        const name = String(lib.author || '').trim();
+        if(!name) return;
+        const lower = name.toLowerCase();
+        const item = userMap.get(lower) || { username:name, count:0, latest:0 };
+        item.count += 1;
+        item.latest = Math.max(item.latest, Number(lib.createdAt) || 0);
+        userMap.set(lower, item);
+      });
+      const users = Array.from(userMap.values())
+        .filter(item=> item.username.toLowerCase().includes(q))
+        .sort((a,b)=> activeGlobalSearchSort === 'newest' ? b.latest - a.latest : b.count - a.count);
+
+      const tagMap = new Map();
+      visiblePosts.forEach(lib=>{
+        (lib.tags || []).forEach(tag=>{
+          const clean = String(tag || '').trim();
+          if(!clean) return;
+          const lower = clean.toLowerCase();
+          tagMap.set(lower, (tagMap.get(lower) || 0) + 1);
+        });
+      });
+      const tags = Array.from(tagMap.entries())
+        .filter(([tag])=> tag.includes(q))
+        .map(([tag,count])=> ({ tag, count }))
+        .sort((a,b)=> b.count - a.count);
+
+      return { posts, users, tags };
+    }
+
+    function renderGlobalSearchResults(query){
+      const panel = document.getElementById('globalSearchResults');
+      if(!panel) return;
+      const text = (query || '').trim();
+      if(!text){ panel.style.display = 'none'; panel.innerHTML = ''; return; }
+      const groups = buildGlobalSearchResults(text);
+      const showPosts = activeGlobalType === 'all' || activeGlobalType === 'posts';
+      const showUsers = activeGlobalType === 'all' || activeGlobalType === 'users';
+      const showTags = activeGlobalType === 'all' || activeGlobalType === 'tags';
+      panel.innerHTML = '';
+      const appendGroup = (title, items)=>{
+        const group = document.createElement('div');
+        group.className = 'globalSearchGroup';
+        group.innerHTML = `<div class="smallMuted">${title}</div>`;
+        items.forEach(node=> group.appendChild(node));
+        panel.appendChild(group);
+      };
+
+      if(showPosts && groups.posts.length){
+        const nodes = groups.posts.slice(0, 8).map(item=>{
+          const row = document.createElement('div');
+          row.className = 'globalSearchItem';
+          row.innerHTML = `<div>${highlightMatch(censorBadWords(item.title), text)}</div><div class="smallMuted">by ${highlightMatch(censorBadWords(item.author), text)}</div>`;
+          row.addEventListener('click', ()=>{
+            activeGlobalType = 'posts';
+            const input = document.getElementById('search');
+            if(input) input.value = item.title;
+            refreshListView({ refilter:true, resetPage:true, animate:true });
+          });
+          return row;
+        });
+        appendGroup('Posts', nodes);
+      }
+
+      if(showUsers && groups.users.length){
+        const nodes = groups.users.slice(0, 8).map(item=>{
+          const row = document.createElement('div');
+          row.className = 'globalSearchItem';
+          row.innerHTML = `<div>${highlightMatch(censorBadWords(item.username), text)}</div><div class="smallMuted">${item.count} post${item.count===1?'':'s'}</div>`;
+          row.addEventListener('click', ()=> openProfile(item.username));
+          return row;
+        });
+        appendGroup('Users', nodes);
+      }
+
+      if(showTags && groups.tags.length){
+        const nodes = groups.tags.slice(0, 10).map(item=>{
+          const row = document.createElement('div');
+          row.className = 'globalSearchItem';
+          row.innerHTML = `<div>#${highlightMatch(censorBadWords(item.tag), text)}</div><div class="smallMuted">${item.count} post${item.count===1?'':'s'}</div>`;
+          row.addEventListener('click', ()=>{
+            activeTagFilter = item.tag;
+            const tagSelect = document.getElementById('tagFilterSelect');
+            if(tagSelect) tagSelect.value = item.tag;
+            refreshListView({ refilter:true, resetPage:true, animate:true });
+          });
+          return row;
+        });
+        appendGroup('Tags', nodes);
+      }
+
+      if(!panel.innerHTML){
+        panel.innerHTML = '<div class="smallMuted">No results found.</div>';
+      }
+      panel.style.display = 'block';
     }
 
     function refreshTagFilterOptions(){
@@ -1252,6 +1906,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
           if(!avatarImg) return;
           try{
             const social = await fetchSocial(lib.author);
+            const authorMeta = node.querySelector('.meta');
+            renderRoleBadgesInline(authorMeta, lib.author, social);
             const avatarSource = getAvatarSourceBundle(lib.author, social);
             setAvatarImage(avatarImg, {
               src: avatarSource.src || DEFAULT_AVATAR_URL,
@@ -1268,6 +1924,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
               meta.appendChild(bioEl);
             }
           }catch(e){
+            const authorMeta = node.querySelector('.meta');
+            renderRoleBadgesInline(authorMeta, lib.author);
             setAvatarImage(avatarImg, { src: DEFAULT_AVATAR_URL, wrapper: avatarWrap, stage: 'default' });
           }
         })();
@@ -1673,6 +2331,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
             const safeAuthor = censorBadWords(c.author || '');
             const safeCommentText = escapeHtml(censorBadWords(c.text || ''));
             div.innerHTML = `<span class="small"><b>${safeAuthor}</b>:</span> <span>${safeCommentText}</span> <span class="smallMuted" style="margin-left:8px">${new Date(c.t).toLocaleString()}</span>`;
+            const authorSpan = div.querySelector('.small');
+            renderRoleBadgesInline(authorSpan, c.author, null, { context:'comment' });
             // Reply button
             if(depth<4){
               const replyBtn = document.createElement('button'); replyBtn.className='ghost'; replyBtn.textContent='Reply'; replyBtn.style.marginLeft='8px';
@@ -1845,8 +2505,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
       renderPaginationControls(totalPages);
     }
 
-    search.addEventListener('input', ()=>{
+    const runSearchPipeline = ()=>{
       refreshListView({ refilter:true, resetPage:true, animate:true });
+      renderGlobalSearchResults(search.value || '');
+    };
+
+    search.addEventListener('input', ()=>{
+      if(searchDebounceTimer) clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(runSearchPipeline, 220);
     });
 
     const sortSelectEl = document.getElementById('sortSelect');
@@ -1862,6 +2528,30 @@ Get a code from the character builder in jjs, then paste it here. When you click
     if(tagFilterSelectEl){
       tagFilterSelectEl.addEventListener('change', ()=>{
         activeTagFilter = (tagFilterSelectEl.value || '').toLowerCase();
+        refreshListView({ refilter:true, resetPage:true, animate:true });
+      });
+    }
+
+    const globalTypeSelectEl = document.getElementById('globalTypeSelect');
+    if(globalTypeSelectEl){
+      globalTypeSelectEl.addEventListener('change', ()=>{
+        activeGlobalType = globalTypeSelectEl.value || 'all';
+        renderGlobalSearchResults(search.value || '');
+      });
+    }
+
+    const globalSearchSortEl = document.getElementById('globalSearchSort');
+    if(globalSearchSortEl){
+      globalSearchSortEl.addEventListener('change', ()=>{
+        activeGlobalSearchSort = globalSearchSortEl.value || 'relevance';
+        renderGlobalSearchResults(search.value || '');
+      });
+    }
+
+    const feedModeSelectEl = document.getElementById('feedModeSelect');
+    if(feedModeSelectEl){
+      feedModeSelectEl.addEventListener('change', ()=>{
+        activeFeedMode = feedModeSelectEl.value || 'all';
         refreshListView({ refilter:true, resetPage:true, animate:true });
       });
     }
@@ -2030,15 +2720,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return usersList.filter(u=> (u.role || '').toLowerCase() === 'moderator').map(u=>({ id: u.id || u.username, username: u.username }));
     }
 
-    function inferRoleFromState(username){
-      const normalized = (username || '').toLowerCase();
-      if(!normalized) return 'member';
-      if(staffState.owner && staffState.owner.username && staffState.owner.username.toLowerCase() === normalized) return 'owner';
-      if(staffState.moderators.some(mod=> (mod.username || '').toLowerCase() === normalized)) return 'moderator';
-      if(OWNER_USERNAME_LOWER && normalized === OWNER_USERNAME_LOWER) return 'owner';
-      return 'member';
-    }
-
     function inferRoleFromPayload(payload){
       if(!payload) return 'member';
       if(payload.role) return payload.role;
@@ -2157,9 +2838,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const btn = document.getElementById('addModeratorBtn');
       if(!btn) return;
       const user = getCurrentUser();
-      const ownerName = staffState.owner && staffState.owner.username ? staffState.owner.username.toLowerCase() : '';
-      const userMatch = user && user.username ? user.username.toLowerCase() : '';
-      const isOwner = !!(user && (user.role === 'owner' || (ownerName && ownerName === userMatch) || (OWNER_USERNAME_LOWER && OWNER_USERNAME_LOWER === userMatch)));
+      const isOwner = permissionGuard.hasPermission(user, OWNER_PERMISSIONS.OWNER_PANEL);
       btn.style.display = isOwner ? 'inline-flex' : 'none';
       if(!isOwner){
         btn.disabled = false;
@@ -2180,6 +2859,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       });
       const data = await resp.json().catch(()=>null);
       if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to update staff');
+      try{ roleService.assignRole(targetName, 'moderator'); }catch(_e){}
       return data.user;
     }
 
@@ -2196,6 +2876,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       });
       const data = await resp.json().catch(()=>null);
       if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to update staff');
+      try{ roleService.removeRole(targetName, 'moderator'); }catch(_e){}
       return data.user;
     }
 
@@ -2220,6 +2901,519 @@ Get a code from the character builder in jjs, then paste it here. When you click
         btn.disabled = false;
         btn.textContent = original;
       }
+    }
+
+    function refreshGlobalRoleBadgeUI(){
+      refreshListView({ refilter:true });
+      renderSidebar();
+      const profileModal = document.getElementById('profileModal');
+      if(profileModal){
+        const heading = profileModal.querySelector('[data-profile-username]');
+        if(heading){
+          renderRoleBadgesInline(heading.parentElement || heading, heading.getAttribute('data-profile-username') || '');
+        }
+      }
+    }
+
+    function ensureOwnerAccess(user = getCurrentUser()){
+      permissionGuard.requireOwner(user);
+      return true;
+    }
+
+    function findLibraryByRef(ref){
+      const text = String(ref || '').trim();
+      if(!text) return null;
+      const byId = libs.find(lib=> String(lib.id) === text);
+      if(byId) return byId;
+      const lower = text.toLowerCase();
+      return libs.find(lib=> String(lib.title || '').toLowerCase() === lower) || null;
+    }
+
+    const commandHandler = {
+      registry: {
+        cmds: {
+          usage: '?cmds',
+          description: 'Open command help panel',
+          run: async ()=>{
+            openOwnerCommandPanel();
+            return 'Opened command panel';
+          }
+        },
+        mod: {
+          usage: 'mod <user>',
+          description: 'Grant moderator role',
+          run: async ([username], user)=>{
+            ensureOwnerAccess(user);
+            if(!username) throw new Error('Usage: mod <user>');
+            await promoteToModerator(username);
+            await refreshStaffDisplay();
+            refreshGlobalRoleBadgeUI();
+            return `${username} promoted to moderator`;
+          }
+        },
+        unmod: {
+          usage: 'unmod <user>',
+          description: 'Remove moderator role',
+          run: async ([username], user)=>{
+            ensureOwnerAccess(user);
+            if(!username) throw new Error('Usage: unmod <user>');
+            await demoteModerator(username);
+            await refreshStaffDisplay();
+            refreshGlobalRoleBadgeUI();
+            return `${username} removed from moderators`;
+          }
+        },
+        giverole: {
+          usage: 'giverole <user> <role>',
+          description: 'Assign a role to a user',
+          run: async ([username, roleId], user)=>{
+            ensureOwnerAccess(user);
+            if(!username || !roleId) throw new Error('Usage: giverole <user> <role>');
+            roleService.assignRole(username, roleId);
+            refreshGlobalRoleBadgeUI();
+            return `Assigned ${roleId} to ${username}`;
+          }
+        },
+        removerole: {
+          usage: 'removerole <user> <role>',
+          description: 'Remove a role from a user',
+          run: async ([username, roleId], user)=>{
+            ensureOwnerAccess(user);
+            if(!username || !roleId) throw new Error('Usage: removerole <user> <role>');
+            roleService.removeRole(username, roleId);
+            refreshGlobalRoleBadgeUI();
+            return `Removed ${roleId} from ${username}`;
+          }
+        },
+        givebadge: {
+          usage: 'givebadge <user> <badge>',
+          description: 'Assign a badge to a user',
+          run: async ([username, badgeId], user)=>{
+            ensureOwnerAccess(user);
+            if(!username || !badgeId) throw new Error('Usage: givebadge <user> <badge>');
+            badgeService.assignBadge(username, badgeId);
+            refreshGlobalRoleBadgeUI();
+            return `Assigned ${badgeId} to ${username}`;
+          }
+        },
+        removebadge: {
+          usage: 'removebadge <user> <badge>',
+          description: 'Remove a badge from a user',
+          run: async ([username, badgeId], user)=>{
+            ensureOwnerAccess(user);
+            if(!username || !badgeId) throw new Error('Usage: removebadge <user> <badge>');
+            badgeService.removeBadge(username, badgeId);
+            refreshGlobalRoleBadgeUI();
+            return `Removed ${badgeId} from ${username}`;
+          }
+        },
+        pinpost: {
+          usage: 'pinpost <postId|title>',
+          description: 'Pin a post',
+          run: async ([...parts], user)=>{
+            if(!permissionGuard.hasPermission(user, OWNER_PERMISSIONS.MODERATION_TOOLS)) throw new Error('Permission denied');
+            const target = findLibraryByRef(parts.join(' '));
+            if(!target) throw new Error('Post not found');
+            target.pinned = true;
+            await persistLibraryFile(target);
+            refreshListView({ refilter:true });
+            return `Pinned ${target.title || target.id}`;
+          }
+        },
+        deletepost: {
+          usage: 'deletepost <postId|title>',
+          description: 'Delete a post',
+          run: async ([...parts], user)=>{
+            if(!permissionGuard.hasPermission(user, OWNER_PERMISSIONS.MODERATION_TOOLS)) throw new Error('Permission denied');
+            const target = findLibraryByRef(parts.join(' '));
+            if(!target) throw new Error('Post not found');
+            const idx = libs.findIndex(lib=> lib && lib.id === target.id);
+            if(idx < 0) throw new Error('Post not found');
+            libs.splice(idx, 1);
+            refreshListView({ refilter:true, resetPage:true });
+            return `Deleted ${target.title || target.id}`;
+          }
+        },
+        banuser: {
+          usage: 'banuser <username>',
+          description: 'Local ban list (optional)',
+          run: async ([username], user)=>{
+            if(!permissionGuard.hasPermission(user, OWNER_PERMISSIONS.MODERATION_TOOLS)) throw new Error('Permission denied');
+            const target = String(username || '').trim();
+            if(!target) throw new Error('Usage: banuser <username>');
+            const key = 'jjs_banned_users';
+            let list = [];
+            try{ list = JSON.parse(localStorage.getItem(key) || '[]'); }catch(_e){ list = []; }
+            list = dedupeStringList([...(Array.isArray(list) ? list : []), target]);
+            try{ localStorage.setItem(key, JSON.stringify(list)); }catch(_e){}
+            return `${target} added to local ban list`;
+          }
+        }
+      },
+      list(){
+        return Object.entries(this.registry).map(([name, item])=>({ name, usage:item.usage, description:item.description }));
+      },
+      async run(rawCommand){
+        const user = getCurrentUser();
+        const text = String(rawCommand || '').trim();
+        if(!text) throw new Error('Enter a command');
+        const normalized = text.startsWith('?') ? text.slice(1) : text;
+        const parts = normalized.split(/\s+/).filter(Boolean);
+        const name = (parts.shift() || '').toLowerCase();
+        const entry = this.registry[name];
+        if(!entry) throw new Error('Unknown command. Run ?cmds');
+        if(name !== 'cmds') ensureOwnerAccess(user);
+        return await entry.run(parts, user);
+      }
+    };
+
+    function openOwnerCommandPanel(){
+      try{ ensureOwnerAccess(getCurrentUser()); }catch(_e){
+        alert('Owner access required');
+        return;
+      }
+      let modal = document.getElementById('ownerCommandsModal');
+      if(modal) modal.remove();
+      modal = document.createElement('div');
+      modal.id = 'ownerCommandsModal';
+      modal.className = 'ownerPanelOverlay';
+      modal.innerHTML = `<div class="ownerPanelCard" style="grid-template-columns:1fr;max-width:760px">
+        <div class="ownerPanelBody">
+          <div class="ownerRow" style="justify-content:space-between">
+            <h3 style="margin:0">Command Console</h3>
+            <button class="ghost" id="closeOwnerCommands" type="button">Close</button>
+          </div>
+          <div class="ownerCommands" id="ownerCommandsList"></div>
+          <form id="ownerCommandsForm" class="ownerRow">
+            <input id="ownerCommandInput" placeholder="giverole username moderator" />
+            <button class="ghost" type="submit">Run</button>
+          </form>
+          <div class="ownerStatus" id="ownerCommandStatus"></div>
+        </div>
+      </div>`;
+      document.body.appendChild(modal);
+      const listEl = modal.querySelector('#ownerCommandsList');
+      if(listEl){
+        listEl.innerHTML = commandHandler.list().map(item=>`<div><strong>${escapeHtml(item.usage)}</strong> — ${escapeHtml(item.description)}</div>`).join('');
+      }
+      const close = ()=> modal.remove();
+      modal.querySelector('#closeOwnerCommands').addEventListener('click', close);
+      modal.addEventListener('click', ev=>{ if(ev.target === modal) close(); });
+      const form = modal.querySelector('#ownerCommandsForm');
+      const input = modal.querySelector('#ownerCommandInput');
+      const status = modal.querySelector('#ownerCommandStatus');
+      form.addEventListener('submit', async ev=>{
+        ev.preventDefault();
+        const cmd = input.value.trim();
+        if(!cmd){ status.textContent = 'Enter a command'; return; }
+        status.textContent = 'Running...';
+        try{
+          const result = await commandHandler.run(cmd);
+          status.textContent = result;
+          input.value = '';
+        }catch(err){
+          status.textContent = err && err.message ? err.message : 'Command failed';
+        }
+      });
+      input.focus();
+    }
+
+    function openOwnerPanel(){
+      const user = getCurrentUser();
+      try{ ensureOwnerAccess(user); }catch(_e){
+        alert('Owner access required');
+        if(location.hash === '#owner-panel') history.replaceState(null, '', location.pathname + location.search);
+        return;
+      }
+      loadOwnerControlState();
+      let panel = document.getElementById('ownerPanelModal');
+      if(panel) panel.remove();
+      panel = document.createElement('div');
+      panel.id = 'ownerPanelModal';
+      panel.className = 'ownerPanelOverlay';
+      panel.innerHTML = `<div class="ownerPanelCard">
+        <aside class="ownerPanelSide">
+          <button class="ownerPanelTab active" data-owner-tab="roles" type="button">Role Management</button>
+          <button class="ownerPanelTab" data-owner-tab="badges" type="button">Badge Management</button>
+          <button class="ownerPanelTab" data-owner-tab="assign" type="button">User Assignment</button>
+          <button class="ownerPanelTab" data-owner-tab="mods" type="button">Moderator Management</button>
+          <button class="ownerPanelTab" data-owner-tab="commands" type="button">Command Console</button>
+          <button class="ghost" id="closeOwnerPanel" type="button" style="margin-top:auto">Close</button>
+        </aside>
+        <section class="ownerPanelBody" id="ownerPanelBody"></section>
+      </div>`;
+      document.body.appendChild(panel);
+
+      const body = panel.querySelector('#ownerPanelBody');
+      const tabs = Array.from(panel.querySelectorAll('.ownerPanelTab'));
+
+      const renderUserSearch = (container, onPick)=>{
+        const wrap = document.createElement('div');
+        wrap.className = 'ownerCard';
+        wrap.innerHTML = `<div class="ownerRow"><input placeholder="Search user..." /><div class="ownerStatus">Fast search</div></div><div class="ownerSearchResults"></div>`;
+        const input = wrap.querySelector('input');
+        const results = wrap.querySelector('.ownerSearchResults');
+        const renderResults = ()=>{
+          const list = searchKnownUsers(input.value);
+          results.innerHTML = '';
+          if(!list.length){ results.innerHTML = '<div class="ownerStatus">No users found</div>'; return; }
+          list.forEach(username=>{
+            const row = document.createElement('div');
+            row.className = 'ownerSearchResult';
+            row.textContent = username;
+            row.addEventListener('click', ()=> onPick(username));
+            results.appendChild(row);
+          });
+        };
+        input.addEventListener('input', renderResults);
+        renderResults();
+        container.appendChild(wrap);
+      };
+
+      const renderRolesTab = ()=>{
+        const roles = roleService.getAll();
+        body.innerHTML = `<h3 style="margin:0">Role Management</h3>
+          <div class="ownerCard"><div class="ownerRow">
+            <input id="newRoleName" placeholder="Role name" />
+            <input id="newRoleColor" type="color" value="#a9b9d3" style="max-width:70px;padding:4px" />
+            <input id="newRoleIcon" placeholder="Icon" style="max-width:90px" />
+            <input id="newRolePriority" type="number" value="100" placeholder="Priority" style="max-width:100px" />
+            <input id="newRolePermissions" placeholder="permissions (comma separated)" />
+            <button class="ghost" id="createRoleBtn" type="button">Create role</button>
+          </div></div>
+          <div class="ownerList" id="ownerRolesList"></div>`;
+        const listEl = body.querySelector('#ownerRolesList');
+        roles.forEach(role=>{
+          const item = document.createElement('div');
+          item.className = 'ownerListItem';
+          item.innerHTML = `<div class="ownerListMeta"><span class="ownerDot" style="--dot-color:${escapeHtml(role.color)}"></span><b>${escapeHtml(role.icon ? `${role.icon} ${role.name}` : role.name)}</b><span class="ownerStatus">priority ${Number(role.priority)||0}</span></div>
+          <div class="ownerRow"><button class="ghost" data-action="edit">Edit</button><button class="ghost" data-action="delete">Delete</button></div>`;
+          item.querySelector('[data-action="edit"]').addEventListener('click', ()=>{
+            const name = prompt('Role name', role.name);
+            if(name === null) return;
+            const color = prompt('Role color (hex)', role.color);
+            if(color === null) return;
+            const icon = prompt('Role icon (optional)', role.icon || '');
+            if(icon === null) return;
+            const priorityInput = prompt('Priority number', String(role.priority || 0));
+            if(priorityInput === null) return;
+            const permissionsInput = prompt('Permissions (comma separated)', (role.permissions || []).join(','));
+            if(permissionsInput === null) return;
+            try{
+              roleService.update(role.id, {
+                name,
+                color,
+                icon,
+                priority: Number(priorityInput) || 0,
+                permissions: permissionsInput.split(',').map(v=>v.trim()).filter(Boolean)
+              });
+              refreshGlobalRoleBadgeUI();
+              renderRolesTab();
+            }catch(err){ alert(err && err.message ? err.message : 'Update failed'); }
+          });
+          item.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
+            if(role.id === 'owner') return alert('Owner role cannot be deleted');
+            if(!confirm(`Delete role ${role.name}? This removes it from all users.`)) return;
+            try{
+              roleService.delete(role.id);
+              refreshGlobalRoleBadgeUI();
+              renderRolesTab();
+            }catch(err){ alert(err && err.message ? err.message : 'Delete failed'); }
+          });
+          listEl.appendChild(item);
+        });
+        body.querySelector('#createRoleBtn').addEventListener('click', ()=>{
+          const name = body.querySelector('#newRoleName').value.trim();
+          const color = body.querySelector('#newRoleColor').value;
+          const icon = body.querySelector('#newRoleIcon').value.trim();
+          const priority = Number(body.querySelector('#newRolePriority').value || 0);
+          const permissions = body.querySelector('#newRolePermissions').value.split(',').map(v=>v.trim()).filter(Boolean);
+          try{
+            roleService.create({ name, color, icon, priority, permissions });
+            refreshGlobalRoleBadgeUI();
+            renderRolesTab();
+          }catch(err){ alert(err && err.message ? err.message : 'Create failed'); }
+        });
+      };
+
+      const renderBadgesTab = ()=>{
+        const badges = badgeService.getAll();
+        body.innerHTML = `<h3 style="margin:0">Badge Management</h3>
+          <div class="ownerCard"><div class="ownerRow">
+            <input id="newBadgeName" placeholder="Badge name" />
+            <input id="newBadgeIcon" placeholder="Icon" style="max-width:90px" value="🏅" />
+            <input id="newBadgeColor" type="color" value="#a9b9d3" style="max-width:70px;padding:4px" />
+            <input id="newBadgeTooltip" placeholder="Tooltip description" />
+            <button class="ghost" id="createBadgeBtn" type="button">Create badge</button>
+          </div></div>
+          <div class="ownerList" id="ownerBadgesList"></div>`;
+        const listEl = body.querySelector('#ownerBadgesList');
+        badges.forEach(badge=>{
+          const item = document.createElement('div');
+          item.className = 'ownerListItem';
+          item.innerHTML = `<div class="ownerListMeta"><span class="ownerDot" style="--dot-color:${escapeHtml(badge.color)}"></span><b>${escapeHtml(`${badge.icon} ${badge.name}`)}</b><span class="ownerStatus">${escapeHtml(badge.tooltip || 'No tooltip')}</span></div>
+          <div class="ownerRow"><button class="ghost" data-action="edit">Edit</button><button class="ghost" data-action="delete">Delete</button></div>`;
+          item.querySelector('[data-action="edit"]').addEventListener('click', ()=>{
+            const name = prompt('Badge name', badge.name);
+            if(name === null) return;
+            const icon = prompt('Badge icon', badge.icon || '🏅');
+            if(icon === null) return;
+            const color = prompt('Badge color (hex)', badge.color);
+            if(color === null) return;
+            const tooltip = prompt('Tooltip description', badge.tooltip || '');
+            if(tooltip === null) return;
+            const showInComments = confirm('Show badge in comments? (OK = Yes, Cancel = No)');
+            try{
+              badgeService.update(badge.id, { name, icon, color, tooltip, showInComments });
+              refreshGlobalRoleBadgeUI();
+              renderBadgesTab();
+            }catch(err){ alert(err && err.message ? err.message : 'Update failed'); }
+          });
+          item.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
+            if(!confirm(`Delete badge ${badge.name}? It will be removed from all users.`)) return;
+            try{
+              badgeService.delete(badge.id);
+              refreshGlobalRoleBadgeUI();
+              renderBadgesTab();
+            }catch(err){ alert(err && err.message ? err.message : 'Delete failed'); }
+          });
+          listEl.appendChild(item);
+        });
+        body.querySelector('#createBadgeBtn').addEventListener('click', ()=>{
+          const name = body.querySelector('#newBadgeName').value.trim();
+          const icon = body.querySelector('#newBadgeIcon').value.trim() || '🏅';
+          const color = body.querySelector('#newBadgeColor').value;
+          const tooltip = body.querySelector('#newBadgeTooltip').value.trim();
+          try{
+            badgeService.create({ name, icon, color, tooltip, showInComments:true });
+            refreshGlobalRoleBadgeUI();
+            renderBadgesTab();
+          }catch(err){ alert(err && err.message ? err.message : 'Create failed'); }
+        });
+      };
+
+      const renderAssignTab = ()=>{
+        body.innerHTML = `<h3 style="margin:0">User Role & Badge Assignment</h3><div id="ownerAssignMount"></div><div class="ownerStatus" id="ownerAssignStatus"></div>`;
+        const mount = body.querySelector('#ownerAssignMount');
+        const status = body.querySelector('#ownerAssignStatus');
+        renderUserSearch(mount, username=>{
+          const roles = roleService.getAll();
+          const badges = badgeService.getAll();
+          const roleId = prompt(`Assign role to ${username}. Available: ${roles.map(r=>r.id).join(', ')}`);
+          if(roleId){
+            try{ roleService.assignRole(username, roleId); status.textContent = `Assigned role ${roleId} to ${username}`; }catch(err){ status.textContent = err && err.message ? err.message : 'Role assignment failed'; }
+          }
+          const removeRoleId = prompt(`Remove role from ${username} (optional). Leave empty to skip.`);
+          if(removeRoleId){
+            try{ roleService.removeRole(username, removeRoleId); status.textContent = `Removed role ${removeRoleId} from ${username}`; }catch(err){ status.textContent = err && err.message ? err.message : 'Role remove failed'; }
+          }
+          if(badges.length){
+            const badgeId = prompt(`Assign badge to ${username}. Available: ${badges.map(b=>b.id).join(', ')}`);
+            if(badgeId){
+              try{ badgeService.assignBadge(username, badgeId); status.textContent = `Assigned badge ${badgeId} to ${username}`; }catch(err){ status.textContent = err && err.message ? err.message : 'Badge assignment failed'; }
+            }
+            const removeBadgeId = prompt(`Remove badge from ${username} (optional). Leave empty to skip.`);
+            if(removeBadgeId){
+              try{ badgeService.removeBadge(username, removeBadgeId); status.textContent = `Removed badge ${removeBadgeId} from ${username}`; }catch(err){ status.textContent = err && err.message ? err.message : 'Badge remove failed'; }
+            }
+          }
+          refreshGlobalRoleBadgeUI();
+        });
+      };
+
+      const renderModeratorsTab = ()=>{
+        body.innerHTML = `<h3 style="margin:0">Moderator Management</h3><div id="ownerModsMount"></div><div class="ownerStatus" id="ownerModsStatus"></div><div class="ownerList" id="ownerModsList"></div>`;
+        const status = body.querySelector('#ownerModsStatus');
+        const list = body.querySelector('#ownerModsList');
+        const renderMods = ()=>{
+          list.innerHTML = '';
+          const mods = (staffState.moderators || []).slice();
+          if(!mods.length){ list.innerHTML = '<div class="ownerStatus">No moderators yet</div>'; return; }
+          mods.forEach(mod=>{
+            const row = document.createElement('div');
+            row.className = 'ownerListItem';
+            row.innerHTML = `<div class="ownerListMeta"><b>${escapeHtml(mod.username || 'unknown')}</b></div><button class="ghost" type="button">Remove moderator</button>`;
+            row.querySelector('button').addEventListener('click', async ()=>{
+              if(!confirm(`Remove moderator ${mod.username}?`)) return;
+              try{
+                await demoteModerator(mod.username);
+                roleService.removeRole(mod.username, 'moderator');
+                await refreshStaffDisplay();
+                refreshGlobalRoleBadgeUI();
+                renderMods();
+                status.textContent = `${mod.username} removed from moderators`;
+              }catch(err){ status.textContent = err && err.message ? err.message : 'Failed to remove moderator'; }
+            });
+            list.appendChild(row);
+          });
+        };
+        renderUserSearch(body.querySelector('#ownerModsMount'), async username=>{
+          try{
+            await promoteToModerator(username);
+            roleService.assignRole(username, 'moderator');
+            await refreshStaffDisplay();
+            refreshGlobalRoleBadgeUI();
+            renderMods();
+            status.textContent = `${username} is now a moderator`;
+          }catch(err){ status.textContent = err && err.message ? err.message : 'Failed to add moderator'; }
+        });
+        renderMods();
+      };
+
+      const renderCommandsTab = ()=>{
+        body.innerHTML = `<h3 style="margin:0">Command Console</h3>
+          <div class="ownerCommands">${commandHandler.list().map(item=>`<div><strong>${escapeHtml(item.usage)}</strong> — ${escapeHtml(item.description)}</div>`).join('')}</div>
+          <form id="ownerPanelCommandForm" class="ownerRow"><input id="ownerPanelCommandInput" placeholder="giverole user moderator"/><button class="ghost" type="submit">Run</button></form>
+          <div class="ownerStatus" id="ownerPanelCommandStatus"></div>`;
+        const form = body.querySelector('#ownerPanelCommandForm');
+        const input = body.querySelector('#ownerPanelCommandInput');
+        const status = body.querySelector('#ownerPanelCommandStatus');
+        form.addEventListener('submit', async ev=>{
+          ev.preventDefault();
+          const cmd = input.value.trim();
+          if(!cmd){ status.textContent = 'Enter a command'; return; }
+          status.textContent = 'Running...';
+          try{
+            const result = await commandHandler.run(cmd);
+            status.textContent = result;
+            input.value = '';
+          }catch(err){
+            status.textContent = err && err.message ? err.message : 'Command failed';
+          }
+        });
+      };
+
+      const renderTab = (tab)=>{
+        tabs.forEach(btn=> btn.classList.toggle('active', btn.getAttribute('data-owner-tab') === tab));
+        if(tab === 'roles') return renderRolesTab();
+        if(tab === 'badges') return renderBadgesTab();
+        if(tab === 'assign') return renderAssignTab();
+        if(tab === 'mods') return renderModeratorsTab();
+        return renderCommandsTab();
+      };
+
+      tabs.forEach(btn=> btn.addEventListener('click', ()=> renderTab(btn.getAttribute('data-owner-tab') || 'roles')));
+      panel.querySelector('#closeOwnerPanel').addEventListener('click', ()=>{
+        panel.remove();
+        if(location.hash === '#owner-panel') history.replaceState(null, '', location.pathname + location.search);
+      });
+      panel.addEventListener('click', ev=>{
+        if(ev.target === panel){
+          panel.remove();
+          if(location.hash === '#owner-panel') history.replaceState(null, '', location.pathname + location.search);
+        }
+      });
+      renderTab('roles');
+    }
+
+    async function runStaffConsoleCommand(command){
+      const text = String(command || '').trim();
+      if(!text) throw new Error('Enter a command');
+      if(/^\?cmds$/i.test(text)){
+        openOwnerCommandPanel();
+        return 'Opened command panel';
+      }
+      return await commandHandler.run(text);
     }
 
     async function runStaffConsoleCommand(command){
@@ -2267,8 +3461,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const consoleBlock = document.getElementById('staffConsoleBlock');
       if(!consoleBlock) return;
       const user = getCurrentUser();
-      const normalized = user && user.username ? user.username.toLowerCase() : '';
-      const isOwner = !!(user && (user.role === 'owner' || (normalized && (normalized === OWNER_USERNAME_LOWER))));
+      const isOwner = permissionGuard.hasPermission(user, OWNER_PERMISSIONS.OWNER_PANEL);
+      const ownerShortcut = document.getElementById('openOwnerPanelBtn');
+      if(ownerShortcut){
+        ownerShortcut.style.display = isOwner ? 'inline-flex' : 'none';
+      }
       const reportsBtn = document.getElementById('reviewReportsBtn');
       if(reportsBtn){
         reportsBtn.style.display = isStaffUser(user) ? 'inline-flex' : 'none';
@@ -2279,7 +3476,35 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(statusEl) statusEl.textContent = '';
         const inputEl = document.getElementById('staffConsoleInput');
         if(inputEl) inputEl.value = '';
+        const ownerPanel = document.getElementById('ownerPanelModal');
+        if(ownerPanel) ownerPanel.remove();
+        const ownerCmds = document.getElementById('ownerCommandsModal');
+        if(ownerCmds) ownerCmds.remove();
+        if(location.hash === '#owner-panel'){
+          history.replaceState(null, '', location.pathname + location.search);
+        }
       }
+      const me = getCurrentUser();
+      const feedModeSelect = document.getElementById('feedModeSelect');
+      if(feedModeSelect){
+        feedModeSelect.disabled = !me;
+        if(!me){
+          feedModeSelect.value = 'all';
+          activeFeedMode = 'all';
+        }
+      }
+    }
+
+    function handleOwnerHashRoute(){
+      if(location.hash !== '#owner-panel') return;
+      const user = getCurrentUser();
+      if(!permissionGuard.hasPermission(user, OWNER_PERMISSIONS.OWNER_PANEL)){
+        history.replaceState(null, '', location.pathname + location.search);
+        const openPanel = document.getElementById('ownerPanelModal');
+        if(openPanel) openPanel.remove();
+        return;
+      }
+      if(!document.getElementById('ownerPanelModal')) openOwnerPanel();
     }
 
     function normalizeUsernameForPath(username){
@@ -2417,7 +3642,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const tok = getToken();
       const p = decodeToken(tok);
       if(!p || !p.username) return null;
-      const role = inferRoleFromPayload(p) || 'member';
+      const role = inferRoleFromState(p.username) || inferRoleFromPayload(p) || 'member';
       return { username: p.username, id: p.id, role };
     }
 
@@ -3086,13 +4311,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
             </div>
           </div>
           <div id="staffConsoleBlock" style="margin-top:10px;display:none">
-            <div class="smallMuted">Staff Console (?mod user / ?unmod user)</div>
+            <div class="smallMuted">Owner Console (?cmds)</div>
             <form id="staffConsoleForm" style="display:flex;gap:6px;margin-top:6px">
-              <input id="staffConsoleInput" placeholder="?mod username" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
+              <input id="staffConsoleInput" placeholder="?cmds or giverole user moderator" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04)" />
               <button type="submit" class="ghost">Run</button>
             </form>
             <div class="smallMuted" id="staffConsoleStatus"></div>
           </div>
+          <button id="openOwnerPanelBtn" class="ghost ownerPanelShortcut" type="button" style="display:none">Open Owner Panel</button>
         </div>`;
       wrap.appendChild(div);
       const bioInput = document.getElementById('profileBio');
@@ -3221,6 +4447,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const staffForm = document.getElementById('staffConsoleForm');
       if(staffForm){
         staffForm.addEventListener('submit', handleStaffConsoleSubmit);
+      }
+      const ownerPanelBtn = document.getElementById('openOwnerPanelBtn');
+      if(ownerPanelBtn){
+        ownerPanelBtn.addEventListener('click', ()=>{
+          location.hash = 'owner-panel';
+          openOwnerPanel();
+        });
       }
       updateStaffConsoleVisibility();
       window.__hydrateProfileEditor = hydrateProfileEditor;
@@ -3479,8 +4712,12 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const linksBlock = safeLinks.length ? `<div style="margin-top:10px"><div class="smallMuted" style="letter-spacing:0.12em;text-transform:uppercase;font-size:11px">Links</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">${safeLinks.map(link=>`<a class="link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px">${escapeHtml(link.label)}</a>`).join('')}</div></div>` : '';
       const friendLabel = friends === 1 ? 'friend' : 'friends';
       const followerLabel = followersCount === 1 ? 'follower' : 'followers';
-      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><strong>${escapeHtml(username)}</strong><div class="smallMuted">${friends} ${friendLabel} • ${followersCount} ${followerLabel}</div><div class="smallMuted">Joined ${escapeHtml(joinDateLabel)} • Avg rating ${profileStats.avgPostRating.toFixed(2)} (${profileStats.ratingsCount} ratings)</div>${bioBlock}${linksBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Posts</strong><div id="profileLibs"></div><div id="profileLibPagination" style="display:flex;gap:6px;align-items:center;margin-top:8px"></div></div>`;
+      modal.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;gap:10px;align-items:center">${avatarBlock}<div><div data-profile-name-wrap><strong data-profile-username="${escapeHtml(username)}">${escapeHtml(username)}</strong></div><div class="smallMuted">${friends} ${friendLabel} • ${followersCount} ${followerLabel}</div><div class="smallMuted">Joined ${escapeHtml(joinDateLabel)} • Avg rating ${profileStats.avgPostRating.toFixed(2)} (${profileStats.ratingsCount} ratings)</div>${bioBlock}${linksBlock}</div></div><button id="closeProfile">Close</button></div><div style="margin-top:10px" id="profileActions"></div><div style="margin-top:10px"><strong>Posts</strong><div id="profileLibs"></div><div id="profileLibPagination" style="display:flex;gap:6px;align-items:center;margin-top:8px"></div></div>`;
       document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
+      const profileNameWrap = modal.querySelector('[data-profile-name-wrap]');
+      if(profileNameWrap){
+        renderRoleBadgesInline(profileNameWrap, username, social);
+      }
       const profileAvatarImg = document.getElementById('profileAvatar');
       const profileAvatarWrap = modal.querySelector('.profileAvatarWrap');
       setAvatarImage(profileAvatarImg, {
@@ -3985,6 +5222,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
     refreshUserCount();
     refreshStaffDisplay();
     updateStaffConsoleVisibility();
+    window.addEventListener('hashchange', handleOwnerHashRoute);
+    handleOwnerHashRoute();
   </script>
 </body>
 </html>
