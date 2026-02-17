@@ -1,0 +1,16 @@
+{
+  "id": "owner",
+  "name": "Owner",
+  "color": "#f5c77d",
+  "gradient": "",
+  "icon": "👑",
+  "priority": 1000,
+  "permissions": [
+    "owner.panel",
+    "moderation.access",
+    "moderation.tools",
+    "roles.manage",
+    "badges.manage",
+    "commands.run"
+  ]
+}
