@@ -3652,9 +3652,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
         [normalized, normalized.toLowerCase(), normalized.toUpperCase()].forEach(value=>{
           const key = String(value || '').trim();
           if(!key) return;
-          const dedupeKey = key.toLowerCase();
-          if(seen.has(dedupeKey)) return;
-          seen.add(dedupeKey);
+          if(seen.has(key)) return;
+          seen.add(key);
           out.push(key);
         });
       });
@@ -5458,3 +5457,4 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
