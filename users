@@ -245,5 +245,13 @@
     "createdAt": "2026-02-17T05:42:48.132Z",
     "createdIp": "182.11.154.77",
     "role": "member"
+  },
+  {
+    "id": "1771323385279",
+    "username": "Boykd",
+    "passwordHash": "8b6d28bdde8aab2ca07599796c6886c5$db49b95cac5d9aef0e36ef4c2ce4b8bb58ab11b5d635a217e31a244555631d1deedfa075acbec78b1d2790684a2062ac50a5e46dc33819e1d2de0fe04d544b5a",
+    "createdAt": "2026-02-17T10:16:25.348Z",
+    "createdIp": "49.228.100.165",
+    "role": "member"
   }
 ]
