@@ -37,5 +37,21 @@
       "value": 5,
       "t": 1771280229491
     }
-  ]
+  ],
+  "visibility": "public",
+  "whitelist": [],
+  "createdAt": 1771022785817,
+  "views": 0,
+  "pinned": false,
+  "reactions": {
+    "👍": [],
+    "❤️": [
+      "JJ_lovemuffins"
+    ],
+    "😂": [],
+    "😮": [],
+    "🔥": []
+  },
+  "__filename": "1771022785817-Gojo - Custom M1_s - Custom base _ ult - Custom R special.json",
+  "__path": "libs/1771022785817-Gojo - Custom M1_s - Custom base _ ult - Custom R special.json"
 }
