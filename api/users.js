@@ -276,6 +276,96 @@ async function putJsonAtPath(token, owner, repo, branch, path, data, sha, messag
   return await fetchFn(api, { method:'PUT', headers:{ Authorization:`token ${token}`, Accept:'application/vnd.github.v3+json', 'Content-Type':'application/json' }, body: JSON.stringify(body) });
 }
 
+async function deleteJsonAtPath(token, owner, repo, branch, path, sha, message){
+  const api = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const body = { message: message || `Delete ${path}`, sha, branch };
+  return await fetchFn(api, { method:'DELETE', headers:{ Authorization:`token ${token}`, Accept:'application/vnd.github.v3+json', 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+}
+
+async function listDirectory(token, owner, repo, branch, path){
+  const api = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const resp = await fetchFn(`${api}?ref=${encodeURIComponent(branch)}`, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+  if(resp.status === 404) return [];
+  if(resp.status !== 200){
+    const text = await resp.text();
+    throw new Error(`List failed (${resp.status}): ${text}`);
+  }
+  const body = await resp.json();
+  return Array.isArray(body) ? body : [];
+}
+
+async function readRoleBadgeCatalogFromLibs(token, owner, repo, branch, rolesDirPath, badgesDirPath){
+  const roles = [];
+  const badges = [];
+  const roleFiles = await listDirectory(token, owner, repo, branch, rolesDirPath).catch(()=>[]);
+  for(const file of roleFiles){
+    if(!file || file.type !== 'file' || !String(file.name || '').endsWith('.json')) continue;
+    const data = await getJsonAtPath(token, owner, repo, branch, file.path).catch(()=>({ data:null }));
+    const normalized = normalizeRoleRecord(data.data);
+    if(normalized) roles.push(normalized);
+  }
+  const badgeFiles = await listDirectory(token, owner, repo, branch, badgesDirPath).catch(()=>[]);
+  for(const file of badgeFiles){
+    if(!file || file.type !== 'file' || !String(file.name || '').endsWith('.json')) continue;
+    const data = await getJsonAtPath(token, owner, repo, branch, file.path).catch(()=>({ data:null }));
+    const normalized = normalizeBadgeRecord(data.data);
+    if(normalized) badges.push(normalized);
+  }
+  return normalizeOwnerControlMeta({ roles, badges });
+}
+
+async function saveRoleBadgeCatalogToLibs(token, owner, repo, branch, rolesDirPath, badgesDirPath, meta){
+  const normalizedMeta = normalizeOwnerControlMeta(meta || {});
+  const existingRoleFiles = await listDirectory(token, owner, repo, branch, rolesDirPath).catch(()=>[]);
+  const existingBadgeFiles = await listDirectory(token, owner, repo, branch, badgesDirPath).catch(()=>[]);
+
+  const existingRoleById = new Map(
+    existingRoleFiles
+      .filter(f=>f && f.type === 'file' && String(f.name || '').endsWith('.json'))
+      .map(f=>[String(f.name).replace(/\.json$/i,''), { path:f.path, sha:f.sha }])
+  );
+  const existingBadgeById = new Map(
+    existingBadgeFiles
+      .filter(f=>f && f.type === 'file' && String(f.name || '').endsWith('.json'))
+      .map(f=>[String(f.name).replace(/\.json$/i,''), { path:f.path, sha:f.sha }])
+  );
+
+  const nextRoleIds = new Set();
+  for(const role of normalizedMeta.roles){
+    const roleId = normalizeRoleId(role.id);
+    if(!roleId) continue;
+    nextRoleIds.add(roleId);
+    const path = `${rolesDirPath}/${roleId}.json`;
+    const existing = existingRoleById.get(roleId);
+    const resp = await putJsonAtPath(token, owner, repo, branch, path, role, existing ? existing.sha : null, `Save role ${roleId}`);
+    if(!resp.ok){ const text = await resp.text(); throw new Error(`Failed to save role ${roleId}: ${text}`); }
+  }
+
+  const nextBadgeIds = new Set();
+  for(const badge of normalizedMeta.badges){
+    const badgeId = normalizeBadgeId(badge.id);
+    if(!badgeId) continue;
+    nextBadgeIds.add(badgeId);
+    const path = `${badgesDirPath}/${badgeId}.json`;
+    const existing = existingBadgeById.get(badgeId);
+    const resp = await putJsonAtPath(token, owner, repo, branch, path, badge, existing ? existing.sha : null, `Save badge ${badgeId}`);
+    if(!resp.ok){ const text = await resp.text(); throw new Error(`Failed to save badge ${badgeId}: ${text}`); }
+  }
+
+  for(const [roleId, info] of existingRoleById.entries()){
+    if(nextRoleIds.has(roleId)) continue;
+    if(!info || !info.sha) continue;
+    await deleteJsonAtPath(token, owner, repo, branch, info.path, info.sha, `Delete role ${roleId}`);
+  }
+  for(const [badgeId, info] of existingBadgeById.entries()){
+    if(nextBadgeIds.has(badgeId)) continue;
+    if(!info || !info.sha) continue;
+    await deleteJsonAtPath(token, owner, repo, branch, info.path, info.sha, `Delete badge ${badgeId}`);
+  }
+
+  return normalizedMeta;
+}
+
 module.exports = async (req,res) => {
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
@@ -286,6 +376,9 @@ module.exports = async (req,res) => {
   const owner = process.env.GITHUB_OWNER;
   const repo = process.env.GITHUB_REPO;
   const branch = process.env.GITHUB_BRANCH || 'main';
+  const libsBasePath = (process.env.GITHUB_PATH || 'libs').replace(/^\/+|\/+$/g,'');
+  const rolesDirPath = `${libsBasePath}/roles`;
+  const badgesDirPath = `${libsBasePath}/badges`;
   const usersPath = (process.env.GITHUB_USERS_PATH || 'users/users.json').replace(/^\/+|\/+$/g,'');
   const ownerControlMetaPath = (process.env.GITHUB_OWNER_CONTROL_META_PATH || 'users/owner-control-meta.json').replace(/^\/+|\/+$/g,'');
   const jwtSecret = process.env.JWT_SECRET || null;
@@ -314,8 +407,12 @@ module.exports = async (req,res) => {
     if(action === 'ownerControlGet'){
       if(!token || !owner || !repo) return res.status(500).json({ error:'Server not configured for users. Set GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO.' });
       const { users } = await getUsers(token, owner, repo, branch, usersPath);
-      const metaResp = await getJsonAtPath(token, owner, repo, branch, ownerControlMetaPath).catch(()=>({ data:null, sha:null }));
-      const state = buildOwnerControlState(users, metaResp && metaResp.data ? metaResp.data : {});
+      let catalog = await readRoleBadgeCatalogFromLibs(token, owner, repo, branch, rolesDirPath, badgesDirPath).catch(()=>null);
+      if(!catalog || (!catalog.roles.length && !catalog.badges.length)){
+        const metaResp = await getJsonAtPath(token, owner, repo, branch, ownerControlMetaPath).catch(()=>({ data:null, sha:null }));
+        catalog = normalizeOwnerControlMeta(metaResp && metaResp.data ? metaResp.data : {});
+      }
+      const state = buildOwnerControlState(users, catalog || {});
       return res.status(200).json({ ok:true, state });
     }
     return res.status(200).json({ ok:true, configured: !!(token && owner && repo && jwtSecret), owner: owner||null, repo: repo||null, usersPath });
@@ -419,7 +516,7 @@ module.exports = async (req,res) => {
     if(!isOwner) return res.status(403).json({ error:'Only owner can update owner panel data.' });
 
     const incoming = body && body.state ? body.state : body;
-    const normalizedMeta = normalizeOwnerControlMeta(incoming || {});
+    let normalizedMeta = normalizeOwnerControlMeta(incoming || {});
     const roleMap = incoming && incoming.userRoles && typeof incoming.userRoles === 'object' ? incoming.userRoles : {};
     const badgeMap = incoming && incoming.userBadges && typeof incoming.userBadges === 'object' ? incoming.userBadges : {};
 
@@ -433,6 +530,8 @@ module.exports = async (req,res) => {
     applyOwnerControlStateToUsers(users, stateForUsers);
     const putUsersResp = await putUsers(token, owner, repo, branch, usersPath, users, sha);
     if(!putUsersResp.ok){ const txt = await putUsersResp.text(); return res.status(500).json({ error:'Failed to save users', detail: txt }); }
+
+    normalizedMeta = await saveRoleBadgeCatalogToLibs(token, owner, repo, branch, rolesDirPath, badgesDirPath, normalizedMeta);
 
     const existingMeta = await getJsonAtPath(token, owner, repo, branch, ownerControlMetaPath).catch(()=>({ data:null, sha:null }));
     const putMetaResp = await putJsonAtPath(token, owner, repo, branch, ownerControlMetaPath, normalizedMeta, existingMeta.sha, 'Update owner control meta');
