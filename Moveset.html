@@ -288,11 +288,8 @@
             <div class="controlRow controlRow--primary">
               <input id="search" class="search" placeholder="Search libraries (title, tags)..." />
               <div id="authBox">
-                <input id="authUser" placeholder="username" />
-                <input id="authPass" type="password" placeholder="password" />
-                <button id="signupBtn" class="ghost">Sign up</button>
-                <button id="loginBtn" class="ghost">Log in</button>
                 <div id="userLabel" class="small"></div>
+                <button id="openHomeAuth" class="ghost">Sign in on Home</button>
               </div>
             </div>
             <div class="controlRow controlRow--actions">
@@ -3786,61 +3783,28 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const roleLabel = u.role && u.role !== 'member' ? ` (${u.role})` : '';
         lbl.textContent = `Signed in: ${u.username}${roleLabel}`;
       }else{
-        lbl.textContent = '';
+        lbl.textContent = 'Not signed in';
       }
+      const homeBtn = document.getElementById('openHomeAuth');
+      if(homeBtn) homeBtn.style.display = u ? 'none' : 'inline-flex';
     }
 
-    async function authSignup(username,password){
-      try{
-        const resp = await fetch(USERS_URL + '?action=signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
-        const j = await resp.json().catch(()=>null);
-        if(!resp.ok) throw new Error((j && j.error) || 'Signup failed');
-        if(j && j.token) setToken(j.token);
-        try{ await Promise.all([refreshUserCount(), refreshStaffDisplay(), refreshOwnerControlFromServer(true)]); }catch(_err){}
-        refreshGlobalRoleBadgeUI();
-        return j;
-      }catch(err){
-        alert(err && err.message ? err.message : 'Signup failed');
-        return null;
-      }
-    }
-
-    async function authLogin(username,password){
-      try{
-        const resp = await fetch(USERS_URL + '?action=login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
-        const j = await resp.json().catch(()=>null);
-        if(!resp.ok) throw new Error((j && j.error) || 'Login failed');
-        if(j && j.token) setToken(j.token);
-        try{ await Promise.all([refreshStaffDisplay(), refreshOwnerControlFromServer(true)]); }catch(_err){}
-        refreshGlobalRoleBadgeUI();
-        return j;
-      }catch(err){
-        alert(err && err.message ? err.message : 'Login failed');
-        return null;
-      }
-    }
-
-    // attach auth button handlers
-    document.getElementById('signupBtn').addEventListener('click', ()=>{
-      const u = document.getElementById('authUser').value.trim();
-      const p = document.getElementById('authPass').value;
-      if(!u||!p) return alert('username and password required');
-      if(u.length < 4 || u.length > 15) return alert('Username must be 4-15 characters.');
-      authSignup(u,p);
-    });
-    document.getElementById('loginBtn').addEventListener('click', ()=>{
-      const u = document.getElementById('authUser').value.trim();
-      const p = document.getElementById('authPass').value;
-      if(!u||!p) return alert('username and password required');
-      authLogin(u,p);
-    });
     updateUserLabel();
     updateStaffConsoleVisibility();
-    const authUserInput = document.getElementById('authUser');
-    if(authUserInput){
-      authUserInput.minLength = 4;
-      authUserInput.maxLength = 15;
+    const openHomeAuthBtn = document.getElementById('openHomeAuth');
+    if(openHomeAuthBtn){
+      openHomeAuthBtn.addEventListener('click', ()=>{
+        location.href = 'index.html';
+      });
     }
+    window.addEventListener('storage', (event)=>{
+      if(event && event.key === 'jjs_token'){
+        updateUserLabel();
+        updateAddModeratorButton();
+        updateStaffConsoleVisibility();
+        refreshListView({ refilter:true });
+      }
+    });
 
     // --- Tag picker ---
     const PRESET_TAGS = ['Beginner moveset','Intermediate moveset','Advanced moveset','Custom','JJK','Dragonball','Sololeveling','Video-game','OP'];
@@ -4602,6 +4566,27 @@ Get a code from the character builder in jjs, then paste it here. When you click
     })();
 
     // --- Social helpers (friend requests, blocking, profiles) ---
+    function syncSocialToHomepageProfile(username, social){
+      const user = getCurrentUser();
+      const target = (username || '').toLowerCase();
+      const viewer = user && user.username ? user.username.toLowerCase() : '';
+      if(!target || !viewer || target !== viewer || !social || typeof social !== 'object') return;
+      try{
+        const prev = JSON.parse(localStorage.getItem('jjs_profile_v2') || '{}') || {};
+        const next = Object.assign({}, prev, {
+          username,
+          pronouns: String(social.pronouns || prev.pronouns || '').trim(),
+          bio: String(social.bio || prev.bio || '').trim(),
+          avatarUrl: String(social.avatar_url || prev.avatarUrl || '').trim(),
+          bannerUrl: String(social.banner_url || prev.bannerUrl || '').trim(),
+          socialLinks: sanitizeProfileLinks(Array.isArray(social.links) ? social.links : (prev.socialLinks || []))
+            .slice(0, 5)
+            .map(link=>({ label: String(link.label || 'Link').slice(0, 40), url: String(link.url || '').trim() }))
+        });
+        localStorage.setItem('jjs_profile_v2', JSON.stringify(next));
+      }catch(_e){}
+    }
+
     function mergeHomepageProfileIntoSocial(username, social){
       const user = getCurrentUser();
       const target = (username || '').toLowerCase();
@@ -4610,19 +4595,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       let homeProfile = null;
       try{ homeProfile = JSON.parse(localStorage.getItem('jjs_profile_v2') || '{}'); }catch(_e){ homeProfile = null; }
       if(!homeProfile || typeof homeProfile !== 'object') return social || {};
-      const next = Object.assign({}, social || {});
-      if(homeProfile.bio) next.bio = homeProfile.bio;
-      if(homeProfile.pronouns) next.pronouns = homeProfile.pronouns;
-      if(homeProfile.avatarUrl) next.avatar_url = homeProfile.avatarUrl;
-      if(homeProfile.bannerUrl) next.banner_url = homeProfile.bannerUrl;
-      if(Array.isArray(homeProfile.socialLinks)){
-        const links = homeProfile.socialLinks.filter(link=> link && link.url).map(link=>({
-          label: String(link.label || 'Link').slice(0, 40),
-          url: String(link.url || '').trim()
-        })).filter(link=>link.url);
-        if(links.length) next.links = links;
-      }
-      return next;
+      return Object.assign({}, social || {});
     }
 
     async function fetchSocial(username){
@@ -4643,6 +4616,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
                 localStorage.setItem(key, JSON.stringify(mergedSocial));
                 if(legacyKey !== key) localStorage.setItem(legacyKey, JSON.stringify(mergedSocial));
               }catch(_e){}
+              syncSocialToHomepageProfile(username, mergedSocial);
               socialCache.set(normalizedUser, mergedSocial);
               socialCache.set(username, mergedSocial);
               return mergedSocial;
@@ -4653,6 +4627,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       try{
         const cached = JSON.parse(localStorage.getItem(key) || localStorage.getItem(legacyKey) || '{}');
         const mergedCached = mergeHomepageProfileIntoSocial(username, cached);
+        syncSocialToHomepageProfile(username, mergedCached);
         socialCache.set(normalizedUser, mergedCached);
         socialCache.set(username, mergedCached);
         return mergedCached;
@@ -4672,6 +4647,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }catch(_e){}
       socialCache.set(normalizedUser, social);
       socialCache.set(username, social);
+      syncSocialToHomepageProfile(username, social);
       if(SERVERLESS_URL){
         try{
           const resp = await fetch(SERVERLESS_URL + '?action=updateSocial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, social }) });
