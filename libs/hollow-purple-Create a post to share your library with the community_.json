@@ -18,11 +18,13 @@
   "reactions": {
     "👍": [],
     "❤️": [],
-    "😂": [],
-    "😮": [],
-    "🔥": [
+    "😂": [
       "Kuro"
-    ]
+    ],
+    "😮": [],
+    "🔥": []
   },
-  "ratings": []
+  "ratings": [],
+  "__path": "libs/hollow-purple-Create a post to share your library with the community_.json",
+  "__filename": "hollow-purple-Create a post to share your library with the community_.json"
 }
