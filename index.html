@@ -135,8 +135,11 @@
     .reactionBtn:disabled{opacity:.45;cursor:not-allowed}
     .hoverLift{transition:transform .2s ease,box-shadow .2s ease}
     .hoverLift:hover{transform:translateY(-2px)}
-    .roleBadges{display:inline-flex;align-items:center;gap:4px;margin-left:6px;vertical-align:middle}
-    .roleBadge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);font-size:10px;line-height:1;color:var(--text);background:rgba(255,255,255,0.06)}
+    .roleBadges{display:inline-flex;align-items:center;gap:5px;margin-left:6px;vertical-align:middle;flex-wrap:wrap}
+    .roleBadge{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:18px;padding:0 7px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);font-size:10px;line-height:1;color:var(--text);background:rgba(255,255,255,0.06);white-space:nowrap}
+    .roleBadgeIcon{font-size:10px;line-height:1}
+    .roleBadgeName{font-size:10px;line-height:1;letter-spacing:.03em}
+    .roleBadge--named{padding:3px 8px;min-height:20px}
     .roleBadge--owner{border-color:rgba(255,196,107,0.5);background:rgba(255,196,107,0.2)}
     .roleBadge--moderator{border-color:rgba(133,198,255,0.5);background:rgba(133,198,255,0.18)}
     .roleBadge--verified{border-color:rgba(126,249,194,0.5);background:rgba(126,249,194,0.18)}
@@ -471,14 +474,23 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return (value || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
     }
 
+    function normalizeGradientValue(value){
+      const text = String(value || '').trim();
+      if(!text) return '';
+      return /gradient\s*\(/i.test(text) ? text : '';
+    }
+
     function normalizeRoleRecord(role){
       if(!role) return null;
       const id = normalizeRoleId(role.id || role.name);
       if(!id) return null;
+      const rawColor = String(role.color || '#a9b9d3').trim() || '#a9b9d3';
+      const gradient = normalizeGradientValue(role.gradient || rawColor);
       return {
         id,
         name: String(role.name || id).trim() || id,
-        color: String(role.color || '#a9b9d3').trim() || '#a9b9d3',
+        color: gradient ? '#a9b9d3' : rawColor,
+        gradient,
         icon: String(role.icon || '').trim(),
         priority: Number.isFinite(Number(role.priority)) ? Number(role.priority) : 10,
         permissions: Array.isArray(role.permissions) ? role.permissions.filter(Boolean).map(String) : []
@@ -493,11 +505,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(!badge) return null;
       const id = normalizeBadgeId(badge.id || badge.name);
       if(!id) return null;
+      const rawColor = String(badge.color || '#a9b9d3').trim() || '#a9b9d3';
+      const gradient = normalizeGradientValue(badge.gradient || rawColor);
       return {
         id,
         name: String(badge.name || id).trim() || id,
         icon: String(badge.icon || '🏅').trim() || '🏅',
-        color: String(badge.color || '#a9b9d3').trim() || '#a9b9d3',
+        color: gradient ? '#a9b9d3' : rawColor,
+        gradient,
         tooltip: String(badge.tooltip || '').trim(),
         showInComments: badge.showInComments !== false
       };
@@ -527,23 +542,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       return 'member';
     }
 
-    function canReadOwnerControlData(){
-      const payload = decodeToken(getToken()) || {};
-      const user = normalizeUsername(payload.username || '');
-      const ownerName = normalizeUsername((staffState.owner && staffState.owner.username) || OWNER_USERNAME || '');
-      if(payload.role && String(payload.role).toLowerCase() === 'owner') return true;
-      return !!(user && (user === ownerName || user === OWNER_USERNAME_LOWER));
-    }
-
     function loadOwnerControlState(force = false){
-      if(!force && !canReadOwnerControlData()){
-        ownerControlState.roles = DEFAULT_OWNER_ROLES.slice();
-        ownerControlState.badges = [];
-        ownerControlState.userRoles = {};
-        ownerControlState.userBadges = {};
-        ownerControlState.loaded = false;
-        return ownerControlState;
-      }
       if(ownerControlState.loaded && !force) return ownerControlState;
       let roles = DEFAULT_OWNER_ROLES.slice();
       let badges = [];
@@ -584,6 +583,97 @@ Get a code from the character builder in jjs, then paste it here. When you click
       try{ localStorage.setItem(OWNER_BADGES_STORAGE_KEY, JSON.stringify(ownerControlState.badges)); }catch(_e){}
       try{ localStorage.setItem(OWNER_USER_ROLES_STORAGE_KEY, JSON.stringify(ownerControlState.userRoles)); }catch(_e){}
       try{ localStorage.setItem(OWNER_USER_BADGES_STORAGE_KEY, JSON.stringify(ownerControlState.userBadges)); }catch(_e){}
+    }
+
+    function persistOwnerControlStateWithSync(){
+      persistOwnerControlState();
+      scheduleOwnerControlServerSave();
+    }
+
+    function applyOwnerControlStateFromPayload(payload){
+      const normalized = payload && typeof payload === 'object' ? payload : {};
+      const roles = Array.isArray(normalized.roles) ? normalized.roles.map(normalizeRoleRecord).filter(Boolean) : [];
+      const badges = Array.isArray(normalized.badges) ? normalized.badges.map(normalizeBadgeRecord).filter(Boolean) : [];
+      const userRoles = normalized.userRoles && typeof normalized.userRoles === 'object' ? normalized.userRoles : {};
+      const userBadges = normalized.userBadges && typeof normalized.userBadges === 'object' ? normalized.userBadges : {};
+
+      if(!roles.some(r=>r.id === 'owner')) roles.push(DEFAULT_OWNER_ROLES[0]);
+      if(!roles.some(r=>r.id === 'moderator')) roles.push(DEFAULT_OWNER_ROLES[1]);
+      if(!roles.some(r=>r.id === 'member')) roles.push(DEFAULT_OWNER_ROLES[2]);
+
+      ownerControlState.roles = roles.sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
+      ownerControlState.badges = badges;
+      ownerControlState.userRoles = userRoles;
+      ownerControlState.userBadges = userBadges;
+      ownerControlState.loaded = true;
+      ownerControlState.lastLoadedAt = Date.now();
+      persistOwnerControlState();
+    }
+
+    async function refreshOwnerControlFromServer(force = false){
+      if(!OWNER_CONTROL_URL) return ownerControlState;
+      const age = Date.now() - (ownerControlSyncState.lastRemoteSyncAt || 0);
+      if(!force && ownerControlSyncState.fetchPromise) return ownerControlSyncState.fetchPromise;
+      if(!force && age < 30000 && ownerControlState.loaded) return ownerControlState;
+      ownerControlSyncState.fetchPromise = (async ()=>{
+        try{
+          const resp = await fetch(OWNER_CONTROL_URL + '?action=get', { cache:'no-store' });
+          const data = await resp.json().catch(()=>null);
+          if(resp.ok && data && data.ok && data.state){
+            applyOwnerControlStateFromPayload(data.state);
+            ownerControlSyncState.lastRemoteSyncAt = Date.now();
+          }else{
+            loadOwnerControlState();
+          }
+        }catch(_err){
+          loadOwnerControlState();
+        }finally{
+          ownerControlSyncState.fetchPromise = null;
+        }
+        return ownerControlState;
+      })();
+      return ownerControlSyncState.fetchPromise;
+    }
+
+    async function pushOwnerControlToServer(){
+      if(!OWNER_CONTROL_URL) return;
+      const token = getToken();
+      if(!token) return;
+      const state = loadOwnerControlState();
+      const payload = {
+        roles: state.roles,
+        badges: state.badges,
+        userRoles: state.userRoles,
+        userBadges: state.userBadges
+      };
+      const resp = await fetch(OWNER_CONTROL_URL + '?action=save', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ state: payload })
+      });
+      const data = await resp.json().catch(()=>null);
+      if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to sync role/badge changes');
+      if(data.state) applyOwnerControlStateFromPayload(data.state);
+      ownerControlSyncState.lastRemoteSyncAt = Date.now();
+    }
+
+    function scheduleOwnerControlServerSave(){
+      if(ownerControlSyncState.saveTimer) clearTimeout(ownerControlSyncState.saveTimer);
+      ownerControlSyncState.pendingSave = true;
+      ownerControlSyncState.saveTimer = setTimeout(async ()=>{
+        if(ownerControlSyncState.savePromise) return;
+        ownerControlSyncState.savePromise = (async ()=>{
+          try{
+            if(ownerControlSyncState.pendingSave) await pushOwnerControlToServer();
+          }catch(err){
+            console.warn('Owner-control sync failed', err && err.message ? err.message : err);
+          }finally{
+            ownerControlSyncState.pendingSave = false;
+            ownerControlSyncState.savePromise = null;
+          }
+        })();
+        await ownerControlSyncState.savePromise;
+      }, 180);
     }
 
     function logOwnerAction(action, details){
@@ -647,7 +737,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(state.roles.some(role=> role.id === record.id)) throw new Error('Role already exists');
         state.roles.push(record);
         state.roles.sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('role.create', `${record.name}`);
         return record;
       },
@@ -660,7 +750,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(!next) throw new Error('Invalid role update');
         state.roles[idx] = next;
         state.roles.sort((a,b)=> Number(b.priority || 0) - Number(a.priority || 0));
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('role.update', `${next.name}`);
         return next;
       },
@@ -675,7 +765,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           state.userRoles[userKey] = dedupeStringList((state.userRoles[userKey] || []).filter(item=> normalizeRoleId(item) !== key));
           if(!state.userRoles[userKey].length) delete state.userRoles[userKey];
         });
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('role.delete', `${role.name}`);
       },
       getUserRoles(username){
@@ -699,7 +789,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const current = dedupeStringList(state.userRoles[userKey] || []).map(normalizeRoleId);
         if(!current.includes(key)) current.push(key);
         state.userRoles[userKey] = dedupeStringList(current);
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('role.assign', `${username} -> ${key}`);
       },
       removeRole(username, roleId){
@@ -713,7 +803,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const next = dedupeStringList((state.userRoles[userKey] || []).map(normalizeRoleId).filter(item=> item !== key));
         if(next.length) state.userRoles[userKey] = next;
         else delete state.userRoles[userKey];
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('role.remove', `${username} -/-> ${key}`);
       }
     };
@@ -730,7 +820,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(!record) throw new Error('Invalid badge');
         if(state.badges.some(badge=> badge.id === record.id)) throw new Error('Badge already exists');
         state.badges.push(record);
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('badge.create', `${record.name}`);
         return record;
       },
@@ -742,7 +832,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const next = normalizeBadgeRecord({ ...state.badges[idx], ...changes, id: state.badges[idx].id });
         if(!next) throw new Error('Invalid badge update');
         state.badges[idx] = next;
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('badge.update', `${next.name}`);
         return next;
       },
@@ -756,7 +846,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           state.userBadges[userKey] = dedupeStringList((state.userBadges[userKey] || []).filter(item=> normalizeBadgeId(item) !== key));
           if(!state.userBadges[userKey].length) delete state.userBadges[userKey];
         });
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('badge.delete', `${badge.name}`);
       },
       getUserBadges(username){
@@ -773,7 +863,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(!this.getById(key)) throw new Error('Badge does not exist');
         const next = dedupeStringList([...(state.userBadges[userKey] || []), key]);
         state.userBadges[userKey] = next;
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('badge.assign', `${username} -> ${key}`);
       },
       removeBadge(username, badgeId){
@@ -784,7 +874,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const next = dedupeStringList((state.userBadges[userKey] || []).filter(item=> normalizeBadgeId(item) !== key));
         if(next.length) state.userBadges[userKey] = next;
         else delete state.userBadges[userKey];
-        persistOwnerControlState();
+        persistOwnerControlStateWithSync();
         logOwnerAction('badge.remove', `${username} -/-> ${key}`);
       }
     };
@@ -868,6 +958,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
       userRoles: {},
       userBadges: {},
       lastLoadedAt: 0
+    };
+    const ownerControlSyncState = {
+      fetchPromise: null,
+      saveTimer: null,
+      savePromise: null,
+      pendingSave: false,
+      lastRemoteSyncAt: 0
     };
     let activeSort = SORT_OPTIONS.NEWEST;
     let activeTagFilter = '';
@@ -1088,19 +1185,19 @@ Get a code from the character builder in jjs, then paste it here. When you click
           if(role.id === 'member') return;
           const short = (role.icon || role.name || role.id || 'R').slice(0, 3).toUpperCase();
           const cls = role.id === 'owner' ? 'roleBadge--owner' : (role.id === 'moderator' ? 'roleBadge--moderator' : 'roleBadge--custom');
-          badges.push({ label: role.name, short, cls, color: role.color });
+          badges.push({ label: role.name, short, name: role.name, cls, color: role.color, gradient: role.gradient });
         });
 
       const assignedBadges = badgeService.getUserBadges(username)
         .map(badgeId=> badgeService.getById(badgeId))
         .filter(Boolean)
         .filter(badge=> context !== 'comment' || badge.showInComments !== false)
-        .map(badge=>({ label: badge.tooltip || badge.name, short: (badge.icon || badge.name || '🏅').slice(0, 3), cls:'roleBadge--custom', color: badge.color }));
+        .map(badge=>({ label: badge.tooltip || badge.name, short: (badge.icon || badge.name || '🏅').slice(0, 3), name: badge.name, cls:'roleBadge--custom', color: badge.color, gradient: badge.gradient }));
       badges.push(...assignedBadges);
 
       const socialData = social || getCachedSocialSnapshot(username);
-      if(socialData && socialData.verifiedCreator) badges.push({ label:'Verified Creator', short:'✓', cls:'roleBadge--verified' });
-      if(socialData && socialData.ogUser) badges.push({ label:'OG User', short:'OG', cls:'roleBadge--og' });
+      if(socialData && socialData.verifiedCreator) badges.push({ label:'Verified Creator', short:'✓', name:'Verified Creator', cls:'roleBadge--verified' });
+      if(socialData && socialData.ogUser) badges.push({ label:'OG User', short:'OG', name:'OG User', cls:'roleBadge--og' });
       return badges;
     }
 
@@ -1110,14 +1207,30 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const existing = container.querySelector('.roleBadges');
       if(existing) existing.remove();
       if(!badges.length) return;
+      const showNames = !!opts.showNames;
       const wrap = document.createElement('span');
       wrap.className = 'roleBadges';
       badges.forEach(badge=>{
         const item = document.createElement('span');
-        item.className = `roleBadge ${badge.cls}`;
-        item.textContent = badge.short;
+        item.className = `roleBadge ${badge.cls}${showNames ? ' roleBadge--named' : ''}`;
         item.title = badge.label;
         if(badge.color) item.style.setProperty('--badge-color', badge.color);
+        if(badge.gradient){
+          item.style.background = badge.gradient;
+          item.style.borderColor = 'rgba(255,255,255,0.42)';
+        }
+        if(showNames){
+          const iconEl = document.createElement('span');
+          iconEl.className = 'roleBadgeIcon';
+          iconEl.textContent = badge.short;
+          const nameEl = document.createElement('span');
+          nameEl.className = 'roleBadgeName';
+          nameEl.textContent = badge.name || badge.label || '';
+          item.appendChild(iconEl);
+          item.appendChild(nameEl);
+        }else{
+          item.textContent = badge.short;
+        }
         wrap.appendChild(item);
       });
       container.appendChild(wrap);
@@ -1907,7 +2020,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           try{
             const social = await fetchSocial(lib.author);
             const authorMeta = node.querySelector('.meta');
-            renderRoleBadgesInline(authorMeta, lib.author, social);
+            renderRoleBadgesInline(authorMeta, lib.author, social, { context:'post', showNames:true });
             const avatarSource = getAvatarSourceBundle(lib.author, social);
             setAvatarImage(avatarImg, {
               src: avatarSource.src || DEFAULT_AVATAR_URL,
@@ -1925,7 +2038,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
             }
           }catch(e){
             const authorMeta = node.querySelector('.meta');
-            renderRoleBadgesInline(authorMeta, lib.author);
+            renderRoleBadgesInline(authorMeta, lib.author, null, { context:'post', showNames:true });
             setAvatarImage(avatarImg, { src: DEFAULT_AVATAR_URL, wrapper: avatarWrap, stage: 'default' });
           }
         })();
@@ -2622,6 +2735,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     // Users endpoint derived from serverless base
     const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
+    const OWNER_CONTROL_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/owner-control');
     const OWNER_USERNAME = 'Kuro';
     const OWNER_USERNAME_LOWER = OWNER_USERNAME.toLowerCase();
     const socialCache = new Map();
@@ -2831,7 +2945,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
       updateAddModeratorButton();
       updateStaffConsoleVisibility();
-      refreshListView({ refilter:true });
+      refreshOwnerControlFromServer().then(()=>{
+        refreshListView({ refilter:true });
+      }).catch(()=>{
+        refreshListView({ refilter:true });
+      });
     }
 
     function updateAddModeratorButton(){
@@ -3118,7 +3236,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       input.focus();
     }
 
-    function openOwnerPanel(){
+    async function openOwnerPanel(){
       const user = getCurrentUser();
       try{ ensureOwnerAccess(user); }catch(_e){
         alert('Owner access required');
@@ -3126,6 +3244,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
         return;
       }
       loadOwnerControlState();
+      await refreshOwnerControlFromServer(true);
       let panel = document.getElementById('ownerPanelModal');
       if(panel) panel.remove();
       panel = document.createElement('div');
@@ -3176,6 +3295,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
           <div class="ownerCard"><div class="ownerRow">
             <input id="newRoleName" placeholder="Role name" />
             <input id="newRoleColor" type="color" value="#a9b9d3" style="max-width:70px;padding:4px" />
+            <input id="newRoleGradient" placeholder="Optional gradient (linear-gradient(...))" />
             <input id="newRoleIcon" placeholder="Icon" style="max-width:90px" />
             <input id="newRolePriority" type="number" value="100" placeholder="Priority" style="max-width:100px" />
             <input id="newRolePermissions" placeholder="permissions (comma separated)" />
@@ -3193,6 +3313,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
             if(name === null) return;
             const color = prompt('Role color (hex)', role.color);
             if(color === null) return;
+            const gradient = prompt('Role gradient (optional, e.g. linear-gradient(...))', role.gradient || '');
+            if(gradient === null) return;
             const icon = prompt('Role icon (optional)', role.icon || '');
             if(icon === null) return;
             const priorityInput = prompt('Priority number', String(role.priority || 0));
@@ -3203,6 +3325,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
               roleService.update(role.id, {
                 name,
                 color,
+                gradient,
                 icon,
                 priority: Number(priorityInput) || 0,
                 permissions: permissionsInput.split(',').map(v=>v.trim()).filter(Boolean)
@@ -3225,11 +3348,12 @@ Get a code from the character builder in jjs, then paste it here. When you click
         body.querySelector('#createRoleBtn').addEventListener('click', ()=>{
           const name = body.querySelector('#newRoleName').value.trim();
           const color = body.querySelector('#newRoleColor').value;
+          const gradient = body.querySelector('#newRoleGradient').value.trim();
           const icon = body.querySelector('#newRoleIcon').value.trim();
           const priority = Number(body.querySelector('#newRolePriority').value || 0);
           const permissions = body.querySelector('#newRolePermissions').value.split(',').map(v=>v.trim()).filter(Boolean);
           try{
-            roleService.create({ name, color, icon, priority, permissions });
+            roleService.create({ name, color, gradient, icon, priority, permissions });
             refreshGlobalRoleBadgeUI();
             renderRolesTab();
           }catch(err){ alert(err && err.message ? err.message : 'Create failed'); }
@@ -3243,6 +3367,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
             <input id="newBadgeName" placeholder="Badge name" />
             <input id="newBadgeIcon" placeholder="Icon" style="max-width:90px" value="🏅" />
             <input id="newBadgeColor" type="color" value="#a9b9d3" style="max-width:70px;padding:4px" />
+            <input id="newBadgeGradient" placeholder="Optional gradient (linear-gradient(...))" />
             <input id="newBadgeTooltip" placeholder="Tooltip description" />
             <button class="ghost" id="createBadgeBtn" type="button">Create badge</button>
           </div></div>
@@ -3260,11 +3385,13 @@ Get a code from the character builder in jjs, then paste it here. When you click
             if(icon === null) return;
             const color = prompt('Badge color (hex)', badge.color);
             if(color === null) return;
+            const gradient = prompt('Badge gradient (optional, e.g. linear-gradient(...))', badge.gradient || '');
+            if(gradient === null) return;
             const tooltip = prompt('Tooltip description', badge.tooltip || '');
             if(tooltip === null) return;
             const showInComments = confirm('Show badge in comments? (OK = Yes, Cancel = No)');
             try{
-              badgeService.update(badge.id, { name, icon, color, tooltip, showInComments });
+              badgeService.update(badge.id, { name, icon, color, gradient, tooltip, showInComments });
               refreshGlobalRoleBadgeUI();
               renderBadgesTab();
             }catch(err){ alert(err && err.message ? err.message : 'Update failed'); }
@@ -3283,9 +3410,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
           const name = body.querySelector('#newBadgeName').value.trim();
           const icon = body.querySelector('#newBadgeIcon').value.trim() || '🏅';
           const color = body.querySelector('#newBadgeColor').value;
+          const gradient = body.querySelector('#newBadgeGradient').value.trim();
           const tooltip = body.querySelector('#newBadgeTooltip').value.trim();
           try{
-            badgeService.create({ name, icon, color, tooltip, showInComments:true });
+            badgeService.create({ name, icon, color, gradient, tooltip, showInComments:true });
             refreshGlobalRoleBadgeUI();
             renderBadgesTab();
           }catch(err){ alert(err && err.message ? err.message : 'Create failed'); }
@@ -3669,7 +3797,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const j = await resp.json().catch(()=>null);
         if(!resp.ok) throw new Error(JSON.stringify(j));
         if(j && j.token) setToken(j.token);
-        try{ await Promise.all([refreshUserCount(), refreshStaffDisplay()]); }catch(_err){}
+        try{ await Promise.all([refreshUserCount(), refreshStaffDisplay(), refreshOwnerControlFromServer(true)]); }catch(_err){}
+        refreshGlobalRoleBadgeUI();
         return j;
       }catch(err){ return null; }
     }
@@ -3680,7 +3809,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
         const j = await resp.json().catch(()=>null);
         if(!resp.ok) throw new Error(JSON.stringify(j));
         if(j && j.token) setToken(j.token);
-        try{ await refreshStaffDisplay(); }catch(_err){}
+        try{ await Promise.all([refreshStaffDisplay(), refreshOwnerControlFromServer(true)]); }catch(_err){}
+        refreshGlobalRoleBadgeUI();
         return j;
       }catch(err){ return null; }
     }
@@ -4716,7 +4846,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
       const profileNameWrap = modal.querySelector('[data-profile-name-wrap]');
       if(profileNameWrap){
-        renderRoleBadgesInline(profileNameWrap, username, social);
+        renderRoleBadgesInline(profileNameWrap, username, social, { context:'profile', showNames:true });
       }
       const profileAvatarImg = document.getElementById('profileAvatar');
       const profileAvatarWrap = modal.querySelector('.profileAvatarWrap');
@@ -5221,6 +5351,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
     loadRemoteLibs();
     refreshUserCount();
     refreshStaffDisplay();
+    refreshOwnerControlFromServer(true).then(()=> refreshGlobalRoleBadgeUI()).catch(()=>{});
+    setInterval(()=>{ refreshOwnerControlFromServer(false).then(()=> refreshListView({ refilter:true })).catch(()=>{}); }, 45000);
     updateStaffConsoleVisibility();
     window.addEventListener('hashchange', handleOwnerHashRoute);
     handleOwnerHashRoute();
