@@ -236,6 +236,7 @@
     const USERS_URL = '/api/users';
     const OWNER_CONTROL_URL = '/api/users';
     const SAVE_URL = '/api/save-lib';
+    const SAVE_URL_FALLBACK = 'https://jjs-libraries.vercel.app/api/save-lib';
     const USERS_URL_FALLBACK = 'https://jjs-libraries.vercel.app/api/users';
     const OWNER_USERNAME = 'Kuro';
     const OWNER_USERNAME_LOWER = OWNER_USERNAME.toLowerCase();
@@ -245,6 +246,8 @@
     let onlineRefreshTimer = null;
     let onlineUsers = [];
     let ownerState = { roles: [], badges: [], userRoles: {}, userBadges: {}, loaded: false };
+    let profileSyncUser = '';
+    let profileSyncDone = false;
 
     const topbarRoot = document.getElementById('topbarRoot');
     const mainRoot = document.getElementById('mainRoot');
@@ -256,6 +259,10 @@
         if(token) localStorage.setItem(AUTH_KEY, token);
         else localStorage.removeItem(AUTH_KEY);
       } catch(_e){}
+      if(!token){
+        profileSyncUser = '';
+        profileSyncDone = false;
+      }
       render();
     }
 
@@ -324,6 +331,11 @@
 
     function usersEndpointCandidates(){
       const list = [USERS_URL, USERS_URL_FALLBACK].filter(Boolean);
+      return Array.from(new Set(list));
+    }
+
+    function saveEndpointCandidates(){
+      const list = [SAVE_URL, SAVE_URL_FALLBACK].filter(Boolean);
       return Array.from(new Set(list));
     }
 
@@ -449,6 +461,79 @@
           localStorage.setItem('jjs_social_' + user.username, JSON.stringify(nextSocial));
         } catch(_e){}
       }
+      return profile;
+    }
+
+    function profileToSocial(profile){
+      const safe = Object.assign(defaultProfile(), profile || {});
+      return {
+        bio: String(safe.bio || '').trim(),
+        pronouns: String(safe.pronouns || '').trim(),
+        avatar_url: sanitizeUrl(safe.avatarUrl, { allowDataImage: true }) || '',
+        banner_url: sanitizeUrl(safe.bannerUrl, { allowDataImage: true }) || '',
+        links: normalizeSocialLinks(safe.socialLinks)
+      };
+    }
+
+    function socialToProfile(social, username){
+      const src = social && typeof social === 'object' ? social : {};
+      return {
+        username: username || (getUser() && getUser().username) || 'Guest',
+        pronouns: String(src.pronouns || '').trim(),
+        bio: String(src.bio || '').trim(),
+        avatarUrl: sanitizeUrl(src.avatar_url || src.avatarUrl || '', { allowDataImage: true }),
+        bannerUrl: sanitizeUrl(src.banner_url || src.bannerUrl || '', { allowDataImage: true }),
+        socialLinks: normalizeSocialLinks(src.links || src.socialLinks || [])
+      };
+    }
+
+    async function fetchProfileFromServer(username){
+      if(!username) return null;
+      for(const endpoint of saveEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=getSocial&username=${encodeURIComponent(username)}`, { cache: 'no-store' });
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || !data || !data.ok) continue;
+          return socialToProfile(data.social || {}, username);
+        }catch(_e){}
+      }
+      return null;
+    }
+
+    async function saveProfileToServer(profile){
+      const user = getUser();
+      if(!user || !user.username) throw new Error('Sign in required');
+      const social = profileToSocial(profile);
+      let lastError = null;
+      for(const endpoint of saveEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=updateSocial`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user.username, social })
+          });
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || !data || !data.ok){
+            throw new Error((data && data.error) || 'Failed to save profile');
+          }
+          return true;
+        }catch(err){
+          lastError = err;
+        }
+      }
+      throw (lastError || new Error('Failed to save profile'));
+    }
+
+    async function syncProfileFromServer(force = false){
+      const user = getUser();
+      if(!user || !user.username) return;
+      const userKey = String(user.username).toLowerCase();
+      if(!force && profileSyncDone && profileSyncUser === userKey) return;
+      const remote = await fetchProfileFromServer(user.username);
+      if(remote) setProfile(remote);
+      else setProfile({ username: user.username });
+      profileSyncUser = userKey;
+      profileSyncDone = true;
     }
 
     function transitionTo(path){
@@ -761,13 +846,17 @@
       const user = getUser();
       if(!user || !file) return '';
       const dataUrl = await fileToDataUrl(file);
-      const resp = await fetch(`${SAVE_URL}?action=uploadAvatar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: user.username, dataUrl })
-      });
-      const data = await resp.json().catch(()=>null);
-      if(resp.ok && data && data.url) return data.url;
+      for(const endpoint of saveEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=uploadAvatar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user.username, dataUrl })
+          });
+          const data = await resp.json().catch(()=>null);
+          if(resp.ok && data && data.url) return data.url;
+        }catch(_e){}
+      }
       return dataUrl;
     }
 
@@ -959,9 +1048,19 @@
           }
         }
 
-        setProfile(patch);
-        closeModal();
-        render();
+        try{
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Saving...';
+          const nextProfile = setProfile(patch);
+          await saveProfileToServer(nextProfile);
+          closeModal();
+          render();
+        }catch(err){
+          setLinksStatus((err && err.message) ? err.message : 'Failed to save profile', true);
+        }finally{
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Profile';
+        }
       });
     }
 
@@ -1778,7 +1877,6 @@
     async function render(){
       applyTheme(getTheme());
       const user = getUser();
-      const profile = getProfile();
 
       topbarRoot.innerHTML = renderTopbar();
       wireTopbar();
@@ -1791,9 +1889,7 @@
         return;
       }
 
-      if(!profile.username || profile.username === 'Guest'){
-        setProfile({ username: user.username });
-      }
+      await syncProfileFromServer();
 
       mainRoot.innerHTML = renderAuthedMain(user, getProfile());
       wireAuthedMain();
@@ -1807,4 +1903,7 @@
     render();
   </script>
 </body>
+</html>
+</body>
+
 </html>
