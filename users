@@ -549,5 +549,13 @@
     "createdAt": "2026-02-18T18:30:00.713Z",
     "createdIp": "172.58.2.47",
     "role": "member"
+  },
+  {
+    "id": "1771439499815",
+    "username": "pablo esteve",
+    "passwordHash": "2c5d470785879f71897d421c3539c377$a0a98caf073de19123e3b86d9d1102d2b0bad67da8b4ce4c791fa5ff99df64667a606b8acbc0235eaf4ff21475fd866475de77106ba3d1a88544399cfa7867e5",
+    "createdAt": "2026-02-18T18:31:39.886Z",
+    "createdIp": "5.154.53.175",
+    "role": "member"
   }
 ]
