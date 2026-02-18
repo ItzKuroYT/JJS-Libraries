@@ -429,5 +429,13 @@
     "createdAt": "2026-02-18T06:44:22.325Z",
     "createdIp": "182.190.204.59",
     "role": "member"
+  },
+  {
+    "id": "1771398841737",
+    "username": "ZarkDreew",
+    "passwordHash": "b7fb7cae24e991364799143f09a2bfeb$48e3f13ae4ba72c9663952613580656d91de9103a621b8efb74564aac7ac9f80255994a2f7473cd6b441a593d8d3080189f75bfde304e13052b08bc55b617196",
+    "createdAt": "2026-02-18T07:14:01.808Z",
+    "createdIp": "201.66.152.88",
+    "role": "member"
   }
 ]
