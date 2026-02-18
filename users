@@ -293,5 +293,13 @@
     "createdAt": "2026-02-18T01:02:53.442Z",
     "createdIp": "100.2.221.44",
     "role": "member"
+  },
+  {
+    "id": "1771380208409",
+    "username": "seba",
+    "passwordHash": "0cf1e04c46f5bd6c67c382f347c4e54f$72962bbcae4f198862a271d261a08155fcf0c38a20d8eb6ecc67060aec4360a60537f99da7948ebaefbce77eb5d0e392e96a6004d553d1d34c46c4b8357d521a",
+    "createdAt": "2026-02-18T02:03:28.465Z",
+    "createdIp": "190.134.190.30",
+    "role": "member"
   }
 ]
