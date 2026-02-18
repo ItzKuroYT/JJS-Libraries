@@ -445,5 +445,13 @@
     "createdAt": "2026-02-18T07:20:44.908Z",
     "createdIp": "71.73.170.39",
     "role": "member"
+  },
+  {
+    "id": "1771407413997",
+    "username": "LostMythic",
+    "passwordHash": "7dfd6a4ffe8542e50de7978b2608d000$9c904542d4e5ddd7ec02764c0e21ea7f64ddd03b4b2505ad68585897834742d132acf546eebebbc3d8be858bf7626a99ce98d79625013721b28475037a94715e",
+    "createdAt": "2026-02-18T09:36:54.069Z",
+    "createdIp": "134.0.121.158",
+    "role": "member"
   }
 ]
