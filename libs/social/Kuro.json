@@ -1,14 +1,8 @@
 {
   "bio": "Hey Kuro here! im the creator of this website, took a while and alot of bugfixing but its alr now!",
+  "pronouns": "He/Him",
   "avatar_url": "https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/main/libs/avatars/Kuro.png",
-  "outgoingRequests": [
-    "Shunoko",
-    "Ashura",
-    "ADMIN - Kuro"
-  ],
-  "friends": [
-    "JJ_lovemuffins"
-  ],
+  "banner_url": "",
   "links": [
     {
       "label": "Youtube",
@@ -18,9 +12,5 @@
       "label": "Roblox",
       "url": "https://www.roblox.com/users/2215298407/profile"
     }
-  ],
-  "following": [
-    "Shunoko",
-    "JJ_lovemuffins"
   ]
 }
