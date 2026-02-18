@@ -736,12 +736,32 @@
     }
 
     async function auth(mode, username, password){
-      const resp = await fetch(`${USERS_URL}?action=${mode}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      return await parseResponse(resp);
+      let lastError = null;
+      const endpoints = usersEndpointCandidates();
+      for(const endpoint of endpoints){
+        try{
+          const resp = await fetch(`${endpoint}?action=${mode}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+
+          if(resp.ok) return await parseResponse(resp);
+
+          const data = await resp.json().catch(()=>null);
+          const message = (data && data.error) || 'Request failed';
+
+          if(resp.status >= 500 || resp.status === 404){
+            lastError = new Error(message);
+            continue;
+          }
+
+          throw new Error(message);
+        }catch(err){
+          lastError = err;
+        }
+      }
+      throw (lastError || new Error('Authentication failed'));
     }
 
     function authHeaders(){
