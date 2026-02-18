@@ -333,5 +333,13 @@
     "createdAt": "2026-02-18T03:37:07.860Z",
     "createdIp": "24.107.112.26",
     "role": "member"
+  },
+  {
+    "id": "1771385946117",
+    "username": "Exclipse",
+    "passwordHash": "5c48edad85372fc33ac167b44187d040$a50805c19b952b31dfe4fe6092fad395d3f1d9e5fe459907ff562812ed1acff51c7e2262be21e6ec5efb10a37877a053a2c9b1c9b5d2c433c7f6a61b1cfefb51",
+    "createdAt": "2026-02-18T03:39:06.171Z",
+    "createdIp": "98.231.134.207",
+    "role": "member"
   }
 ]
