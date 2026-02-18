@@ -669,5 +669,13 @@
     "createdAt": "2026-02-18T23:10:43.906Z",
     "createdIp": "172.59.125.3",
     "role": "member"
+  },
+  {
+    "id": "1771457175570",
+    "username": "kidstr8",
+    "passwordHash": "a85693d050a9cc0d3765535c1ea6e1c6$745d0cbc5974efd05da50ada1c22ac028005b2bc1ada802db85eb3ceb5992cb71fdd10ee009540973fe2e5beb519b830feb60f925aa3f61dc747ac248e709110",
+    "createdAt": "2026-02-18T23:26:15.637Z",
+    "createdIp": "67.248.123.118",
+    "role": "member"
   }
 ]
