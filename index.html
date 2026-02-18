@@ -1174,14 +1174,22 @@
     }
 
     async function listDmConversations(username){
-      const resp = await fetch(`${SAVE_URL}?action=listDMs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
-      });
-      const data = await resp.json().catch(()=>null);
-      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load DMs');
-      return Array.isArray(data.conversations) ? data.conversations : [];
+      let lastError = null;
+      for(const endpoint of saveEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=listDMs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+          });
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load DMs');
+          return Array.isArray(data.conversations) ? data.conversations : [];
+        }catch(err){
+          lastError = err;
+        }
+      }
+      throw (lastError || new Error('Failed to load DMs'));
     }
 
     async function fetchDmConversation(withUser){
@@ -1189,14 +1197,22 @@
       if(!me) throw new Error('Sign in to use DMs');
       const convId = getDmConvId(me.username, withUser);
       if(!convId) return [];
-      const resp = await fetch(`${SAVE_URL}?action=getDMConversation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ convId })
-      });
-      const data = await resp.json().catch(()=>null);
-      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load conversation');
-      return Array.isArray(data.messages) ? data.messages : [];
+      let lastError = null;
+      for(const endpoint of saveEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=getDMConversation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ convId })
+          });
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to load conversation');
+          return Array.isArray(data.messages) ? data.messages : [];
+        }catch(err){
+          lastError = err;
+        }
+      }
+      throw (lastError || new Error('Failed to load conversation'));
     }
 
     async function sendDm(withUser, text){
@@ -1207,13 +1223,22 @@
       const clean = String(text || '').trim();
       if(!clean) return;
       const entry = { from: me.username, to: withUser, message: clean.slice(0, 500), t: Date.now() };
-      const resp = await fetch(`${SAVE_URL}?action=saveDM`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ convId, entry })
-      });
-      const data = await resp.json().catch(()=>null);
-      if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to send message');
+      let lastError = null;
+      for(const endpoint of saveEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=saveDM`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ convId, entry })
+          });
+          const data = await resp.json().catch(()=>null);
+          if(!resp.ok || !data || data.error) throw new Error((data && data.error) || 'Failed to send message');
+          return;
+        }catch(err){
+          lastError = err;
+        }
+      }
+      throw (lastError || new Error('Failed to send message'));
     }
 
     async function openDmsMenu(prefillUser = ''){
