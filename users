@@ -381,5 +381,13 @@
     "createdAt": "2026-02-18T04:43:11.744Z",
     "createdIp": "49.217.130.157",
     "role": "member"
+  },
+  {
+    "id": "1771390869493",
+    "username": "Yuki",
+    "passwordHash": "32f3ac7b2f9b352eb3616062243d05ad$ba3c8b4343bfde9de9e454cb22021606b19f7d8c851ce4fb19709810493c003f09b13b900d49270873711fe83bd3d7f920b78f3ceb3f4b59387117efa99aca03",
+    "createdAt": "2026-02-18T05:01:09.573Z",
+    "createdIp": "58.11.11.233",
+    "role": "member"
   }
 ]
