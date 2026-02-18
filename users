@@ -341,5 +341,13 @@
     "createdAt": "2026-02-18T03:39:06.171Z",
     "createdIp": "98.231.134.207",
     "role": "member"
+  },
+  {
+    "id": "1771386093662",
+    "username": "CyberRooter",
+    "passwordHash": "0460ba3430fdb769af12075aa431e969$f38ae5cd1574735de87d15b703e1d7f774ff34a380d9a89ec51eeabb677255afcebb78cb5c8b93435a357bb6f357882dac6cfee7649206ba4305bc9595b8d1a5",
+    "createdAt": "2026-02-18T03:41:33.732Z",
+    "createdIp": "177.230.61.52",
+    "role": "member"
   }
 ]
