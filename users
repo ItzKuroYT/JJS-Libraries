@@ -677,5 +677,13 @@
     "createdAt": "2026-02-18T23:26:15.637Z",
     "createdIp": "67.248.123.118",
     "role": "member"
+  },
+  {
+    "id": "1771457376492",
+    "username": "folkslore",
+    "passwordHash": "9046a2dee72f2e38fa6c07f9b9190b49$85999019d765331b0f21d41a4897792b8f4e8ad8d0d33a1bc77f749fa4e8e6bc02637e3037624655ef5e8254e1c5e0ed96c9d01ab8aaf2b50dcac81693152e0c",
+    "createdAt": "2026-02-18T23:29:36.563Z",
+    "createdIp": "69.222.127.254",
+    "role": "member"
   }
 ]
