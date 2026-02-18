@@ -969,7 +969,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
     let activeGlobalSearchSort = 'relevance';
     let searchDebounceTimer = null;
     const AVATAR_FOLDER = (window.AVATAR_FOLDER || 'libs/avatars').toString().replace(/\\/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
-    const DEFAULT_AVATAR_URL = AVATAR_FOLDER ? `${AVATAR_FOLDER}/default.png` : 'default.png';
+    const DEFAULT_AVATAR_URL = '';
     const FALLBACK_AVATAR_DATA_URI = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="26" fill="%231f2436"/><circle cx="40" cy="30" r="18" fill="%23495773"/><rect x="18" y="52" width="44" height="18" rx="9" fill="%23495773"/></svg>';
 
     const listEl = document.getElementById('list');
@@ -3718,10 +3718,17 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     function getAvatarSourceBundle(username, social){
-      const normalizedSocialUrl = social && typeof social.avatar_url === 'string' ? social.avatar_url.trim() : '';
-      const storedAvatarUrl = getStoredAvatarUrl(username);
+      const sanitizeAvatarSource = (value)=>{
+        const raw = String(value || '').trim();
+        if(!raw) return '';
+        const lowered = raw.toLowerCase();
+        if(lowered.endsWith('/default.png') || lowered === 'default.png') return '';
+        return raw;
+      };
+      const normalizedSocialUrl = sanitizeAvatarSource(social && typeof social.avatar_url === 'string' ? social.avatar_url : '');
+      const storedAvatarUrl = sanitizeAvatarSource(getStoredAvatarUrl(username));
       const candidateUrls = buildAvatarUrls(username);
-      const primary = normalizedSocialUrl || storedAvatarUrl || candidateUrls[0] || DEFAULT_AVATAR_URL;
+      const primary = normalizedSocialUrl || storedAvatarUrl || candidateUrls[0] || '';
       const fallbackSources = [];
       const seen = new Set([primary, DEFAULT_AVATAR_URL, FALLBACK_AVATAR_DATA_URI]);
       candidateUrls.forEach(url=>{
@@ -3731,7 +3738,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       });
       return {
         src: primary,
-        stage: primary && primary !== DEFAULT_AVATAR_URL && primary !== FALLBACK_AVATAR_DATA_URI ? 'remote' : 'default',
+        stage: primary && primary !== DEFAULT_AVATAR_URL && primary !== FALLBACK_AVATAR_DATA_URI ? 'remote' : 'none',
         fallbackSources
       };
     }
@@ -3745,7 +3752,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const wrapper = opts.wrapper || null;
       const requestedSrc = typeof opts.src === 'string' ? opts.src.trim() : '';
       const resolvedSrc = requestedSrc || DEFAULT_AVATAR_URL;
-      const resolvedStage = opts.stage || ((requestedSrc && requestedSrc !== DEFAULT_AVATAR_URL && requestedSrc !== FALLBACK_AVATAR_DATA_URI) ? 'remote' : 'default');
+      const resolvedStage = opts.stage || ((requestedSrc && requestedSrc !== DEFAULT_AVATAR_URL && requestedSrc !== FALLBACK_AVATAR_DATA_URI) ? 'remote' : 'none');
       const fallbackSources = Array.isArray(opts.fallbackSources)
         ? opts.fallbackSources.filter(src=> typeof src === 'string' && src.trim() && src.trim() !== requestedSrc)
         : [];
@@ -3753,8 +3760,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
         if(!wrapper) return;
         wrapper.style.background = filled ? 'none' : 'rgba(255,255,255,0.08)';
       };
+      const clearImage = ()=>{
+        imgEl.dataset.avatarStage = 'none';
+        imgEl.removeAttribute('src');
+        imgEl.style.display = 'none';
+      };
       const applySource = (srcValue, stageValue)=>{
         imgEl.dataset.avatarStage = stageValue;
+        imgEl.style.display = '';
         imgEl.src = srcValue;
       };
       imgEl.onload = ()=> updateWrapper(true);
@@ -3766,17 +3779,17 @@ Get a code from the character builder in jjs, then paste it here. When you click
             applySource(nextSrc, 'remote');
             return;
           }
-          applySource(DEFAULT_AVATAR_URL, 'default');
-          updateWrapper(false);
-          return;
-        }
-        if(stage === 'default'){
-          applySource(FALLBACK_AVATAR_DATA_URI, 'inline');
+          clearImage();
           updateWrapper(false);
           return;
         }
         imgEl.onerror = null;
       };
+      if(!resolvedSrc){
+        clearImage();
+        updateWrapper(false);
+        return;
+      }
       applySource(resolvedSrc, resolvedStage);
       updateWrapper(resolvedStage === 'remote');
     }
@@ -5457,4 +5470,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
   </script>
 </body>
 </html>
+
+
 
