@@ -12,7 +12,13 @@
   ],
   "visibility": "public",
   "comments": [],
-  "ratings": [],
+  "ratings": [
+    {
+      "user": "Zaky",
+      "value": 5,
+      "t": 1771423449434
+    }
+  ],
   "whitelist": [],
   "createdAt": 1771280974826,
   "views": 3,
