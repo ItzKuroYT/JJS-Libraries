@@ -621,5 +621,13 @@
     "createdAt": "2026-02-18T21:58:08.203Z",
     "createdIp": "99.226.146.97",
     "role": "member"
+  },
+  {
+    "id": "1771451929795",
+    "username": "LeoRoblox mate",
+    "passwordHash": "07149a05b823a24c5438851e8b1af184$fa2da790a5d8589635d42bba389477e5a4354080ab22c3dd02942a2bd466ef9edbaea0cb5a38ad6995be0112191659a2a52107e7258cd64189bec18aacce761e",
+    "createdAt": "2026-02-18T21:58:49.856Z",
+    "createdIp": "82.79.152.91",
+    "role": "member"
   }
 ]
