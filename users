@@ -581,5 +581,13 @@
     "createdAt": "2026-02-18T20:11:30.941Z",
     "createdIp": "94.210.217.51",
     "role": "member"
+  },
+  {
+    "id": "1771446085468",
+    "username": "LRG_king08",
+    "passwordHash": "69e66c8c7e69a93ad9e302e6edc7b92d$70d10f0f8c53d62eedf3721c0fe6453fd02da838d1ee2bd246564cfd0645b4ebfd44e0da7b2dcf0acaad766083636ad5e9e769e42ad9d62aa16f0741d6f94bf4",
+    "createdAt": "2026-02-18T20:21:25.539Z",
+    "createdIp": "12.74.222.19",
+    "role": "member"
   }
 ]
