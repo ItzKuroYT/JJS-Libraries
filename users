@@ -349,5 +349,13 @@
     "createdAt": "2026-02-18T03:41:33.732Z",
     "createdIp": "177.230.61.52",
     "role": "member"
+  },
+  {
+    "id": "1771386768561",
+    "username": "TRJ_OMNIVARUS",
+    "passwordHash": "45ab47448d955a20a493b35cb303e977$8c38a2a47ea76bdad8aa899412bf3f947d2dfe1695a32ac487c3f914baae167d0b9868fded6d6dfad244c47d0ddf39e559a3ff4cdda5f5421a17be3e6f1d0c11",
+    "createdAt": "2026-02-18T03:52:48.632Z",
+    "createdIp": "162.205.8.239",
+    "role": "member"
   }
 ]
