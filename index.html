@@ -35,10 +35,134 @@
 
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); }
+    body { position: relative; overflow-x: hidden; background: transparent; }
     a { color: inherit; text-decoration: none; }
     button, input, textarea, select { font: inherit; }
 
-    .app { width: min(1220px, 95vw); margin: 16px auto 28px; }
+    .bgScene {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      background:
+        radial-gradient(130% 85% at 0% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 58%),
+        radial-gradient(120% 95% at 100% 0%, color-mix(in srgb, var(--accent2) 20%, transparent), transparent 60%),
+        radial-gradient(140% 105% at 50% 120%, color-mix(in srgb, var(--surfaceSoft) 60%, transparent), transparent 72%),
+        var(--bg);
+    }
+    .bgNebula,
+    .bgStars,
+    .bgGrid,
+    .bgComets,
+    .bgAurora,
+    .bgRadial {
+      position: absolute;
+      inset: -20%;
+      pointer-events: none;
+    }
+    .bgRadial {
+      inset: 0;
+      opacity: .65;
+      background:
+        radial-gradient(48% 42% at 22% 28%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 72%),
+        radial-gradient(42% 36% at 78% 20%, color-mix(in srgb, var(--accent2) 30%, transparent), transparent 70%),
+        radial-gradient(60% 54% at 52% 88%, color-mix(in srgb, var(--surfaceSoft) 72%, transparent), transparent 74%);
+      filter: blur(10px);
+      animation: radialBreath 14s ease-in-out infinite alternate;
+    }
+    .bgNebula {
+      background:
+        radial-gradient(34% 28% at 18% 24%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+        radial-gradient(32% 30% at 72% 18%, color-mix(in srgb, var(--accent2) 24%, transparent), transparent 72%),
+        radial-gradient(26% 24% at 56% 72%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 76%);
+      filter: blur(10px);
+      animation: nebulaDrift 26s ease-in-out infinite alternate;
+      opacity: .9;
+    }
+    .bgStars {
+      opacity: .52;
+      background-image:
+        radial-gradient(circle at 15% 20%, #fff 0 1px, transparent 1.8px),
+        radial-gradient(circle at 72% 34%, #fff 0 1px, transparent 1.8px),
+        radial-gradient(circle at 42% 78%, #fff 0 1px, transparent 1.8px),
+        radial-gradient(circle at 86% 58%, #fff 0 1px, transparent 1.8px),
+        radial-gradient(circle at 25% 66%, #fff 0 1px, transparent 1.8px),
+        radial-gradient(circle at 58% 12%, #fff 0 1px, transparent 1.8px),
+        radial-gradient(circle at 8% 46%, #fff 0 1px, transparent 1.8px),
+        radial-gradient(circle at 94% 14%, #fff 0 1px, transparent 1.8px);
+      background-size: 420px 300px, 510px 360px, 610px 460px, 530px 390px, 660px 520px, 580px 420px, 700px 540px, 780px 620px;
+      animation: starsShift 90s linear infinite, starsPulse 6s ease-in-out infinite alternate;
+    }
+    .bgGrid {
+      inset: 0;
+      opacity: .01;
+      background-image:
+        linear-gradient(color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: radial-gradient(circle at 50% 35%, #000 35%, transparent 78%);
+      animation: gridFloat 24s linear infinite;
+    }
+    .bgComets {
+      inset: 0;
+      opacity: .55;
+      background-image:
+        linear-gradient(120deg, transparent 45%, color-mix(in srgb, #fff 95%, transparent) 50%, transparent 55%),
+        linear-gradient(120deg, transparent 42%, color-mix(in srgb, var(--accent) 80%, transparent) 50%, transparent 58%),
+        linear-gradient(120deg, transparent 40%, color-mix(in srgb, var(--accent2) 78%, transparent) 50%, transparent 60%);
+      background-size: 260px 2px, 320px 2px, 300px 2px;
+      background-repeat: no-repeat;
+      background-position: -25% 25%, -35% 55%, -20% 75%;
+      filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent2) 45%, transparent));
+      animation: cometSweep 9s linear infinite;
+    }
+    .bgAurora {
+      inset: -10% -20%;
+      opacity: .4;
+      background:
+        conic-gradient(from 120deg at 25% 10%, transparent 0deg, color-mix(in srgb, var(--accent) 26%, transparent) 60deg, transparent 120deg),
+        conic-gradient(from 250deg at 80% 0%, transparent 0deg, color-mix(in srgb, var(--accent2) 24%, transparent) 70deg, transparent 130deg);
+      filter: blur(24px);
+      animation: auroraWave 18s ease-in-out infinite alternate;
+    }
+
+    @keyframes nebulaDrift {
+      0% { transform: translate3d(-1%, -1%, 0) scale(1); }
+      100% { transform: translate3d(2.2%, 1.4%, 0) scale(1.08); }
+    }
+    @keyframes starsShift {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(-120px, 70px, 0); }
+    }
+    @keyframes starsPulse {
+      0% { opacity: .38; }
+      100% { opacity: .58; }
+    }
+    @keyframes gridFloat {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(34px, 34px, 0); }
+    }
+    @keyframes cometSweep {
+      0% { background-position: -30% 20%, -38% 50%, -24% 70%; opacity: 0; }
+      10% { opacity: .65; }
+      70% { opacity: .45; }
+      100% { background-position: 130% 52%, 125% 78%, 132% 96%; opacity: 0; }
+    }
+    @keyframes auroraWave {
+      0% { transform: translate3d(-2%, 0, 0) scale(1); }
+      100% { transform: translate3d(2.5%, 1.5%, 0) scale(1.07); }
+    }
+    @keyframes radialBreath {
+      0% { transform: scale(1) translate3d(0, 0, 0); opacity: .56; }
+      100% { transform: scale(1.08) translate3d(1.5%, -1%, 0); opacity: .76; }
+    }
+    @keyframes galaxyTitleShift {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+
+    .app { width: min(1220px, 95vw); margin: 16px auto 28px; position: relative; z-index: 1; }
     .topbar {
       position: sticky;
       top: 10px;
@@ -47,15 +171,40 @@
       grid-template-columns: 1fr auto 1fr;
       gap: 10px;
       align-items: center;
-      background: var(--surface);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 12px 30px color-mix(in srgb, var(--bg) 52%, transparent);
+      position: relative;
+    }
+    .topbar::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 26px color-mix(in srgb, var(--accent2) 22%, transparent);
     }
     .leftActions, .rightActions { display: flex; align-items: center; gap: 8px; }
     .rightActions { justify-content: flex-end; }
     .brand { text-align: center; }
-    .brand h1 { margin: 0; font-size: 1.2rem; }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: .01em;
+      color: var(--text);
+      background-image: linear-gradient(95deg, #ffffff 0%, #b8c6ff 18%, #8fa4ff 36%, #ba88ff 58%, #79d7ff 76%, #ffffff 100%);
+      background-size: 240% 240%;
+      background-position: 0% 50%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: galaxyTitleShift 7s ease-in-out infinite alternate;
+      text-shadow: 0 0 24px color-mix(in srgb, var(--accent2) 25%, transparent);
+    }
     .nav { display: inline-flex; gap: 8px; margin-top: 6px; }
     .navBtn {
       padding: 6px 12px;
@@ -64,6 +213,13 @@
       background: var(--surfaceSoft);
       color: var(--muted);
       cursor: pointer;
+      transition: transform .16s ease, box-shadow .18s ease, border-color .18s ease, color .18s ease;
+    }
+    .navBtn:hover:not([disabled]) {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent), 0 10px 18px color-mix(in srgb, var(--bg) 45%, transparent);
+      color: var(--text);
     }
     .navBtn.active { color: #fff; border-color: transparent; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
     .navBtn[disabled] { opacity: .55; cursor: not-allowed; }
@@ -75,6 +231,13 @@
       border-radius: 10px;
       padding: 8px 12px;
       cursor: pointer;
+      transition: transform .16s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
+    }
+    .btn:hover:not([disabled]) {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 54%, var(--border));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent2) 40%, transparent), 0 12px 20px color-mix(in srgb, var(--bg) 44%, transparent);
+      filter: brightness(1.04);
     }
     .btn.primary { color: #fff; border-color: transparent; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
     .btn.danger { color: #fff; border-color: transparent; background: var(--danger); }
@@ -86,16 +249,25 @@
       gap: 14px;
     }
     .panel {
-      background: var(--surface);
+      background: color-mix(in srgb, var(--surface) 90%, transparent);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 14px;
+      backdrop-filter: blur(7px);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--bg) 42%, transparent);
+      position: relative;
+      transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+    }
+    .panel:hover {
+      border-color: color-mix(in srgb, var(--accent2) 34%, var(--border));
+      box-shadow: 0 14px 30px color-mix(in srgb, var(--bg) 45%, transparent), 0 0 24px color-mix(in srgb, var(--accent2) 20%, transparent);
+      transform: translateY(-1px);
     }
     .communityStrip {
       margin-top: 10px;
       padding: 10px;
       border-radius: 14px;
-      background: linear-gradient(120deg, rgba(123,91,255,0.14), rgba(8,19,42,0.8));
+      background: linear-gradient(120deg, color-mix(in srgb, var(--accent2) 18%, transparent), color-mix(in srgb, var(--surface) 88%, transparent));
       border: 1px solid var(--border);
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -218,9 +390,23 @@
     @media (max-width: 980px) {
       .layout { grid-template-columns: 1fr; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bgNebula, .bgStars, .bgGrid, .bgComets, .bgAurora, .bgRadial { animation: none !important; }
+      .brand h1 { animation: none !important; }
+      .panel, .btn, .navBtn { transition: none !important; }
+    }
   </style>
 </head>
 <body>
+  <div class="bgScene" aria-hidden="true">
+    <div class="bgRadial"></div>
+    <div class="bgAurora"></div>
+    <div class="bgNebula"></div>
+    <div class="bgStars"></div>
+    <div class="bgGrid"></div>
+    <div class="bgComets"></div>
+  </div>
   <div class="app">
     <header id="topbarRoot"></header>
     <main id="mainRoot"></main>
