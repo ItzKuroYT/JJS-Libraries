@@ -685,5 +685,13 @@
     "createdAt": "2026-02-18T23:29:36.563Z",
     "createdIp": "69.222.127.254",
     "role": "member"
+  },
+  {
+    "id": "1771457656572",
+    "username": "valor",
+    "passwordHash": "60eebe004244a581ef0c6cc85fd6d10b$9f4ad7efa3dd0488518bd1049dcdad135ca9bc4abe49b146199fcf659105ec361d4c147b5aec29f216b35f747dbbf20aeb5252890aece37fdeebdbf40af2d3f0",
+    "createdAt": "2026-02-18T23:34:16.634Z",
+    "createdIp": "172.58.130.42",
+    "role": "member"
   }
 ]
