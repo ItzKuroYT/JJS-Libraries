@@ -613,5 +613,13 @@
     "createdAt": "2026-02-18T20:49:36.097Z",
     "createdIp": "85.104.64.210",
     "role": "member"
+  },
+  {
+    "id": "1771451888134",
+    "username": "DarkMasterFour",
+    "passwordHash": "0350285fe0fbef0d49b2940dec7f749a$58ba96f570d0570c7f77168f56b49b3c9a6e9f0c5a6b3e0bfaedf8ec902ad6c96bb264923e1f9f2d96cab6ccc311bc88679a6a2831a037cf6efe8eb1473de680",
+    "createdAt": "2026-02-18T21:58:08.203Z",
+    "createdIp": "99.226.146.97",
+    "role": "member"
   }
 ]
