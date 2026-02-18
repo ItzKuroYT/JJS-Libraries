@@ -597,5 +597,13 @@
     "createdAt": "2026-02-18T20:22:07.200Z",
     "createdIp": "83.175.178.156",
     "role": "member"
+  },
+  {
+    "id": "1771446237423",
+    "username": "Jhonkaisen",
+    "passwordHash": "fbaa96cd538853e0f1fc01a604cc2a12$8d9bd097aab9c7fc87592b765b051d5681d6f549ec0fefdfa6c0c3af63e617ba0506e355e35b7c145e1af7e3c644dfb0af10c8b999d27a4c244c2941b3ee9099",
+    "createdAt": "2026-02-18T20:23:57.503Z",
+    "createdIp": "96.27.226.223",
+    "role": "member"
   }
 ]
