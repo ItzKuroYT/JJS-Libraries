@@ -788,5 +788,13 @@
     "createdAt": "2026-02-19T15:36:56.116Z",
     "createdIp": "27.125.250.174",
     "role": "member"
+  },
+  {
+    "id": "1771520737261",
+    "username": "Invisible",
+    "passwordHash": "a7b6888692b32f3982d13ccac92bd582$9afad1c3828b0a363da8c01732345828282a9a4e87e3e008eee0506744ff516351ac53efc9e4d28cc092dbc0d3718229570d6f29716e90d9c3efb5333a6bf028",
+    "createdAt": "2026-02-19T17:05:37.317Z",
+    "createdIp": "188.232.239.133",
+    "role": "member"
   }
 ]
