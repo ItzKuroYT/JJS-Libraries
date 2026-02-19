@@ -860,5 +860,13 @@
     "createdAt": "2026-02-19T22:52:45.614Z",
     "createdIp": "108.243.146.228",
     "role": "member"
+  },
+  {
+    "id": "1771542325248",
+    "username": "kira",
+    "passwordHash": "265157ba01f04b4db6406337a7467356$579f33151de195bd3a81b8ee0324f1add7085047a59da18da1ebb2e89c457d5b99801d6c4efd3838a4fd2341c043b0675f3d4ef72eedc39906ce839e9b5c086a",
+    "createdAt": "2026-02-19T23:05:25.320Z",
+    "createdIp": "70.173.103.57",
+    "role": "member"
   }
 ]
