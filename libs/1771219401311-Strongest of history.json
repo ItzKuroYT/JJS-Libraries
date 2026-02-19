@@ -28,5 +28,19 @@
     }
   ],
   "__filename": "1771219401311-Strongest of history.json",
-  "__path": "libs/1771219401311-Strongest of history.json"
+  "__path": "libs/1771219401311-Strongest of history.json",
+  "visibility": "public",
+  "whitelist": [],
+  "createdAt": 1771219401311,
+  "views": 0,
+  "pinned": false,
+  "reactions": {
+    "👍": [],
+    "❤️": [],
+    "😂": [],
+    "😮": [],
+    "🔥": [
+      "hamsterloraster"
+    ]
+  }
 }
