@@ -45,17 +45,6 @@
     "role": "member"
   },
   {
-    "id": "1771115845033",
-    "username": "Test",
-    "passwordHash": "c721401473a97786676ab9eef04d44c7$a36136ea25540419eb82abfe26215f922945088e87a42fee582b8cacae327360eb336b6144b6c94c51f265d5282bb08f3a8799ea9657104728c864bacaae8b6e",
-    "createdAt": "2026-02-15T00:37:25.151Z",
-    "roles": [
-      "member"
-    ],
-    "badges": [],
-    "role": "member"
-  },
-  {
     "id": "1771134163538",
     "username": "marii",
     "passwordHash": "d9b29d9529c65d9f36861f5af7245264$07265b3f8a60ecd0e145848a111711ef8d55a4804af5cf6e6164463da8294148effdbb24b997f4827b9c0eaa9771e1e5718f16eb05b9e56da8b86f62ba826dd5",
@@ -71,28 +60,6 @@
     "username": "thewheatrat",
     "passwordHash": "5ffacdbd9085ccd08f1100bd53273062$c89464655b0887170e806ca49aad2bdeed15453ee27b028d878833cfde1d3f31906bf420d984834ec49e25adcccc2584b209507360a5538a5cb5310739dd61f4",
     "createdAt": "2026-02-15T05:50:53.056Z",
-    "roles": [
-      "member"
-    ],
-    "badges": [],
-    "role": "member"
-  },
-  {
-    "id": "1771142166913",
-    "username": "Test2",
-    "passwordHash": "66a9c087900974f288acbdab761691c3$dda708972c6e32030e7ffad272df5c8fa0a4d846bf96b38233aba8e236b5b6436869abfd16ec286eec6a48535c74c34cabd84020e5dacb4127e4bf93c4b55b37",
-    "createdAt": "2026-02-15T07:56:07.030Z",
-    "roles": [
-      "member"
-    ],
-    "badges": [],
-    "role": "member"
-  },
-  {
-    "id": "1771143076764",
-    "username": "Test3",
-    "passwordHash": "05a3746fd000ebe82951591c212aec62$3d1320219ae593c002b703402e7aba25a2ce5661fd0749cf0722b908a3712c2699ae934c67cb19352c686bb7d20a1485ff55e83657f3d02c3d9477d3260696c6",
-    "createdAt": "2026-02-15T08:11:16.879Z",
     "roles": [
       "member"
     ],
@@ -221,22 +188,6 @@
       "emq"
     ],
     "badges": []
-  },
-  {
-    "id": "1771304742814",
-    "username": "Username2",
-    "passwordHash": "283c4c5ad7039383444a29502a0c1956$eb06d133202d621303a2fe36cb99a6b8ff08970d69afaa6ec92b4fc33fffcb013d3a17db47a7e3c83f8d1daf458e7b03cb81792a1643c7fd05aeb802295436b0",
-    "createdAt": "2026-02-17T05:05:42.880Z",
-    "createdIp": "175.136.58.249",
-    "role": "member"
-  },
-  {
-    "id": "1771304751545",
-    "username": "Username1",
-    "passwordHash": "26642b4c67134356f4e457fc770b516e$0ad197148b41ef1846580f75f790a9e3187baf96530cd619a63ee3b90033404b882fc63fcf457506ba769353b46ccee0807109355f91e7a7c79d6f81a571c45d",
-    "createdAt": "2026-02-17T05:05:51.660Z",
-    "createdIp": "175.136.58.249",
-    "role": "member"
   },
   {
     "id": "1771306968067",
