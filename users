@@ -796,5 +796,13 @@
     "createdAt": "2026-02-19T17:05:37.317Z",
     "createdIp": "188.232.239.133",
     "role": "member"
+  },
+  {
+    "id": "1771527389201",
+    "username": "Warichy",
+    "passwordHash": "4ccf758a3948d9a97d4fce9fec8667cc$0e8da8c0de7fe0a2940535fc7e8dfb1b9f04269e54b7dbb5a8a648cac13cab4d941790cab3c27e1497beaf04b4e3c6f146c8576a6c014f5a44264a05d27c38fe",
+    "createdAt": "2026-02-19T18:56:29.271Z",
+    "createdIp": "78.190.127.56",
+    "role": "member"
   }
 ]
