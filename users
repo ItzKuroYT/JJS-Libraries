@@ -844,5 +844,13 @@
     "createdAt": "2026-02-19T21:19:23.917Z",
     "createdIp": "24.197.138.134",
     "role": "member"
+  },
+  {
+    "id": "1771540965740",
+    "username": "dihguy1",
+    "passwordHash": "23fba677265e5c75293079b7e318b04e$573545bb84def697ae920790a532bad1264d7bb5d192800e71cd417df5a281393d477d82d3c94019d905c164e34becefa45443c9398bea2c573bb86fc06357da",
+    "createdAt": "2026-02-19T22:42:45.797Z",
+    "createdIp": "94.107.93.144",
+    "role": "member"
   }
 ]
