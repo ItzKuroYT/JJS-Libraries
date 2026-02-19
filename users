@@ -812,5 +812,13 @@
     "createdAt": "2026-02-19T19:01:25.617Z",
     "createdIp": "72.224.137.97",
     "role": "member"
+  },
+  {
+    "id": "1771528746412",
+    "username": "Erebus",
+    "passwordHash": "3276ad5d30f0d9df0efa01e61eb5de91$31900adf6a5efdf641daabb7f95d6ddd77823fd006eac339688aad679096203222be5cde4e03e798f471e5c793734af73f4e10e21e3ade04483a58efde8c0c09",
+    "createdAt": "2026-02-19T19:19:06.519Z",
+    "createdIp": "96.244.151.142",
+    "role": "member"
   }
 ]
