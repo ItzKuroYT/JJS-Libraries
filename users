@@ -884,5 +884,13 @@
     "createdAt": "2026-02-19T23:35:21.703Z",
     "createdIp": "70.95.15.122",
     "role": "member"
+  },
+  {
+    "id": "1771545512073",
+    "username": "billybob95",
+    "passwordHash": "b27f59cac6b5210567a09d99f7f418d7$4b797d7ad30d5d1020d5099be62d47fd2b4593801b02e0cff0f3c141b32411a980f629b8537919fc6f34f6e7d7af1ae68f6a3e45553c88caa8247f4b700414d6",
+    "createdAt": "2026-02-19T23:58:32.144Z",
+    "createdIp": "24.2.105.34",
+    "role": "member"
   }
 ]
