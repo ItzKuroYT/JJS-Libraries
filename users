@@ -772,5 +772,13 @@
     "createdAt": "2026-02-19T15:02:10.539Z",
     "createdIp": "188.17.209.160",
     "role": "member"
+  },
+  {
+    "id": "1771515385168",
+    "username": "pixelrhodes123",
+    "passwordHash": "d47a3b4d96f589b2d035537486a5d79e$45187f1131e22bb10a7c146b1d16e5bcd242441f33994821b528593a1e8555205cac3d0b474eafa593fa665cac4ea1df949ee989e0c706a50a6c26496a2e38fe",
+    "createdAt": "2026-02-19T15:36:25.250Z",
+    "createdIp": "187.19.225.166",
+    "role": "member"
   }
 ]
