@@ -836,5 +836,13 @@
     "createdAt": "2026-02-19T20:33:27.321Z",
     "createdIp": "73.66.131.182",
     "role": "member"
+  },
+  {
+    "id": "1771535963858",
+    "username": "trevor.cokacola",
+    "passwordHash": "43fe2721912c27587336ebd8278f5f87$74169c580f712ac0f499d3c72b1941f61b36ff0294cf2744ecd1ca0f3f7db599752785e6d8fb4734ca02b2fc4f96c944279070cbbca28a5e452c01f1944d6629",
+    "createdAt": "2026-02-19T21:19:23.917Z",
+    "createdIp": "24.197.138.134",
+    "role": "member"
   }
 ]
