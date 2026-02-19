@@ -764,5 +764,13 @@
     "createdAt": "2026-02-19T13:36:24.240Z",
     "createdIp": "31.104.78.106",
     "role": "member"
+  },
+  {
+    "id": "1771513330468",
+    "username": "Saversel",
+    "passwordHash": "12479a7dd2de533e5e2dcd93d369bb5d$49abc22dca929ab7d5ad6fa25a909aaee2aa5466777899410026a964db5b299fa41d80aba4e84af81f4ab9a9513289b0f38c60c39b5fa5cd39f1d86a04ec5210",
+    "createdAt": "2026-02-19T15:02:10.539Z",
+    "createdIp": "188.17.209.160",
+    "role": "member"
   }
 ]
