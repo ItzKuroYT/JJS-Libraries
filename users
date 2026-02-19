@@ -748,5 +748,13 @@
     "createdAt": "2026-02-19T11:47:57.003Z",
     "createdIp": "149.34.244.176",
     "role": "member"
+  },
+  {
+    "id": "1771506538218",
+    "username": "gabote31",
+    "passwordHash": "2e1ea74dfbc477037450b853a4557054$3a9e4fbc1f2910227aafdeb297323952257cefeb846bee18224614a883385ee63a019327fb6ee69baa696dfdfdb3e3a92c8064cb8ba6cd2ced8939d7a541aac8",
+    "createdAt": "2026-02-19T13:08:58.290Z",
+    "createdIp": "186.127.184.58",
+    "role": "member"
   }
 ]
