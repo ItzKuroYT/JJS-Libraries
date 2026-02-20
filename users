@@ -900,5 +900,13 @@
     "createdAt": "2026-02-20T01:41:23.339Z",
     "createdIp": "208.53.126.236",
     "role": "member"
+  },
+  {
+    "id": "1771554839065",
+    "username": "Hoodiegamer89",
+    "passwordHash": "f69d25ec7cd88bee5159cf81d3abee36$c31b9ce3b86de77ae0fb430b07f3bb7948c2dc74d3fd4be927b9ec92ab509212870c401d0791cc4d11425a2a9dbe6da397e8922a7599dc73cf159ab6d6c1b928",
+    "createdAt": "2026-02-20T02:33:59.135Z",
+    "createdIp": "72.184.157.58",
+    "role": "member"
   }
 ]
