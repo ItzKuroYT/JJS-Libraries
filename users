@@ -932,5 +932,13 @@
     "createdAt": "2026-02-20T07:43:45.400Z",
     "createdIp": "109.149.67.232",
     "role": "member"
+  },
+  {
+    "id": "1771583852685",
+    "username": "DEnis_back93",
+    "passwordHash": "25a34738e2463238e9014d0e4475a6e4$069fbd6addc018e3c323b1d270a15ce56337e16ffe93718f4007e4674fb474ef9122dbefe39b848b96daebbdd7febd60824512652a790e5cb199108b2ac25dbf",
+    "createdAt": "2026-02-20T10:37:32.756Z",
+    "createdIp": "111.92.89.179",
+    "role": "member"
   }
 ]
