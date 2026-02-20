@@ -12,11 +12,13 @@
   "visibility": "public",
   "whitelist": [],
   "createdAt": 1771555029965,
-  "views": 1,
+  "views": 2,
   "pinned": false,
   "reactions": {
     "👍": [],
-    "❤️": [],
+    "❤️": [
+      "Kuro"
+    ],
     "😂": [],
     "😮": [],
     "🔥": []
@@ -28,5 +30,7 @@
       "value": 5,
       "t": 1771555573519
     }
-  ]
+  ],
+  "__filename": "1771555029965-Body Snatcher.json",
+  "__path": "libs/1771555029965-Body Snatcher.json"
 }
