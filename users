@@ -972,5 +972,13 @@
     "createdAt": "2026-02-20T16:41:49.200Z",
     "createdIp": "187.110.228.121",
     "role": "member"
+  },
+  {
+    "id": "1771610085219",
+    "username": "brois_243",
+    "passwordHash": "f9e0cafc7498102db5011d4e4ed98e95$a5523fcb46de9840686fcf659f58766de0e1b754d4c9e7e96a6164c621a9a748fd7185bbe2440ede5afc886a45a509072438eb1400485c22b29c8b3cfc9ee062",
+    "createdAt": "2026-02-20T17:54:45.287Z",
+    "createdIp": "79.210.9.60",
+    "role": "member"
   }
 ]
