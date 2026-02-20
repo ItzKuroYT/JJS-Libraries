@@ -988,5 +988,13 @@
     "createdAt": "2026-02-20T21:22:49.963Z",
     "createdIp": "96.240.17.161",
     "role": "member"
+  },
+  {
+    "id": "1771624093941",
+    "username": "BibsMaster007",
+    "passwordHash": "edc5967fb52a2eaec9c7296854c74469$c12fc6f1cde1d5beb65d20b0ee9279fb00d68936155088e4ea96bddebf1ab7390310995699a7de609deef074982a80cf5a20a68250d74b7108688661bb1f96fe",
+    "createdAt": "2026-02-20T21:48:14.003Z",
+    "createdIp": "186.207.9.240",
+    "role": "member"
   }
 ]
