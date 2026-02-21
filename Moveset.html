@@ -1496,7 +1496,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
         reactions[item] = (reactions[item] || []).filter(name=> normalizeUsername(name) !== lower);
       });
       reactions[emoji].push(user.username);
-      await persistLibraryFile(lib);
+      try{
+        await persistLibraryFile(lib);
+      }catch(_err){
+        addNotification('Reaction saved locally — sync pending');
+      }
       return reactions;
     }
 
@@ -1509,7 +1513,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const user = getCurrentUser();
       if(!canPinLibrary(user)) throw new Error('Only owner/moderators can pin posts');
       lib.pinned = !lib.pinned;
-      await persistLibraryFile(lib);
+      try{
+        await persistLibraryFile(lib);
+      }catch(_err){
+        addNotification('Pin updated locally — sync pending');
+      }
       return lib.pinned;
     }
 
@@ -1809,7 +1817,6 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     async function submitRating(lib, value){
-      if(!SERVERLESS_URL) throw new Error('Serverless endpoint not configured');
       const me = getCurrentUser();
       if(!me) throw new Error('Sign in to rate');
       const normalizedAuthor = (lib && typeof lib.author === 'string') ? lib.author.toLowerCase() : '';
@@ -1817,17 +1824,40 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(normalizedAuthor && normalizedAuthor === normalizedUser){
         throw new Error('You cannot rate your own post');
       }
+      const normalizedValue = clampRatingValue(value);
+      if(normalizedValue == null) throw new Error('Invalid rating value');
+
+      const ratings = ensureLibRatings(lib);
+      const existingIndex = ratings.findIndex(entry => normalizeUsername(entry && entry.user) === normalizedUser);
+      const nextEntry = { user: me.username, value: normalizedValue, t: Date.now() };
+      if(existingIndex >= 0) ratings[existingIndex] = nextEntry;
+      else ratings.push(nextEntry);
+
+      if(!SERVERLESS_URL){
+        addNotification('Rating saved locally — sync pending');
+        return getRatingStats(lib);
+      }
+
       const libId = getLibIdForApi(lib);
-      if(!libId) throw new Error('Missing library identifier');
-      const resp = await fetch(SERVERLESS_URL + '?action=rate', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ libId, rating: value, username: me.username })
-      });
-      const data = await resp.json().catch(()=>null);
-      if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to submit rating');
-      lib.ratings = Array.isArray(data.ratings) ? data.ratings : ensureLibRatings(lib);
-      return data.stats || getRatingStats(lib);
+      if(!libId){
+        addNotification('Rating saved locally — sync pending');
+        return getRatingStats(lib);
+      }
+
+      try{
+        const resp = await fetch(SERVERLESS_URL + '?action=rate', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ libId, rating: normalizedValue, username: me.username })
+        });
+        const data = await resp.json().catch(()=>null);
+        if(!resp.ok || !data || !data.ok) throw new Error((data && data.error) || 'Failed to submit rating');
+        lib.ratings = Array.isArray(data.ratings) ? data.ratings : ensureLibRatings(lib);
+        return data.stats || getRatingStats(lib);
+      }catch(_err){
+        addNotification('Rating saved locally — sync pending');
+        return getRatingStats(lib);
+      }
     }
 
     function renderRatingRow(lib, container){
