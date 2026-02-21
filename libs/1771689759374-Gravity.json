@@ -22,7 +22,13 @@
     "🔥": []
   },
   "comments": [],
-  "ratings": [],
+  "ratings": [
+    {
+      "user": "Kuro",
+      "value": 5,
+      "t": 1771699697459
+    }
+  ],
   "__filename": "1771689759374-Gravity.json",
   "__path": "libs/1771689759374-Gravity.json"
 }
