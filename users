@@ -1012,5 +1012,13 @@
     "createdAt": "2026-02-21T09:45:27.438Z",
     "createdIp": "187.69.82.179",
     "role": "member"
+  },
+  {
+    "id": "1771679815905",
+    "username": "Yuji",
+    "passwordHash": "663135f75c85d97f4b323deec73a4963$286d516e06d74611fc64955690c8ead911a519a31a39e2c4a19961b1b56250d4e0d5bfb3f1fb61ba5450cf1df3ede47bcb1d754643e408cde6542d1bc7eeec5c",
+    "createdAt": "2026-02-21T13:16:55.971Z",
+    "createdIp": "172.59.123.13",
+    "role": "member"
   }
 ]
