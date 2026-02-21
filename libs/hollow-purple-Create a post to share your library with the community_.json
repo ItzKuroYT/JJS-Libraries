@@ -12,7 +12,7 @@
   "visibility": "public",
   "code": "\nGet a code from the character builder in jjs, then paste it here. When you click \"Copy\", the full code will be copied to your clipboard for easy sharing or use in your own builds.\n",
   "whitelist": [],
-  "createdAt": 1771699683951,
+  "createdAt": 1771700057253,
   "views": 0,
   "pinned": true,
   "reactions": {
