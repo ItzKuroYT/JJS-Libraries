@@ -2728,6 +2728,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
     // Serverless endpoint (preferred). If deployed on Vercel you can use
     // https://<your-project>.vercel.app/api/save-lib. Defaulting to your known deploy URL.
     const SERVERLESS_URL = 'https://jjs-libraries.vercel.app/api/save-lib';
+    const SAVE_URL_LOCAL = '/api/save-lib';
 
     // Users endpoint derived from serverless base
     const USERS_URL = SERVERLESS_URL.replace(/\/save-lib$/,'/users');
@@ -2740,6 +2741,11 @@ Get a code from the character builder in jjs, then paste it here. When you click
     const USERS_FILE_CANDIDATES = [
       'users/users.json','users/users.txt','users/users','users.json','users.txt','users'
     ];
+
+    function saveEndpointCandidates(){
+      const list = [SAVE_URL_LOCAL, SERVERLESS_URL].filter(Boolean);
+      return Array.from(new Set(list));
+    }
 
     function getRepoDefaults(){
       return {
@@ -3683,6 +3689,23 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
     }
 
+    function getHomeCachedAvatarUrl(username){
+      const normalized = normalizeUsernameKey(username);
+      if(!normalized) return '';
+      try{
+        const map = JSON.parse(localStorage.getItem('jjs_cached_user_info') || '{}') || {};
+        const fromMap = map[normalized] || map[username] || null;
+        if(fromMap && typeof fromMap.avatarUrl === 'string' && fromMap.avatarUrl.trim()) return fromMap.avatarUrl.trim();
+      }catch(_e){}
+      try{
+        const homeProfile = JSON.parse(localStorage.getItem('jjs_profile_v2') || '{}') || {};
+        if(homeProfile && normalizeUsernameKey(homeProfile.username) === normalized && typeof homeProfile.avatarUrl === 'string'){
+          return homeProfile.avatarUrl.trim();
+        }
+      }catch(_e){}
+      return '';
+    }
+
     function getAvatarBasePath(){
       const configured = (GITHUB.avatarsPath || '').replace(/^\/+/, '').replace(/\/+$/, '');
       if(configured) return configured;
@@ -3727,8 +3750,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
       };
       const normalizedSocialUrl = sanitizeAvatarSource(social && typeof social.avatar_url === 'string' ? social.avatar_url : '');
       const storedAvatarUrl = sanitizeAvatarSource(getStoredAvatarUrl(username));
+      const homeCachedAvatarUrl = sanitizeAvatarSource(getHomeCachedAvatarUrl(username));
       const candidateUrls = buildAvatarUrls(username);
-      const primary = normalizedSocialUrl || storedAvatarUrl || candidateUrls[0] || '';
+      const primary = normalizedSocialUrl || homeCachedAvatarUrl || storedAvatarUrl || candidateUrls[0] || '';
       const fallbackSources = [];
       const seen = new Set([primary, DEFAULT_AVATAR_URL, FALLBACK_AVATAR_DATA_URI]);
       candidateUrls.forEach(url=>{
@@ -3795,6 +3819,23 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     // --- Authentication helpers (client-side) ---
+    const GUEST_KEY = 'jjs_guest_mode';
+
+    function isGuestModeActive(){
+      try{ return localStorage.getItem(GUEST_KEY) === '1'; }catch(_e){ return false; }
+    }
+
+    function getSessionUser(){
+      const authed = getCurrentUser();
+      if(authed) return authed;
+      if(isGuestModeActive()) return { username: 'Guest', id: 'guest', role: 'guest' };
+      return null;
+    }
+
+    function hasFullAccountAccess(){
+      return !!getCurrentUser();
+    }
+
     function setToken(tok){
       try{
         if(tok) localStorage.setItem('jjs_token', tok);
@@ -3821,18 +3862,62 @@ Get a code from the character builder in jjs, then paste it here. When you click
       if(isStaffUser(user)) return true;
       return isLibraryAuthor(user, lib);
     }
+
+    function updateRestrictedActionsUI(){
+      const canUse = hasFullAccountAccess();
+      const dmToInput = document.getElementById('dmTo');
+      const openDmBtn = document.getElementById('openDm');
+      const createBtn = document.getElementById('createEntry');
+      const avatarFileInput = document.getElementById('avatarFile');
+      const saveBioBtn = document.getElementById('saveBio');
+      const saveAvatarBtn = document.getElementById('saveAvatar');
+      const refreshProfileBtn = document.getElementById('refreshProfile');
+      const addProfileLinkBtn = document.getElementById('addProfileLink');
+      const saveProfileLinksBtn = document.getElementById('saveProfileLinks');
+      const clearProfileLinksBtn = document.getElementById('clearProfileLinks');
+
+      if(dmToInput){
+        dmToInput.disabled = !canUse;
+        dmToInput.title = canUse ? '' : 'Sign in to use DMs';
+      }
+      if(openDmBtn){
+        openDmBtn.disabled = !canUse;
+        openDmBtn.title = canUse ? '' : 'Sign in to use DMs';
+      }
+      if(createBtn){
+        createBtn.disabled = !canUse;
+        createBtn.title = canUse ? '' : 'Sign in to create posts';
+      }
+      if(avatarFileInput){
+        avatarFileInput.disabled = !canUse;
+        avatarFileInput.title = canUse ? '' : 'Sign in to edit profile';
+      }
+      [saveBioBtn, saveAvatarBtn, refreshProfileBtn, addProfileLinkBtn, saveProfileLinksBtn, clearProfileLinksBtn].forEach(btn=>{
+        if(!btn) return;
+        btn.disabled = !canUse;
+        btn.title = canUse ? '' : 'Sign in to edit profile';
+      });
+    }
+
     function updateUserLabel(){
       const lbl = document.getElementById('userLabel');
       if(!lbl) return;
       const u = getCurrentUser();
+      const sessionUser = getSessionUser();
       if(u){
         const roleLabel = u.role && u.role !== 'member' ? ` (${u.role})` : '';
         lbl.textContent = `Signed in: ${u.username}${roleLabel}`;
+      }else if(sessionUser){
+        lbl.textContent = 'Browsing as Guest';
       }else{
         lbl.textContent = 'Not signed in';
       }
       const homeBtn = document.getElementById('openHomeAuth');
-      if(homeBtn) homeBtn.style.display = u ? 'none' : 'inline-flex';
+      if(homeBtn){
+        homeBtn.style.display = u ? 'none' : 'inline-flex';
+        homeBtn.textContent = sessionUser ? 'Sign in for full access' : 'Sign in on Home';
+      }
+      updateRestrictedActionsUI();
     }
 
     updateUserLabel();
@@ -3844,7 +3929,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       });
     }
     window.addEventListener('storage', (event)=>{
-      if(event && event.key === 'jjs_token'){
+      if(event && (event.key === 'jjs_token' || event.key === GUEST_KEY)){
         updateUserLabel();
         updateAddModeratorButton();
         updateStaffConsoleVisibility();
@@ -4261,7 +4346,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
 
     document.getElementById('createEntry').addEventListener('click', ()=>{
       const currentUser = getCurrentUser();
-      if(!currentUser) return alert('You must be signed in to create a library.');
+      if(!currentUser) return alert(isGuestModeActive() ? 'Guest mode cannot create posts. Sign in for full access.' : 'You must be signed in to create a library.');
       const cooldownRemaining = getUserPostCooldownRemaining(currentUser);
       if(cooldownRemaining > 0){
         return alert(`Please wait ${formatMs(cooldownRemaining)} before creating another post.`);
@@ -4393,7 +4478,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
     });
 
     function renderSidebar(){
-      const u = getCurrentUser(); document.getElementById('sideUsername').textContent = u ? u.username : 'Not signed in';
+      const u = getCurrentUser();
+      const sessionUser = getSessionUser();
+      document.getElementById('sideUsername').textContent = sessionUser ? sessionUser.username : 'Not signed in';
       const avatarEl = document.getElementById('avatarImg');
       const avatarWrapper = document.getElementById('avatarWrap');
       if(avatarEl){
@@ -4407,7 +4494,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
       }
       const followSummaryEl = document.getElementById('sideFollowSummary');
       if(followSummaryEl){
-        if(!u){
+        if(!u && isGuestModeActive()){
+          followSummaryEl.textContent = 'Guest mode: sign in to follow creators';
+        }else if(!u){
           followSummaryEl.textContent = 'Sign in to follow creators';
         }else{
           followSummaryEl.textContent = 'Loading followers...';
@@ -4429,6 +4518,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
       document.getElementById('myLibCount').textContent = my.length;
       my.slice(0,10).forEach(l=>{ const d = document.createElement('div'); d.className='libItem'; d.textContent = censorBadWords(l.title || ''); myLibsWrap.appendChild(d); });
       renderFriendRequests(); renderNotifications(); renderDMList();
+      updateRestrictedActionsUI();
       updateStaffConsoleVisibility();
       if(typeof window.__hydrateProfileEditor === 'function'){
         window.__hydrateProfileEditor();
@@ -4671,10 +4761,10 @@ Get a code from the character builder in jjs, then paste it here. When you click
         }
       }
 
-      if(SERVERLESS_URL){
+      for(const endpoint of saveEndpointCandidates()){
         for(const candidate of candidates){
           try{
-            const resp = await fetch(SERVERLESS_URL + '?action=getSocial&username=' + encodeURIComponent(candidate));
+            const resp = await fetch(endpoint + '?action=getSocial&username=' + encodeURIComponent(candidate), { cache:'no-store' });
             if(!resp.ok) continue;
             const j = await resp.json().catch(()=>null);
             if(!j || !j.social) continue;
@@ -4725,9 +4815,9 @@ Get a code from the character builder in jjs, then paste it here. When you click
       socialCache.set(normalizedUser, social);
       socialCache.set(username, social);
       syncSocialToHomepageProfile(username, social);
-      if(SERVERLESS_URL){
+      for(const endpoint of saveEndpointCandidates()){
         try{
-          const resp = await fetch(SERVERLESS_URL + '?action=updateSocial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, social }) });
+          const resp = await fetch(endpoint + '?action=updateSocial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, social }) });
           if(resp.ok) return await resp.json();
         }catch(_err){}
       }
@@ -4914,7 +5004,8 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     async function openProfile(username){
-      const social = await fetchSocial(username);
+      const targetUsername = String(username || '').trim();
+      if(!targetUsername) return;
       let modal = document.getElementById('profileModal');
       if(!modal){
         modal = document.createElement('div');
@@ -4932,11 +5023,20 @@ Get a code from the character builder in jjs, then paste it here. When you click
       modal.style.alignItems = 'center';
       modal.style.justifyContent = 'center';
       modal.style.padding = '16px';
-      const avatarSource = getAvatarSourceBundle(username, social);
+      modal.innerHTML = `<div style="width:min(560px,94vw);max-height:90vh;overflow:auto;background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 22px 54px rgba(0,0,0,0.6);padding:18px"><div class="smallMuted">Loading profile...</div></div>`;
+
+      let social = {};
+      try{
+        social = await fetchSocial(targetUsername);
+      }catch(_err){
+        social = {};
+      }
+
+      const avatarSource = getAvatarSourceBundle(targetUsername, social);
       const avatarUrl = avatarSource.src || DEFAULT_AVATAR_URL;
       const viewer = getCurrentUser();
-      const profileStats = getUserPostStats(username, viewer);
-      const joinDate = getUserJoinDate(username);
+      const profileStats = getUserPostStats(targetUsername, viewer);
+      const joinDate = getUserJoinDate(targetUsername);
       const joinDateLabel = joinDate ? new Date(joinDate).toLocaleDateString() : 'Unknown';
       const friends = (social.friends||[]).length || 0;
       const followersCount = Array.isArray(social.followers) ? social.followers.length : 0;
@@ -4950,14 +5050,14 @@ Get a code from the character builder in jjs, then paste it here. When you click
       const friendLabel = friends === 1 ? 'friend' : 'friends';
       const followerLabel = followersCount === 1 ? 'follower' : 'followers';
       const bannerStyle = bannerUrl ? `background-image:url('${bannerUrl}');background-size:cover;background-position:center;` : 'background:linear-gradient(135deg,rgba(126,249,194,0.35),rgba(123,91,255,0.45));';
-      modal.innerHTML = `<div id="profileCardRoot" style="width:min(760px,96vw);max-height:90vh;overflow:auto;background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 22px 54px rgba(0,0,0,0.6)"><div style="height:140px;${bannerStyle}"></div><div style="padding:0 16px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">${avatarBlock}<button id="closeProfile" class="ghost" style="margin-top:10px">Close</button></div><div data-profile-name-wrap style="margin-top:6px"><strong data-profile-username="${escapeHtml(username)}" style="font-size:20px">${escapeHtml(username)}</strong></div><div class="smallMuted" style="margin-top:4px">${pronouns || 'Pronouns not set'}</div><div class="smallMuted" style="margin-top:4px">${friends} ${friendLabel} • ${followersCount} ${followerLabel}</div><div class="smallMuted" style="margin-top:4px">Joined ${escapeHtml(joinDateLabel)} • Avg rating ${profileStats.avgPostRating.toFixed(2)} (${profileStats.ratingsCount} ratings)</div>${bioBlock}${linksBlock}<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" id="profileActions"></div><div style="margin-top:14px"><strong>Posts</strong><div id="profileLibs" style="margin-top:8px"></div><div id="profileLibPagination" style="display:flex;gap:6px;align-items:center;margin-top:8px"></div></div></div></div>`;
+      modal.innerHTML = `<div id="profileCardRoot" style="width:min(760px,96vw);max-height:90vh;overflow:auto;background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 22px 54px rgba(0,0,0,0.6)"><div style="height:140px;${bannerStyle}"></div><div style="padding:0 16px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">${avatarBlock}<button id="closeProfile" class="ghost" style="margin-top:10px">Close</button></div><div data-profile-name-wrap style="margin-top:6px"><strong data-profile-username="${escapeHtml(targetUsername)}" style="font-size:20px">${escapeHtml(targetUsername)}</strong></div><div class="smallMuted" style="margin-top:4px">${pronouns || 'Pronouns not set'}</div><div class="smallMuted" style="margin-top:4px">${friends} ${friendLabel} • ${followersCount} ${followerLabel}</div><div class="smallMuted" style="margin-top:4px">Joined ${escapeHtml(joinDateLabel)} • Avg rating ${profileStats.avgPostRating.toFixed(2)} (${profileStats.ratingsCount} ratings)</div>${bioBlock}${linksBlock}<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" id="profileActions"></div><div style="margin-top:14px"><strong>Posts</strong><div id="profileLibs" style="margin-top:8px"></div><div id="profileLibPagination" style="display:flex;gap:6px;align-items:center;margin-top:8px"></div></div></div></div>`;
       modal.addEventListener('click', (event)=>{
         if(event.target === modal) modal.remove();
       }, { once:true });
       document.getElementById('closeProfile').addEventListener('click', ()=>modal.remove());
       const profileNameWrap = modal.querySelector('[data-profile-name-wrap]');
       if(profileNameWrap){
-        renderRoleBadgesInline(profileNameWrap, username, social, { context:'profile', showNames:true });
+        renderRoleBadgesInline(profileNameWrap, targetUsername, social, { context:'profile', showNames:true });
       }
       const profileAvatarImg = document.getElementById('profileAvatar');
       const profileAvatarWrap = modal.querySelector('.profileAvatarWrap');
@@ -4968,15 +5068,15 @@ Get a code from the character builder in jjs, then paste it here. When you click
         fallbackSources: avatarSource.fallbackSources
       });
       const me = getCurrentUser(); const actions = document.getElementById('profileActions'); actions.innerHTML='';
-      if(me && me.username !== username){
+      if(me && me.username !== targetUsername){
         const mySocial = await fetchSocial(me.username);
         const theirSocial = social || {};
-        const isFriend = (mySocial.friends||[]).includes(username);
-        const outgoing = (mySocial.outgoingRequests||[]).includes(username);
-        const incoming = (mySocial.incomingRequests||[]).includes(username);
-        const blocked = (mySocial.blocked||[]).includes(username);
+        const isFriend = (mySocial.friends||[]).includes(targetUsername);
+        const outgoing = (mySocial.outgoingRequests||[]).includes(targetUsername);
+        const incoming = (mySocial.incomingRequests||[]).includes(targetUsername);
+        const blocked = (mySocial.blocked||[]).includes(targetUsername);
         const theyBlockedMe = Array.isArray(theirSocial.blocked) ? theirSocial.blocked.includes(me.username) : false;
-        const isFollowing = userIsInList(mySocial && mySocial.following, username);
+        const isFollowing = userIsInList(mySocial && mySocial.following, targetUsername);
         if(theyBlockedMe){
           const note = document.createElement('div');
           note.className = 'smallMuted';
@@ -4990,16 +5090,16 @@ Get a code from the character builder in jjs, then paste it here. When you click
             followBtn.disabled = true;
             followBtn.textContent = 'Unblock to follow';
           }else{
-            followBtn.addEventListener('click', ()=> toggleFollowUser(username));
+            followBtn.addEventListener('click', ()=> toggleFollowUser(targetUsername));
           }
           actions.appendChild(followBtn);
         }
         if(isFriend){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Friends'; actions.appendChild(b); }
         else if(outgoing){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Request sent'; actions.appendChild(b); }
-        else if(incoming){ const a = document.createElement('button'); a.className='ghost'; a.textContent='Accept'; a.addEventListener('click', ()=>{ acceptFriendRequest(username); openProfile(username); }); actions.appendChild(a); }
-        else { const a = document.createElement('button'); a.className='ghost'; a.textContent='Add friend'; a.addEventListener('click', ()=>{ sendFriendRequest(username); openProfile(username); }); actions.appendChild(a); }
-        if(blocked){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Unblock'; b.addEventListener('click', ()=>{ unblockUser(username); openProfile(username); }); actions.appendChild(b); }
-        else { const b = document.createElement('button'); b.className='ghost'; b.textContent='Block'; b.addEventListener('click', ()=>{ if(confirm('Block user? This will remove friends and stop messages.')){ blockUser(username); openProfile(username); } }); actions.appendChild(b); }
+        else if(incoming){ const a = document.createElement('button'); a.className='ghost'; a.textContent='Accept'; a.addEventListener('click', ()=>{ acceptFriendRequest(targetUsername); openProfile(targetUsername); }); actions.appendChild(a); }
+        else { const a = document.createElement('button'); a.className='ghost'; a.textContent='Add friend'; a.addEventListener('click', ()=>{ sendFriendRequest(targetUsername); openProfile(targetUsername); }); actions.appendChild(a); }
+        if(blocked){ const b = document.createElement('button'); b.className='ghost'; b.textContent='Unblock'; b.addEventListener('click', ()=>{ unblockUser(targetUsername); openProfile(targetUsername); }); actions.appendChild(b); }
+        else { const b = document.createElement('button'); b.className='ghost'; b.textContent='Block'; b.addEventListener('click', ()=>{ if(confirm('Block user? This will remove friends and stop messages.')){ blockUser(targetUsername); openProfile(targetUsername); } }); actions.appendChild(b); }
       }
       const libWrap = document.getElementById('profileLibs');
       const pager = document.getElementById('profileLibPagination');
@@ -5299,6 +5399,7 @@ Get a code from the character builder in jjs, then paste it here. When you click
     }
 
     document.getElementById('openDm').addEventListener('click', ()=>{
+      if(!hasFullAccountAccess()) return alert(isGuestModeActive() ? 'Guest mode cannot use DMs. Sign in for full access.' : 'Sign in to use DMs');
       const to = document.getElementById('dmTo').value.trim();
       if(!to) return alert('Enter username');
       openDMWindow(to).catch(err=>{

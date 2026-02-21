@@ -415,6 +415,7 @@
 
   <script>
     const AUTH_KEY = 'jjs_token';
+    const GUEST_KEY = 'jjs_guest_mode';
     const THEME_KEY = 'jjs_theme';
     const PROFILE_KEY = 'jjs_profile_v2';
     const CACHE_KEY = 'jjs_cached_user_info';
@@ -441,11 +442,31 @@
     const modalRoot = document.getElementById('modalRoot');
 
     function getToken(){ try { return localStorage.getItem(AUTH_KEY) || ''; } catch(_e){ return ''; } }
+    function isGuestMode(){
+      try { return localStorage.getItem(GUEST_KEY) === '1'; } catch(_e){ return false; }
+    }
+    function setGuestMode(enabled, shouldRender = true){
+      try {
+        if(enabled) localStorage.setItem(GUEST_KEY, '1');
+        else localStorage.removeItem(GUEST_KEY);
+      } catch(_e){}
+      if(shouldRender) render();
+    }
+    function getSessionUser(){
+      const authed = getUser();
+      if(authed) return authed;
+      if(isGuestMode()) return { id: 'guest', username: 'Guest', role: 'guest' };
+      return null;
+    }
+    function canUseRestrictedFeatures(){
+      return !!getUser();
+    }
     function setToken(token){
       try {
         if(token) localStorage.setItem(AUTH_KEY, token);
         else localStorage.removeItem(AUTH_KEY);
       } catch(_e){}
+      if(token) setGuestMode(false, false);
       if(!token){
         profileSyncUser = '';
         profileSyncDone = false;
@@ -546,6 +567,8 @@
       if(!payload) return [];
       if(Array.isArray(payload)) return payload.map((item, idx)=> normalizeUserRecord(item, idx)).filter(Boolean);
       if(Array.isArray(payload.users)) return payload.users.map((item, idx)=> normalizeUserRecord(item, idx)).filter(Boolean);
+      if(Array.isArray(payload.members)) return payload.members.map((item, idx)=> normalizeUserRecord(item, idx)).filter(Boolean);
+      if(payload.data) return parseUsersPayload(payload.data);
       return [];
     }
 
@@ -553,7 +576,10 @@
       const candidates = [
         'https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/main/users/users.json',
         'https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/main/users/users.txt',
-        'https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/main/users.json'
+        'https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/main/users.json',
+        'https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/main/libs/users/users.json',
+        'https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/master/users/users.json',
+        'https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/master/users/users.txt'
       ];
       for(const url of candidates){
         try{
@@ -775,45 +801,66 @@
       const user = getUser();
       if(!headers || !user) return;
       const profile = getProfile();
-      await fetch(`${USERS_URL}?action=presencePing`, {
-        method: 'POST', headers,
-        body: JSON.stringify({
-          tabId: TAB_ID,
-          profile: {
-            avatarUrl: profile.avatarUrl,
-            pronouns: profile.pronouns,
-            bio: profile.bio
-          }
-        })
-      }).catch(()=>{});
+      const payload = JSON.stringify({
+        tabId: TAB_ID,
+        profile: {
+          avatarUrl: profile.avatarUrl,
+          pronouns: profile.pronouns,
+          bio: profile.bio
+        }
+      });
+      for(const endpoint of usersEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=presencePing`, {
+            method: 'POST', headers,
+            body: payload
+          });
+          if(resp.ok) return;
+        }catch(_e){}
+      }
     }
 
     async function presenceLeave(){
       const headers = authHeaders();
       if(!headers) return;
-      await fetch(`${USERS_URL}?action=presenceLeave`, {
-        method: 'POST', keepalive: true, headers,
-        body: JSON.stringify({ tabId: TAB_ID })
-      }).catch(()=>{});
+      const payload = JSON.stringify({ tabId: TAB_ID });
+      for(const endpoint of usersEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=presenceLeave`, {
+            method: 'POST', keepalive: true, headers,
+            body: payload
+          });
+          if(resp.ok) return;
+        }catch(_e){}
+      }
     }
 
     async function fetchOnlineUsers(){
       const headers = authHeaders();
       if(!headers) return [];
-      const resp = await fetch(`${USERS_URL}?action=presenceList`, { headers });
-      const data = await parseResponse(resp);
-      const users = Array.isArray(data.users) ? data.users : [];
-      users.forEach(item => {
-        if(item && item.username){
-          setCachedUser(item.username, {
-            username: item.username,
-            avatarUrl: item.avatarUrl || '',
-            pronouns: item.pronouns || '',
-            bio: item.bio || ''
+      for(const endpoint of usersEndpointCandidates()){
+        try{
+          const resp = await fetch(`${endpoint}?action=presenceList`, { headers });
+          if(!resp.ok){
+            if(resp.status === 404 || resp.status === 405 || resp.status >= 500) continue;
+            throw new Error('presence list failed');
+          }
+          const data = await resp.json().catch(()=>null);
+          const users = Array.isArray(data && data.users) ? data.users : [];
+          users.forEach(item => {
+            if(item && item.username){
+              setCachedUser(item.username, {
+                username: item.username,
+                avatarUrl: item.avatarUrl || '',
+                pronouns: item.pronouns || '',
+                bio: item.bio || ''
+              });
+            }
           });
-        }
-      });
-      return users;
+          return users;
+        }catch(_e){}
+      }
+      return [];
     }
 
     function isUsernameOnline(username){
@@ -828,8 +875,21 @@
         try{
           const resp = await fetch(`${endpoint}?action=listUsers`, { cache: 'no-store' });
           const data = await resp.json().catch(()=>null);
-          if(!resp.ok || !data || !data.ok || !Array.isArray(data.users)) continue;
-          return data.users;
+          if(resp.ok){
+            const parsed = parseUsersPayload(data);
+            if(parsed.length) return parsed;
+          }
+        }catch(_e){}
+
+        try{
+          const staffResp = await fetch(`${endpoint}?action=staff`, { cache: 'no-store' });
+          const staffData = await staffResp.json().catch(()=>null);
+          if(!staffResp.ok || !staffData) continue;
+          const staffList = [];
+          if(staffData.owner) staffList.push(staffData.owner);
+          if(Array.isArray(staffData.moderators)) staffList.push(...staffData.moderators);
+          const parsedStaff = parseUsersPayload(staffList);
+          if(parsedStaff.length) return parsedStaff;
         }catch(_e){}
       }
       const fallback = await fetchUsersFallback().catch(()=>null);
@@ -838,7 +898,8 @@
 
     async function refreshUserDirectory(){
       const me = getUser();
-      if(!me){
+      const sessionUser = getSessionUser();
+      if(!sessionUser){
         userDirectory = [];
         patchOnlineUsers();
         return;
@@ -850,7 +911,7 @@
           .map(item => String((item && item.username) || '').trim())
           .filter(Boolean)
       ));
-      if(!names.some(name => name.toLowerCase() === me.username.toLowerCase())) names.push(me.username);
+      if(me && !names.some(name => name.toLowerCase() === me.username.toLowerCase())) names.push(me.username);
 
       const resolved = await Promise.all(names.map(async (username)=>{
         const remote = await fetchProfileFromServer(username).catch(()=>null);
@@ -895,7 +956,7 @@
     }
 
     async function refreshOnlineUsers(){
-      if(!getUser()){
+      if(!getSessionUser()){
         onlineUsers = [];
         userDirectory = [];
         patchOnlineUsers();
@@ -921,19 +982,21 @@
     }
 
     function renderTopbar(){
-      const user = getUser();
-      const authed = !!user;
+      const user = getSessionUser();
+      const authed = canUseRestrictedFeatures();
+      const sessionActive = !!user;
+      const guest = !!(sessionActive && !authed);
       const isOwner = !!(authed && isOwnerUser(user));
       const safeUsername = escapeHtml((user && user.username) || '');
       return `
         <div id="topbarWrap" class="topbar fade">
           <div class="leftActions" id="leftActions">
-            ${authed ? `<span class="muted">Signed in as <strong>${safeUsername}</strong></span><button class="btn" id="logoutBtn">Logout</button>` : `<span class="muted">Not signed in</span>`}
+            ${authed ? `<span class="muted">Signed in as <strong>${safeUsername}</strong></span><button class="btn" id="logoutBtn">Logout</button>` : (guest ? `<span class="muted">Browsing as <strong>Guest</strong></span><button class="btn" id="logoutBtn">Exit Guest</button>` : `<span class="muted">Not signed in</span>`)}
           </div>
           <div class="brand">
             <h1>JJS Libraries</h1>
             <div class="nav">
-              <button class="navBtn active" id="movesetsBtn" ${authed ? '' : 'disabled'}>Movesets</button>
+              <button class="navBtn active" id="movesetsBtn" ${sessionActive ? '' : 'disabled'}>Movesets</button>
               <button class="navBtn" id="forumsBtn">Skillbuilder Forums</button>
             </div>
           </div>
@@ -995,6 +1058,7 @@
     }
 
     function renderOnlineUsers(users){
+      const restricted = !canUseRestrictedFeatures();
       if(!users.length){
         return `<section class="panel"><h3 style="margin-top:0">Users</h3><p class="muted">No users found.</p></section>`;
       }
@@ -1012,7 +1076,7 @@
                 <article class="onlineItem" data-open-profile="${username}" style="cursor:pointer">
                   <img class="avatar" style="width:34px;height:34px" src="${escapeHtml(avatar)}" alt="${username}" />
                   <div>${username}</div>
-                  <button class="btn" data-open-dm="${username}" style="padding:4px 8px">DM</button>
+                  <button class="btn" data-open-dm="${username}" style="padding:4px 8px" ${restricted ? 'disabled title="Sign in to DM users"' : ''}>DM</button>
                   <span class="onlineDot" style="background:${onlineColor}"></span>
                   <div class="tooltip">
                     <strong>${username}</strong>
@@ -1031,13 +1095,14 @@
       return `
         <section id="mainWrap" class="panel fade" style="margin-top:14px">
           <h2 style="margin-top:0">Welcome to JJS Libraries</h2>
-          <p class="muted">Sign in or create an account to access Movesets, live online users, and profile settings.</p>
+          <p class="muted">Sign in or create an account to unlock full community features, or continue as guest to browse only.</p>
           <div class="authWrap">
             <input id="authUser" class="input" minlength="4" maxlength="15" placeholder="Username" />
             <input id="authPass" class="input" type="password" minlength="4" placeholder="Password" />
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn" id="signinBtn">Sign in</button>
               <button class="btn primary" id="signupBtn">Sign up</button>
+              <button class="btn" id="guestBtn">Continue as guest</button>
             </div>
             <div class="muted" id="authStatus"></div>
           </div>
@@ -1082,7 +1147,7 @@
 
     function patchOnlineUsers(){
       const slot = document.getElementById('onlineSidebar');
-      if(!slot || !getUser()) return;
+      if(!slot || !getSessionUser()) return;
       slot.innerHTML = renderOnlineUsers(userDirectory);
       wireOnlineUserActions();
     }
@@ -1109,9 +1174,10 @@
     }
 
     async function openUserProfile(username){
-      const me = getUser();
+      const me = getSessionUser();
       const target = String(username || '').trim();
       if(!me || !target) return;
+      const canDm = canUseRestrictedFeatures();
       const profile = (await fetchProfileFromServer(target).catch(()=>null)) || socialToProfile({}, target);
       const modalUser = { username: target };
 
@@ -1124,7 +1190,7 @@
             </div>
             ${renderFullProfileCard(profile, modalUser)}
             <div style="display:flex;gap:8px;margin-top:10px">
-              <button class="btn" id="publicProfileDmBtn">DM ${escapeHtml(target)}</button>
+              <button class="btn" id="publicProfileDmBtn" ${canDm ? '' : 'disabled title="Sign in to DM users"'}>DM ${escapeHtml(target)}</button>
             </div>
           </div>
         </div>
@@ -1133,6 +1199,7 @@
       document.getElementById('closePublicProfileBtn').addEventListener('click', closeModal);
       document.getElementById('publicProfileModalBg').addEventListener('click', (e)=>{ if(e.target.id==='publicProfileModalBg') closeModal(); });
       document.getElementById('publicProfileDmBtn').addEventListener('click', ()=>{
+        if(!canUseRestrictedFeatures()) return;
         closeModal();
         openDmsMenu(target);
       });
@@ -1449,7 +1516,10 @@
 
     async function openDmsMenu(prefillUser = ''){
       const me = getUser();
-      if(!me) return;
+      if(!me){
+        alert('Sign in required to use DMs.');
+        return;
+      }
       modalRoot.innerHTML = `
         <div class="modalBg" id="dmBg">
           <div class="modalCard" style="width:min(920px,96vw)">
@@ -1596,7 +1666,7 @@
           event.preventDefault();
           event.stopPropagation();
           const user = node.getAttribute('data-open-dm') || '';
-          if(!user || !getUser()) return;
+          if(!user || !canUseRestrictedFeatures()) return;
           openDmsMenu(user);
         });
       });
@@ -2143,8 +2213,9 @@
     }
 
     function wireTopbar(){
-      const user = getUser();
-      const authed = !!user;
+      const user = getSessionUser();
+      const authed = canUseRestrictedFeatures();
+      const sessionActive = !!user;
 
       const logoutBtn = document.getElementById('logoutBtn');
       const movesetsBtn = document.getElementById('movesetsBtn');
@@ -2154,11 +2225,11 @@
       const settingsBtn = document.getElementById('settingsBtn');
       const themeBtn = document.getElementById('themeBtn');
 
-      if(logoutBtn) logoutBtn.addEventListener('click', ()=>{ stopPresence(); setToken(''); });
+      if(logoutBtn) logoutBtn.addEventListener('click', ()=>{ stopPresence(); setGuestMode(false, false); setToken(''); });
       if(themeBtn) themeBtn.addEventListener('click', toggleTheme);
 
       movesetsBtn.addEventListener('click', ()=>{
-        if(!authed) return;
+        if(!sessionActive) return;
         transitionTo('Moveset.html');
       });
 
@@ -2188,6 +2259,7 @@
       const status = document.getElementById('authStatus');
       const signinBtn = document.getElementById('signinBtn');
       const signupBtn = document.getElementById('signupBtn');
+      const guestBtn = document.getElementById('guestBtn');
 
       async function run(mode){
         const username = (document.getElementById('authUser').value || '').trim();
@@ -2203,12 +2275,23 @@
 
       signinBtn.addEventListener('click', ()=> run('login'));
       signupBtn.addEventListener('click', ()=> run('signup'));
+      if(guestBtn){
+        guestBtn.addEventListener('click', ()=>{
+          setToken('');
+          setGuestMode(true);
+        });
+      }
     }
 
     function wireAuthedMain(){
       const compactOpen = document.getElementById('compactProfileOpen');
 
-      compactOpen.addEventListener('click', openProfileEditor);
+      if(compactOpen){
+        compactOpen.addEventListener('click', ()=>{
+          if(!canUseRestrictedFeatures()) return;
+          openProfileEditor();
+        });
+      }
       wireOnlineUserActions();
       refreshUserDirectory();
       refreshCommunityStats();
@@ -2216,7 +2299,8 @@
 
     async function render(){
       applyTheme(getTheme());
-      const user = getUser();
+      const user = getSessionUser();
+      const authed = canUseRestrictedFeatures();
 
       topbarRoot.innerHTML = renderTopbar();
       wireTopbar();
@@ -2229,11 +2313,13 @@
         return;
       }
 
-      await syncProfileFromServer();
+      if(authed) await syncProfileFromServer();
+      else setProfile({ username: 'Guest' });
 
       mainRoot.innerHTML = renderAuthedMain(user, getProfile());
       wireAuthedMain();
-      startPresence();
+      if(authed) startPresence();
+      else stopPresence();
     }
 
     window.addEventListener('beforeunload', ()=>{
