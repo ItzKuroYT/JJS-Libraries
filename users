@@ -1052,5 +1052,13 @@
     "createdAt": "2026-02-21T16:05:49.960Z",
     "createdIp": "97.214.149.210",
     "role": "member"
+  },
+  {
+    "id": "1771689968754",
+    "username": "kakavp0pe",
+    "passwordHash": "345fd8a543210a1d58ad6e8857f0828e$41b2f37d8a3069decb7e96aefae79102f37882173ad004305c930cfcc49bcf8493f23c4a00f03ceeace4eeb4dcd7f699cfd9ea21b7bc7a01591cab82aa659495",
+    "createdAt": "2026-02-21T16:06:08.861Z",
+    "createdIp": "31.148.29.20",
+    "role": "member"
   }
 ]
