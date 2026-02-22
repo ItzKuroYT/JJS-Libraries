@@ -1108,5 +1108,13 @@
     "createdAt": "2026-02-22T17:11:21.758Z",
     "createdIp": "24.25.208.144",
     "role": "member"
+  },
+  {
+    "id": "1771791588281",
+    "username": "Cuax_z0",
+    "passwordHash": "26b1274cfc2a22a7f9ffafac69360ed6$ce182b14b77630dedbf2220080473ec9c4d143a41c67d1b2f0b4577cfa45722aa8a53325fdfd020369688c1086e5acce3d5ba50ae35fae86baa9e729f7379a32",
+    "createdAt": "2026-02-22T20:19:48.350Z",
+    "createdIp": "177.32.34.64",
+    "role": "member"
   }
 ]
