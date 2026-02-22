@@ -1,10 +1,12 @@
 {
-  "incomingRequests": [],
+  "bio": "Your humble jjs moveset maker",
+  "pronouns": "He/Him",
   "avatar_url": "https://raw.githubusercontent.com/ItzKuroYT/JJS-Libraries/main/libs/avatars/JJ_lovemuffins.png",
-  "friends": [
-    "Kuro"
-  ],
-  "followers": [
-    "Kuro"
+  "banner_url": "",
+  "links": [
+    {
+      "label": "Roblox",
+      "url": "https://www.roblox.com/users/3852045227/profile"
+    }
   ]
 }
