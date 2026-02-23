@@ -1116,5 +1116,13 @@
     "createdAt": "2026-02-22T20:19:48.350Z",
     "createdIp": "177.32.34.64",
     "role": "member"
+  },
+  {
+    "id": "1771841199161",
+    "username": "Goat",
+    "passwordHash": "0d1c83e5fd86fbf0e95bf985dfbdc9ed$c5e30df6723f8bd217a72c07439ebfa9b8ad7578e5f38e9fa2eee804ea33a0e76d28c01faa88cba1b7fc489328b0f111faeb619f2a266cbd27fb5bd6bdcbeb66",
+    "createdAt": "2026-02-23T10:06:39.228Z",
+    "createdIp": "152.53.37.155",
+    "role": "member"
   }
 ]
