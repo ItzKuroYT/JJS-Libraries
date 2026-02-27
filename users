@@ -1140,5 +1140,13 @@
     "createdAt": "2026-02-27T13:07:50.720Z",
     "createdIp": "43.230.105.193",
     "role": "member"
+  },
+  {
+    "id": "1772224316470",
+    "username": "Kinich",
+    "passwordHash": "a86d60385f8286b891190bfd1fed1ba5$90ed329e0a3a4523000d0c25e1f34b79452c52645a66c15768ba5a24b5811206290476fa28ae8550a6dbe9c78bbad807e85942096fc3ea5c015351735dad3073",
+    "createdAt": "2026-02-27T20:31:56.583Z",
+    "createdIp": "151.30.75.150",
+    "role": "member"
   }
 ]
