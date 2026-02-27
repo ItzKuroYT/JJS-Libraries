@@ -1132,5 +1132,13 @@
     "createdAt": "2026-02-23T23:42:11.757Z",
     "createdIp": "189.230.78.0",
     "role": "member"
+  },
+  {
+    "id": "1772197670652",
+    "username": "BestoFreindo",
+    "passwordHash": "fc9a547f3f4b1e052385c435de44a32c$86fca832876948cb7624e2767edbaeaada22081118978b496fea0888fd7d3b6ca4445a78c1a6798bf51fbafbe996a17993e1d179f676cc2da628badc1b31768d",
+    "createdAt": "2026-02-27T13:07:50.720Z",
+    "createdIp": "43.230.105.193",
+    "role": "member"
   }
 ]
