@@ -1164,5 +1164,13 @@
     "createdAt": "2026-03-01T13:13:08.514Z",
     "createdIp": "205.147.17.37",
     "role": "member"
+  },
+  {
+    "id": "1772396088382",
+    "username": "kaizo888",
+    "passwordHash": "f98ebed2df98a347e1cd1a3aa19f74bf$706cd8938a478013ce6901ae5c8367cca7591dc444d015467ce9e70536f599582d27059750360389f1e0ae1659ae409fb964c720623583661e4b958e032e9301",
+    "createdAt": "2026-03-01T20:14:48.459Z",
+    "createdIp": "81.102.187.82",
+    "role": "member"
   }
 ]
