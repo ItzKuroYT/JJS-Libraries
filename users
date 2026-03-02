@@ -1180,5 +1180,13 @@
     "createdAt": "2026-03-01T20:42:28.047Z",
     "createdIp": "179.6.167.175",
     "role": "member"
+  },
+  {
+    "id": "1772439328912",
+    "username": "@imjesterr",
+    "passwordHash": "a561dbc0d275edff6ae73c63be882baa$ed8677fa3450177c908b83ec9a0c7199adce60d9bcd0ecba0b0341bc0bd5550368b4a65c7ee99e2ad9fd6215c2eb8bef691258ddd3b04a75f664faa512606775",
+    "createdAt": "2026-03-02T08:15:28.979Z",
+    "createdIp": "182.48.134.235",
+    "role": "member"
   }
 ]
