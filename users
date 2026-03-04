@@ -1196,5 +1196,13 @@
     "createdAt": "2026-03-04T03:17:52.181Z",
     "createdIp": "24.245.135.114",
     "role": "member"
+  },
+  {
+    "id": "1772621344812",
+    "username": "yarik123123",
+    "passwordHash": "25a0f1cf501f01d271a61b09411d44e7$8624473a6a753ad0679fef59a6030e6a74beeb00f175ea0186ca929abba3cba4016c5c14451a1cf90427515498e09a101896b361e325158d866b8cb76fc11864",
+    "createdAt": "2026-03-04T10:49:04.880Z",
+    "createdIp": "178.68.200.219",
+    "role": "member"
   }
 ]
