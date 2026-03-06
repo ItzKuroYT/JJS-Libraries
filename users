@@ -1212,5 +1212,13 @@
     "createdAt": "2026-03-05T14:47:54.521Z",
     "createdIp": "14.177.61.35",
     "role": "member"
+  },
+  {
+    "id": "1772820240004",
+    "username": "frizette91",
+    "passwordHash": "446d58ce6d21a9532bfd7ee671c33f07$ade6ff4a36388b4152cfc353616302261fef5ef84953f782fde70d195b19da2332c22a88b76b9ef9e7f20423a3ebaed8fad2c785f35be2e1980fd3eb8e22361b",
+    "createdAt": "2026-03-06T18:04:00.077Z",
+    "createdIp": "89.111.31.100",
+    "role": "member"
   }
 ]
