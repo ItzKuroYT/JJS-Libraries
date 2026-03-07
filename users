@@ -1236,5 +1236,13 @@
     "createdAt": "2026-03-07T06:19:57.882Z",
     "createdIp": "203.76.102.162",
     "role": "member"
+  },
+  {
+    "id": "1772903498551",
+    "username": "Jose",
+    "passwordHash": "d6a5785cc5c31910815ff78b63295d5e$9ffa16f5abdf0526573291d7b4b1e45805cee9520fb1fd7fc7d3038c6ac44abb6d4251d724cc532fdf7ff29c777525283e47790c4233a149501c29f0a3256afb",
+    "createdAt": "2026-03-07T17:11:38.623Z",
+    "createdIp": "62.45.36.8",
+    "role": "member"
   }
 ]
