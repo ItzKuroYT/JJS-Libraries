@@ -1244,5 +1244,13 @@
     "createdAt": "2026-03-07T17:11:38.623Z",
     "createdIp": "62.45.36.8",
     "role": "member"
+  },
+  {
+    "id": "1772949124553",
+    "username": "sunrisebodrio",
+    "passwordHash": "462c1fa73d0d456f5462541a958611a4$fee9bbc4d67df3e093d1e3567733bb0d7994ebd0a9db943bf971260cbdde5a852aec31a22c50cf6871b6ca84ba3c50d56b3204c66a7e8c520b802392ddc52f2d",
+    "createdAt": "2026-03-08T05:52:04.686Z",
+    "createdIp": "181.120.20.240",
+    "role": "member"
   }
 ]
