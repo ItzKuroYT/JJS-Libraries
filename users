@@ -1268,5 +1268,13 @@
     "createdAt": "2026-03-12T06:37:34.714Z",
     "createdIp": "73.77.79.219",
     "role": "member"
+  },
+  {
+    "id": "1773413932142",
+    "username": "Pochita",
+    "passwordHash": "7dcf981541ed3cb44eab6ae87ac1ccdf$3dff287334af3271a29f3ec388a53fddb038300966930f486cce9d62ed3361644d6a8bfcbd33826f86436612a614921d32dbab27153ad66298e3ff72d128e463",
+    "createdAt": "2026-03-13T14:58:52.232Z",
+    "createdIp": "83.135.186.132",
+    "role": "member"
   }
 ]
