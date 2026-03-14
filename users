@@ -1276,5 +1276,13 @@
     "createdAt": "2026-03-13T14:58:52.232Z",
     "createdIp": "83.135.186.132",
     "role": "member"
+  },
+  {
+    "id": "1773468391579",
+    "username": "silverspoon",
+    "passwordHash": "81d3372455d6e1ae25ce96d4f190b6a6$b217457a4d42e3a03ec6f5b90f5b70445ea72c966e195d30d74853e2a61bddf9425c5bfb3900c0c9b775262c21b487d0a13c76ce7951dc5935f5881f78f41b61",
+    "createdAt": "2026-03-14T06:06:31.646Z",
+    "createdIp": "175.176.18.122",
+    "role": "member"
   }
 ]
