@@ -1284,5 +1284,13 @@
     "createdAt": "2026-03-14T06:06:31.646Z",
     "createdIp": "175.176.18.122",
     "role": "member"
+  },
+  {
+    "id": "1774210661800",
+    "username": "KraZyy",
+    "passwordHash": "26c1889ffc4d76f2e007a1fd12f7582e$4b716371ada22b962d6a144a8766358ddf42b7205d9c5b12b40209b1b4011883baeb19aa46ac1374ce317a4b7a81e11372ff69c1c33d91d1b16dfc56451cd878",
+    "createdAt": "2026-03-22T20:17:41.870Z",
+    "createdIp": "24.38.204.53",
+    "role": "member"
   }
 ]
