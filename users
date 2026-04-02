@@ -1292,5 +1292,13 @@
     "createdAt": "2026-03-22T20:17:41.870Z",
     "createdIp": "24.38.204.53",
     "role": "member"
+  },
+  {
+    "id": "1775130602749",
+    "username": "Shadow",
+    "passwordHash": "b5a251bff536c3f8a134eb01e8ff8d8a$243ab93c9f1acbdc929e42dfe50c4a728b8651c9c1b2d51886b53bf22adc35a3aad870ba49c0f3022821988e94bebbe3668ec09c5f0083aa412be8ea384b6406",
+    "createdAt": "2026-04-02T11:50:02.844Z",
+    "createdIp": "176.105.197.163",
+    "role": "member"
   }
 ]
