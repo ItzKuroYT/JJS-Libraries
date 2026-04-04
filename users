@@ -1308,5 +1308,13 @@
     "createdAt": "2026-04-04T08:02:10.850Z",
     "createdIp": "94.65.251.7",
     "role": "member"
+  },
+  {
+    "id": "1775347042682",
+    "username": "THEKILIANRE",
+    "passwordHash": "605966be9ca66c653ca140b845e890fb$05ec35cdbc6b03743d238558dbc7091d67779849a81f89a6fbda9e8715ebc7568be0040cf9c259d82c6c75d5f11b755fbdb17f8ebbab69f52a98a2a7f9b0d2ff",
+    "createdAt": "2026-04-04T23:57:22.755Z",
+    "createdIp": "95.57.234.163",
+    "role": "member"
   }
 ]
