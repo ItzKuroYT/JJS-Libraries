@@ -1324,5 +1324,13 @@
     "createdAt": "2026-04-22T21:27:52.524Z",
     "createdIp": "172.59.114.4",
     "role": "member"
+  },
+  {
+    "id": "1777035290176",
+    "username": "fentpizza",
+    "passwordHash": "3f606a3f0d929bd1579a2506d3b9eae6$7ca61b84be15641abae8947acf024056b74279d6cc23e23fcb61d2a941cfdba6686a9825dbfa45a1df3491cce30eb4275f1ceb92845f737e206242a3dd34889d",
+    "createdAt": "2026-04-24T12:54:50.296Z",
+    "createdIp": "98.97.84.116",
+    "role": "member"
   }
 ]
