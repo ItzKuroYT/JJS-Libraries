@@ -1332,5 +1332,13 @@
     "createdAt": "2026-04-24T12:54:50.296Z",
     "createdIp": "98.97.84.116",
     "role": "member"
+  },
+  {
+    "id": "1777492408497",
+    "username": "Eoeks",
+    "passwordHash": "b023c6c875b030a83868ac2af3d37637$61d7ec0d1882bcbfa6e8c99ebe46c771b58210e84d312772b57634037c94a9e388471c209cdd7b4f6d93dd89ead3a5536a52afd2e86e7ae91b9c1812eebc5099",
+    "createdAt": "2026-04-29T19:53:28.612Z",
+    "createdIp": "174.93.66.2",
+    "role": "member"
   }
 ]
