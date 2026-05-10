@@ -1340,5 +1340,13 @@
     "createdAt": "2026-04-29T19:53:28.612Z",
     "createdIp": "174.93.66.2",
     "role": "member"
+  },
+  {
+    "id": "1778383760414",
+    "username": "Winter",
+    "passwordHash": "889c3301bcabf9c6adc7425fb2875a7a$cb5e831c4cb64a664b866daebb4d9b45f84155fd459b9407e9db2c52f830f9491ee642bb488eb73b2e70e3ab399bf988f86a4a1e60765947e257048b2ae576f7",
+    "createdAt": "2026-05-10T03:29:20.532Z",
+    "createdIp": "197.87.201.23",
+    "role": "member"
   }
 ]
