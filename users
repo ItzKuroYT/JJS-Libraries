@@ -1372,5 +1372,13 @@
     "createdAt": "2026-06-22T12:22:11.832Z",
     "createdIp": "131.0.218.24",
     "role": "member"
+  },
+  {
+    "id": "1782160042214",
+    "username": "illocial",
+    "passwordHash": "e9d666ee6e4ea2d55044dc17eca00709$c7543a84383e9a1d0ad484895a9db8d4a082290c2e5fd8c1a98da48edb88226aa97d5c35a865b7789b63dd6561c878eba478e9d35b0befb7487410ecf841c676",
+    "createdAt": "2026-06-22T20:27:22.285Z",
+    "createdIp": "70.82.233.53",
+    "role": "member"
   }
 ]
